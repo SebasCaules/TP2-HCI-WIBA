@@ -1,0 +1,86 @@
+:root {
+  /* Colors */
+  --background: #ffffffff;
+  --foreground: #0a0a0aff;
+  --primary: #489fb5ff;
+  --primary-foreground: #ffffffff;
+  --accent: #ffa62bff;
+  --accent-foreground: #f3f4f6ff;
+  --success: #22c55eff;
+  --error: #ef4444ff;
+  --muted-text: #6b7280ff;
+  --label: #374151ff;
+  --input-border: #d1d5dbff;
+  --error-bg: #fef2f2ff;
+  --error-text: #b91c1cff;
+  --icon-muted: #9ca3afff;
+  --hover: #0891b2ff;
+  
+  /* Border Radius */
+  --radius: 0.65rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Fonts */
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, monospace;
+
+  --font-geist-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-geist-mono: ui-monospace, SFMono-Regular, monospace;
+  --sidebar-ring: #489fb555;
+  --sidebar-border: #d2d2d2ff;
+  --sidebar-accent-foreground: #ffffffff;
+  --sidebar-accent: #489fb5ff;
+  --sidebar-primary-foreground: #ffffffff;
+  --sidebar-primary: #489fb5ff;
+  --sidebar-foreground: #454545ff;
+  --sidebar: #f8fafcff;
+  --chart-1: #ff9f1cff;
+  --chart-2: #22c55eff;
+  --chart-3: #9966ffff;
+  --chart-4: #36a2ebff;
+  --chart-5: #ff6384ff;
+  --ring: #489fb5ff;
+  --input: #f8fafcff;
+  --border: #d2d2d2ff;
+  --destructive: #ef4444ff;
+  --muted-foreground: #7d7d7dff;
+  --muted: #f3f4f6ff;
+  --secondary-foreground: #454545ff;
+  --secondary: #f3f4f6ff;
+  --popover-foreground: #454545ff;
+  --popover: #ffffffff;
+  --card-foreground: #454545ff;
+  --card: #f3f4f6ff;
+  --surface-alt: #ffffffff;
+}
+
+/* Global Styles */
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Utility Classes */
+.primary-btn {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  transition: background-color 0.3s;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.primary-btn:hover {
+  background-color: var(--hover);
+}
+
+.primary-btn:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+} 
