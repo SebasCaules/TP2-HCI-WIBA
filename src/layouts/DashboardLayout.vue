@@ -12,29 +12,19 @@
     </v-app>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
+<script setup lang="ts">
 import { useAuthStore } from "../store/auth";
 import { useRouter } from "vue-router";
 import Sidebar from '@/components/shared/Sidebar.vue'
 import Topbar from '@/components/shared/Topbar.vue'
 
-export default defineComponent({
-    name: "DashboardLayout",
-    setup() {
-        const authStore = useAuthStore();
-        const router = useRouter();
+const authStore = useAuthStore();
+const router = useRouter();
 
-        const logout = () => {
-            authStore.logout();
-            router.push("/profile/auth/login");
-        };
-
-        return {
-            logout,
-        };
-    },
-});
+const logout = () => {
+    authStore.clearUser();
+    router.push("/login");
+};
 </script>
 
 <style scoped>
