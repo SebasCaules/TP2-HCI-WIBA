@@ -11,12 +11,16 @@
       class="tarjetas-table"
       hide-default-footer
       item-value="id"
+      :loading="loading"
     >
+      <template #no-data>
+        <div v-if="noCards" class="no-cards-message">No tienes tarjetas guardadas.</div>
+      </template>
       <template #item.logo="{ item }">
         <img :src="item.logo" :alt="item.brand" class="tarjeta-logo" />
       </template>
       <template #item.name="{ item }">
-        <span class="tarjeta-name">{{ item.name }}</span>
+        <span class="tarjeta-name">{{ item.brand }} *{{ item.number_last4 }}</span>
       </template>
       <template #item.expiry="{ item }">
         <span class="tarjeta-expiry">{{ item.expiry }}</span>
@@ -46,7 +50,6 @@
                   <span class="card-preview-number-modern">{{ maskedCardNumber }}</span>
                 </div>
                 <div class="card-preview-row card-preview-bottom-modern">
-                  <span v-if="newCard.holder" class="card-preview-name-modern">{{ newCard.holder.toUpperCase() }}</span>
                   <div class="card-preview-expiry-block">
                     <span class="card-preview-expiry-modern">{{ formattedExpiry }}</span>
                   </div>
@@ -84,10 +87,10 @@
                   outlined
                   dense
                   class="add-card-input"
-                  maxlength="4"
+                  :maxlength="getCardBrand(newCard.number) === 'Amex' ? 4 : 3"
                   :error-messages="submitted && cvvError ? [cvvError] : []"
                   :hide-details="!(submitted && cvvError) ? true : 'auto'"
-                  placeholder="123"
+                  :placeholder="getCardBrand(newCard.number) === 'Amex' ? '1234' : '123'"
                 />
               </div>
               <v-text-field
@@ -110,10 +113,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { supabase } from '@/plugins/supabase'
+import { useAuthStore } from '@/store/auth'
+import { v4 as uuidv4 } from 'uuid'
 
 const showDialog = ref(false)
 const submitted = ref(false)
+const loading = ref(false)
+const cards = ref<any[]>([])
+const noCards = ref(false)
+
+const authStore = useAuthStore()
+const userId = computed(() => authStore.user?.id)
 
 const headers = [
   { title: '', value: 'logo', width: 60 },
@@ -122,30 +134,6 @@ const headers = [
   { title: '', value: 'actions', align: 'end', width: 120 },
 ]
 
-const cards = ref([
-  {
-    id: 1,
-    brand: 'Mastercard',
-    name: 'Mastercard Débito *5920',
-    expiry: '03/28',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/0/04/Mastercard-logo.png',
-  },
-  {
-    id: 2,
-    brand: 'Visa',
-    name: 'Visa Crédito *3713',
-    expiry: '07/29',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png',
-  },
-  {
-    id: 3,
-    brand: 'Amex',
-    name: 'American Express *2712',
-    expiry: '04/27',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/3/30/American_Express_logo_%282018%29.svg',
-  },
-])
-
 const newCard = ref({
   number: '',
   expiry: '',
@@ -153,23 +141,40 @@ const newCard = ref({
   holder: '',
 })
 
-const brandLogo = computed(() => {
-  const n = newCard.value.number.replace(/\s/g, '')
-  if (n.startsWith('5')) return 'https://upload.wikimedia.org/wikipedia/commons/0/04/Mastercard-logo.png'
-  if (n.startsWith('4')) return 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png'
-  if (n.startsWith('3')) return 'https://upload.wikimedia.org/wikipedia/commons/3/30/American_Express_logo_%282018%29.svg'
-  return ''
-})
+function getCardBrand(number) {
+  const n = number.replace(/\D/g, '')
+  if (n.startsWith('4')) return 'Visa'
+  if (n.startsWith('5')) return 'Mastercard'
+  if (n.startsWith('3')) return 'Amex'
+  return 'Desconocida'
+}
 
-const transparentPixel =
-  'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=' // 1x1 transparent gif
+function getBrandLogo(brand) {
+  if (brand === 'Visa') return 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png'
+  if (brand === 'Mastercard') return 'https://brandlogos.net/wp-content/uploads/2021/11/mastercard-logo.png'
+  if (brand === 'Amex') return 'https://upload.wikimedia.org/wikipedia/commons/f/fa/American_Express_logo_%282018%29.svg'
+  return transparentPixel
+}
+
+const brand = computed(() => getCardBrand(newCard.value.number))
+const brandLogo = computed(() => getBrandLogo(brand.value))
 
 const maskedCardNumber = computed(() => {
-  // Always show 16 chars, X for missing
   let raw = newCard.value.number.replace(/\D/g, '')
-  let masked = (raw + 'XXXXXXXXXXXXXXXX').slice(0, 16)
-  let arr = masked.split('').map((c, i) => (i < raw.length ? raw[i] : 'X'))
-  return arr.join('').replace(/(.{4})/g, '$1 ').trim()
+  const brand = getCardBrand(raw)
+  
+  if (brand === 'Amex') {
+    let masked = (raw + 'XXXXXXXXXXXXXXX').slice(0, 15)
+    let arr = masked.split('').map((c, i) => (i < raw.length ? raw[i] : 'X'))
+    let formatted = arr.join('')
+    if (formatted.length > 4) formatted = formatted.slice(0, 4) + ' ' + formatted.slice(4)
+    if (formatted.length > 11) formatted = formatted.slice(0, 11) + ' ' + formatted.slice(11)
+    return formatted
+  } else {
+    let masked = (raw + 'XXXXXXXXXXXXXXXX').slice(0, 16)
+    let arr = masked.split('').map((c, i) => (i < raw.length ? raw[i] : 'X'))
+    return arr.join('').replace(/(.{4})/g, '$1 ').trim()
+  }
 })
 
 const formattedExpiry = computed(() => {
@@ -179,33 +184,27 @@ const formattedExpiry = computed(() => {
   return val.slice(0, 2) + '/' + val.slice(2, 4)
 })
 
-const cardNumberError = computed(() => {
-  if (!newCard.value.number) return 'Campo requerido'
-  if (!/^\d{4} \d{4} \d{4} \d{4}$/.test(newCard.value.number)) return 'Formato: 0000 0000 0000 0000'
-  return ''
-})
-const expiryError = computed(() => {
-  if (!newCard.value.expiry) return 'Campo requerido'
-  if (!/^\d{2}\/\d{2}$/.test(newCard.value.expiry)) return 'Formato: MM/AA'
-  const [mm, yy] = newCard.value.expiry.split('/')
-  if (mm && (parseInt(mm) < 1 || parseInt(mm) > 12)) return 'Mes inválido'
-  return ''
-})
-const cvvError = computed(() => {
-  if (!newCard.value.cvv) return 'Campo requerido'
-  if (!/^\d{3,4}$/.test(newCard.value.cvv)) return '3 o 4 dígitos'
-  return ''
-})
-const holderError = computed(() => {
-  if (!newCard.value.holder) return 'Campo requerido'
-  if (newCard.value.holder.length <= 2) return 'Nombre muy corto'
-  return ''
-})
+const transparentPixel =
+  'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='
 
 function formatCardNumber() {
-  let val = newCard.value.number.replace(/\D/g, '').slice(0, 16)
-  let formatted = val.replace(/(.{4})/g, '$1 ').trim()
-  newCard.value.number = formatted
+  let val = newCard.value.number.replace(/\D/g, '')
+  const brand = getCardBrand(val)
+  
+  if (brand === 'Amex') {
+    val = val.slice(0, 15)
+    if (val.length > 4) {
+      val = val.slice(0, 4) + ' ' + val.slice(4)
+    }
+    if (val.length > 11) {
+      val = val.slice(0, 11) + ' ' + val.slice(11)
+    }
+  } else {
+    val = val.slice(0, 16)
+    val = val.replace(/(.{4})/g, '$1 ').trim()
+  }
+  
+  newCard.value.number = val
 }
 
 function formatExpiry() {
@@ -218,7 +217,68 @@ function formatExpiry() {
   }
 }
 
-function addCard() {
+const cardNumberError = computed(() => {
+  if (!newCard.value.number) return 'Campo requerido'
+  const brand = getCardBrand(newCard.value.number)
+  
+  if (brand === 'Amex') {
+    if (!/^\d{4} \d{6} \d{5}$/.test(newCard.value.number)) return 'Formato: 0000 000000 00000'
+  } else {
+    if (!/^\d{4} \d{4} \d{4} \d{4}$/.test(newCard.value.number)) return 'Formato: 0000 0000 0000 0000'
+  }
+  return ''
+})
+const expiryError = computed(() => {
+  if (!newCard.value.expiry) return 'Campo requerido'
+  if (!/^\d{2}\/\d{2}$/.test(newCard.value.expiry)) return 'Formato: MM/AA'
+  const [mm, yy] = newCard.value.expiry.split('/')
+  if (mm && (parseInt(mm) < 1 || parseInt(mm) > 12)) return 'Mes inválido'
+  return ''
+})
+const cvvError = computed(() => {
+  if (!newCard.value.cvv) return 'Campo requerido'
+  const brand = getCardBrand(newCard.value.number)
+  
+  if (brand === 'Amex') {
+    if (!/^\d{4}$/.test(newCard.value.cvv)) return '4 dígitos'
+  } else {
+    if (!/^\d{3}$/.test(newCard.value.cvv)) return '3 dígitos'
+  }
+  return ''
+})
+const holderError = computed(() => {
+  if (!newCard.value.holder) return 'Campo requerido'
+  if (newCard.value.holder.length <= 2) return 'Nombre muy corto'
+  return ''
+})
+
+async function fetchCards() {
+  if (!userId.value) return
+  loading.value = true
+  const { data, error } = await supabase
+    .from('cards')
+    .select('*')
+    .eq('user_id', userId.value)
+    .order('created_at', { ascending: false })
+  loading.value = false
+  if (error) {
+    cards.value = []
+    noCards.value = true
+    return
+  }
+  cards.value = (data || []).map(card => ({
+    ...card,
+    brand: card.brand,
+    name: `${card.brand} *${card.number_last4}`,
+    expiry: card.expiry,
+    logo: getBrandLogo(card.brand)
+  }))
+  noCards.value = cards.value.length === 0
+}
+
+onMounted(fetchCards)
+
+async function addCard() {
   submitted.value = true
   if (
     cardNumberError.value ||
@@ -226,20 +286,30 @@ function addCard() {
     cvvError.value ||
     holderError.value
   ) return
-  cards.value.push({
-    id: Date.now(),
-    brand: brandLogo.value.includes('mastercard') ? 'Mastercard' : brandLogo.value.includes('visa') ? 'Visa' : 'Amex',
-    name: `${brandLogo.value.includes('amex') ? 'American Express' : brandLogo.value.includes('visa') ? 'Visa Crédito' : 'Mastercard Débito'} *${newCard.value.number.slice(-4)}`,
-    expiry: newCard.value.expiry,
-    logo: brandLogo.value,
-  })
-  showDialog.value = false
-  newCard.value = { number: '', expiry: '', cvv: '', holder: '' }
-  submitted.value = false
+  if (!userId.value) return
+  const last4 = newCard.value.number.replace(/\D/g, '').slice(-4)
+  const brandVal = getCardBrand(newCard.value.number)
+  const { error } = await supabase.from('cards').insert([
+    {
+      id: uuidv4(),
+      user_id: userId.value,
+      brand: brandVal,
+      number_last4: last4,
+      expiry: newCard.value.expiry,
+      holder: newCard.value.holder,
+    }
+  ])
+  if (!error) {
+    showDialog.value = false
+    newCard.value = { number: '', expiry: '', cvv: '', holder: '' }
+    submitted.value = false
+    await fetchCards()
+  }
 }
 
-function deleteCard(id: number) {
-  cards.value = cards.value.filter(card => card.id !== id)
+async function deleteCard(id: string) {
+  await supabase.from('cards').delete().eq('id', id)
+  await fetchCards()
 }
 </script>
 
@@ -263,6 +333,13 @@ function deleteCard(id: number) {
 .tarjetas-table {
   width: 100%;
   background: transparent;
+}
+.tarjetas-table :deep(.v-data-table__tr) {
+  height: 72px;
+}
+.tarjetas-table :deep(.v-data-table__td) {
+  padding-top: 16px !important;
+  padding-bottom: 16px !important;
 }
 .add-card-dialog {
   padding: 0;
