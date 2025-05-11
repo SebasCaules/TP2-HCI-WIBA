@@ -2,10 +2,12 @@
   <v-app-bar class="topbar" flat>
     <v-app-bar-title class="topbar-title">WIBA</v-app-bar-title>
     <v-spacer />
-    <v-btn icon class="topbar-user" to="/profile">
-      <v-icon>mdi-account</v-icon>
-      <span class="ml-2">{{ userName }}</span>
-    </v-btn>
+    <div class="topbar-user-container">
+      <v-btn icon class="topbar-user" to="/profile">
+        <v-icon>mdi-account</v-icon>
+        <span class="user-name">{{ userName }}</span>
+      </v-btn>
+    </div>
   </v-app-bar>
 </template>
 
@@ -28,10 +30,30 @@ const userName = computed(() => authStore.user?.name || 'Usuario')
   font-size: 1.3rem;
   color: var(--primary);
 }
+.topbar-user-container {
+  display: flex;
+  align-items: center;
+  padding-right: 2rem;
+}
 .topbar-user {
   color: var(--primary);
   font-weight: 500;
   font-size: 1rem;
   text-transform: none;
+  display: flex;
+  align-items: center;
+  padding: 0 0.5rem;
+  min-width: 0;
+}
+.user-name {
+  margin-left: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
 }
 </style> 
