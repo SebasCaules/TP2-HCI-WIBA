@@ -58,7 +58,7 @@ const cards = ref([
 function deleteCard(id: number) {
   cards.value = cards.value.filter(card => card.id !== id)
 }
-</script>
+</script> 
 
 <style scoped>
 .tarjetas-title {

@@ -84,8 +84,29 @@ export const authService = {
       }
       const user = data.user
       if (user) {
-        // Insertar en tabla users (si existe en tu Supabase)
-        // await supabase.from('users').insert({ id: user.id, first_name: name, last_name: lastName })
+        // 1. Insert into users table
+        const { error: userError } = await supabase.from('users').insert({
+          id: user.id,
+          first_name: name,
+          last_name: lastName,
+        })
+        if (userError) {
+          return { success: false, message: userError.message }
+        }
+
+        // 2. Insert into accounts table
+        function generateAccountNumber() {
+          return Array.from({ length: 12 }, () => Math.floor(Math.random() * 10)).join('');
+        }
+        const { error: accountError } = await supabase.from('accounts').insert({
+          user_id: user.id,
+          balance: 0,
+          account_number: generateAccountNumber(),
+        })
+        if (accountError) {
+          return { success: false, message: accountError.message }
+        }
+
         return { success: true }
       }
       return { success: false, message: 'Error desconocido al registrar' }

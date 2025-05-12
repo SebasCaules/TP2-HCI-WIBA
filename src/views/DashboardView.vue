@@ -4,12 +4,30 @@
       <!-- Columna principal -->
       <v-col cols="12" md="8" class="pr-md-8">
         <div class="dashboard-balance-card">
-          <div class="dashboard-balance-label">Saldo</div>
-          <div class="dashboard-balance-value">$ 2.598,57</div>
-          <div class="dashboard-actions">
-            <button class="primary-btn dashboard-action-btn"><v-icon left>mdi-arrow-down</v-icon>Depositar</button>
-            <button class="primary-btn dashboard-action-btn"><v-icon left>mdi-arrow-right</v-icon>Transferir</button>
-            <button class="primary-btn dashboard-action-btn"><v-icon left>mdi-wallet</v-icon>Cobrar</button>
+          <div class="dashboard-balance-inner">
+            <div class="dashboard-balance-label">Saldo</div>
+            <div class="dashboard-balance-value">
+              <template v-if="loading">
+                Cargando...
+              </template>
+              <template v-else-if="balanceError">
+                {{ balanceError }}
+              </template>
+              <template v-else>
+                $ {{ Number(balance).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+              </template>
+            </div>
+            <div class="dashboard-actions">
+              <IconFilledButton icon="mdi-arrow-down" class="dashboard-action-btn" @click="$router.push('/dashboard/depositar')">
+                Depositar
+              </IconFilledButton>
+              <IconFilledButton icon="mdi-arrow-right" class="dashboard-action-btn">
+                Transferir
+              </IconFilledButton>
+              <IconFilledButton icon="mdi-wallet" class="dashboard-action-btn">
+                Cobrar
+              </IconFilledButton>
+            </div>
           </div>
         </div>
         <div class="dashboard-section mt-8">
@@ -96,10 +114,46 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { supabase } from '@/plugins/supabase'
 import { useAuthStore } from '@/store/auth'
+import IconFilledButton from '@/components/ui/IconFilledButton.vue'
 
 const authStore = useAuthStore()
+const userId = computed(() => authStore.user?.id)
+const balance = ref<number | null>(null)
+const loading = ref(true)
+const balanceError = ref<string | null>(null)
+
+async function fetchBalance() {
+  loading.value = true
+  balanceError.value = null
+  if (!userId.value) {
+    balanceError.value = 'Usuario no autenticado'
+    loading.value = false
+    return
+  }
+  const { data, error } = await supabase
+    .from('accounts')
+    .select('balance')
+    .eq('user_id', userId.value)
+    .single()
+  if (error) {
+    balanceError.value = 'Error al obtener el saldo'
+    console.error('Supabase error:', error)
+    loading.value = false
+    return
+  }
+  if (!data) {
+    balanceError.value = 'No se encontró cuenta'
+    loading.value = false
+    return
+  }
+  balance.value = data.balance
+  loading.value = false
+}
+onMounted(fetchBalance)
+
 const userName = computed(() => authStore.user?.name || 'Usuario')
 
 const transactions = [
@@ -136,6 +190,11 @@ const contacts = [
   padding: 2rem;
   margin-bottom: 1.5rem;
 }
+.dashboard-balance-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
 .dashboard-balance-label {
   color: var(--muted-text);
   font-weight: 500;
@@ -149,11 +208,14 @@ const contacts = [
 .dashboard-actions {
   display: flex;
   gap: 1rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0.2rem;
+  margin-bottom: 0;
+  align-items: center;
+  padding-left: 0;
 }
 .dashboard-action-btn {
   border-radius: 2rem;
-  min-width: 140px;
+  min-width: 180px;
   font-weight: 500;
   /* El color y hover lo da .primary-btn */
   background: none;

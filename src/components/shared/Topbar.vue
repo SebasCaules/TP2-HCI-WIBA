@@ -3,10 +3,10 @@
     <v-app-bar-title class="topbar-title">WIBA</v-app-bar-title>
     <v-spacer />
     <div class="topbar-user-container">
-      <v-btn icon class="topbar-user" to="/profile">
-        <v-icon>mdi-account</v-icon>
+    <v-btn icon class="topbar-user" to="/profile">
+      <v-icon>mdi-account</v-icon>
         <span class="user-name">{{ userName }}</span>
-      </v-btn>
+    </v-btn>
     </div>
   </v-app-bar>
 </template>
