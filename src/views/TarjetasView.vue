@@ -98,15 +98,15 @@ async function deleteCard(id: string) {
   await fetchCards()
 }
 
-function getCardBrand(number) {
+function getCardBrand(number: string) {
   const n = number.replace(/\D/g, '')
   if (n.startsWith('4')) return 'Visa'
-  if (n.startsWith('5')) return 'Mastercard'
+  if (n.startsWith('5') || n.startsWith('2')) return 'Mastercard'
   if (n.startsWith('3')) return 'Amex'
   return 'Desconocida'
 }
 
-function getBrandLogo(brand) {
+function getBrandLogo(brand: string) {
   if (brand === 'Visa') return 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png'
   if (brand === 'Mastercard') return 'https://brandlogos.net/wp-content/uploads/2021/11/mastercard-logo.png'
   if (brand === 'Amex') return 'https://upload.wikimedia.org/wikipedia/commons/f/fa/American_Express_logo_%282018%29.svg'

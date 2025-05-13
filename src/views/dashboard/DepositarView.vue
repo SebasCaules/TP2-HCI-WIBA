@@ -154,7 +154,7 @@ const isAmountValid = computed(() => {
 function getCardBrand(number: string) {
   const n = number.replace(/\D/g, '')
   if (n.startsWith('4')) return 'Visa'
-  if (n.startsWith('5')) return 'Mastercard'
+  if (n.startsWith('5') || n.startsWith('2')) return 'Mastercard'
   if (n.startsWith('3')) return 'Amex'
   return 'Desconocida'
 }

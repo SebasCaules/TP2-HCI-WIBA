@@ -99,7 +99,7 @@ const transparentPixel =
 function getCardBrand(number: string) {
   const n = number.replace(/\D/g, '')
   if (n.startsWith('4')) return 'Visa'
-  if (n.startsWith('5')) return 'Mastercard'
+  if (n.startsWith('5') || n.startsWith('2')) return 'Mastercard'
   if (n.startsWith('3')) return 'Amex'
   return 'Desconocida'
 }
@@ -256,6 +256,9 @@ async function addCard() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
 }
 .card-preview-modern {
   display: flex;
@@ -354,14 +357,16 @@ async function addCard() {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  gap: 0.7rem;
+  max-width: 340px;
+  gap: 0.2rem;
 }
 .add-card-form :deep(.custom-text-field-wrapper) {
   margin-bottom: 0 !important;
   margin-top: 0 !important;
+  width: 100% !important;
 }
 .add-card-input {
-  width: 320px;
+  width: 340px;
   margin-bottom: 1.1rem;
   text-align: center;
   font-family: var(--font-sans) !important;
@@ -381,9 +386,13 @@ async function addCard() {
 .add-card-row-field {
   flex: 1 1 0;
   min-width: 0;
+  width: 100%;
+}
+.add-card-row-field :deep(.custom-text-field-wrapper) {
+  width: 100% !important;
 }
 .add-card-btn {
-  width: 320px;
+  width: 100%;
   margin-top: 0.5rem;
   font-size: 1.1rem;
   font-weight: 600;

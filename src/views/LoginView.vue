@@ -33,6 +33,9 @@
                 />
               </template>
             </CustomTextField>
+            <div class="forgot-password-link">
+              <a href="#" @click.prevent="showResetDialog = true">¿Olvidaste tu contraseña?</a>
+            </div>
             <FilledButton
               type="submit"
               class="login-btn mb-4"
@@ -50,6 +53,48 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <!-- Password Reset Dialog -->
+    <v-dialog v-model="showResetDialog" max-width="400px">
+      <v-card class="reset-dialog">
+        <div class="reset-dialog-content">
+          <h2 class="reset-dialog-title">Restablecer contraseña</h2>
+          <p class="reset-dialog-subtitle">
+            Ingresá tu email y te enviaremos instrucciones para restablecer tu contraseña.
+          </p>
+          <CustomTextField
+            v-model="resetEmail"
+            label="Email"
+            type="email"
+            placeholder="nombre@ejemplo.com"
+            :error="!!resetError"
+            :errorMessage="resetError"
+            class="reset-email-input"
+            autocomplete="email"
+          />
+          <div class="reset-dialog-actions">
+            <FilledButton
+              class="reset-submit-btn"
+              :loading="isResetting"
+              :disabled="!resetEmail || isResetting"
+              @click="handleResetPassword"
+            >
+              Enviar instrucciones
+            </FilledButton>
+            <button
+              class="reset-cancel-btn"
+              @click="showResetDialog = false"
+              :disabled="isResetting"
+            >
+              Cancelar
+            </button>
+          </div>
+          <div v-if="resetSuccess" class="reset-success-message">
+            {{ resetSuccess }}
+          </div>
+        </div>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -69,6 +114,13 @@ const password = ref('')
 const loading = ref(false)
 const emailError = ref('')
 const passwordError = ref('')
+
+// Password reset state
+const showResetDialog = ref(false)
+const resetEmail = ref('')
+const resetError = ref('')
+const resetSuccess = ref('')
+const isResetting = ref(false)
 
 const validateForm = () => {
   let valid = true
@@ -116,6 +168,39 @@ const handleSubmit = async () => {
     loading.value = false
   }
 }
+
+const handleResetPassword = async () => {
+  resetError.value = ''
+  resetSuccess.value = ''
+  isResetting.value = true
+
+  try {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!resetEmail.value.trim()) {
+      resetError.value = 'El email es obligatorio.'
+      return
+    }
+    if (!emailRegex.test(resetEmail.value)) {
+      resetError.value = 'Ingresá un email válido.'
+      return
+    }
+
+    const response = await authService.resetPassword(resetEmail.value)
+    if (response.success) {
+      resetSuccess.value = response.message
+      resetEmail.value = ''
+      // Close dialog after 3 seconds
+      setTimeout(() => {
+        showResetDialog.value = false
+        resetSuccess.value = ''
+      }, 3000)
+    } else {
+      resetError.value = response.message || 'Error al solicitar el restablecimiento de contraseña'
+    }
+  } finally {
+    isResetting.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -152,5 +237,95 @@ const handleSubmit = async () => {
 }
 .login-link:hover {
   text-decoration: underline;
+}
+
+.forgot-password-link {
+  text-align: center;
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+}
+
+.forgot-password-link a {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.forgot-password-link a:hover {
+  text-decoration: underline;
+}
+
+.reset-dialog {
+  border-radius: 16px;
+  padding: 2rem;
+}
+
+.reset-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.reset-dialog-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  text-align: center;
+  margin-bottom: -0.2rem;
+}
+
+.reset-dialog-subtitle {
+  color: var(--muted-text);
+  text-align: center;
+  margin: 0;
+  font-size: 0.95rem;
+  margin-bottom: -0.2rem;
+}
+
+.reset-email-input {
+  margin-top: 0.2rem;
+}
+
+.reset-dialog-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: -0.6rem;
+}
+
+.reset-submit-btn {
+  width: 100%;
+  height: 48px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.reset-cancel-btn {
+  background: none;
+  border: none;
+  color: var(--muted-text);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.5rem;
+  width: 100%;
+}
+
+.reset-cancel-btn:hover {
+  color: var(--text);
+}
+
+.reset-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reset-success-message {
+  color: var(--success);
+  text-align: center;
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
 }
 </style> 
