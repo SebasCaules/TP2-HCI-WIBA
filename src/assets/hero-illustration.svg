@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="600" height="400" viewBox="0 0 600 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="300" cy="200" r="180" fill="#FFFFFF" fill-opacity="0.1"/>
+  
+  <!-- Wallet Base -->
+  <rect x="150" y="120" width="300" height="160" rx="20" fill="#FFFFFF" fill-opacity="0.9"/>
+  <rect x="150" y="120" width="300" height="40" rx="20" fill="#41A7B7" fill-opacity="0.9"/>
+  
+  <!-- Card Slots -->
+  <rect x="170" y="180" width="260" height="80" rx="10" fill="#F8FAFC"/>
+  <rect x="190" y="200" width="220" height="40" rx="8" fill="#E2E8F0"/>
+  
+  <!-- Money Transfer Arrows -->
+  <g transform="translate(400, 100) rotate(45)">
+    <path d="M0 0 L30 0 L15 -15 Z" fill="#41A7B7"/>
+    <path d="M0 0 L30 0 L15 15 Z" fill="#41A7B7" fill-opacity="0.7"/>
+  </g>
+  <g transform="translate(200, 300) rotate(225)">
+    <path d="M0 0 L30 0 L15 -15 Z" fill="#41A7B7"/>
+    <path d="M0 0 L30 0 L15 15 Z" fill="#41A7B7" fill-opacity="0.7"/>
+  </g>
+  
+  <!-- Decorative Elements -->
+  <circle cx="100" cy="100" r="20" fill="#41A7B7" fill-opacity="0.3"/>
+  <circle cx="500" cy="300" r="15" fill="#41A7B7" fill-opacity="0.3"/>
+  <circle cx="450" cy="80" r="25" fill="#41A7B7" fill-opacity="0.2"/>
+  <circle cx="150" cy="320" r="18" fill="#41A7B7" fill-opacity="0.2"/>
+  
+  <!-- Connection Lines -->
+  <path d="M100 100 Q 200 150 300 200" stroke="#41A7B7" stroke-width="2" stroke-opacity="0.3" fill="none"/>
+  <path d="M500 300 Q 400 250 300 200" stroke="#41A7B7" stroke-width="2" stroke-opacity="0.3" fill="none"/>
+  <path d="M450 80 Q 350 120 300 200" stroke="#41A7B7" stroke-width="2" stroke-opacity="0.3" fill="none"/>
+  <path d="M150 320 Q 250 270 300 200" stroke="#41A7B7" stroke-width="2" stroke-opacity="0.3" fill="none"/>
+</svg> 

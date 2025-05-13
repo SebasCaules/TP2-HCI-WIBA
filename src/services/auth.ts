@@ -125,5 +125,29 @@ export const authService = {
     } catch (error: any) {
       return { success: false, message: error.message || 'Error al registrar' }
     }
+  },
+  async resetPassword(email: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+
+      if (error) {
+        return {
+          success: false,
+          message: error.message || 'Error al solicitar el restablecimiento de contraseña'
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Se ha enviado un correo con instrucciones para restablecer tu contraseña'
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Error al solicitar el restablecimiento de contraseña'
+      }
+    }
   }
 } 
