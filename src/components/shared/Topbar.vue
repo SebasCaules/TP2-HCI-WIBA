@@ -206,7 +206,7 @@ onMounted(fetchUserData)
   color: var(--muted-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--font-sans);
 }
 .user-menu-value-container {
   display: flex;
@@ -221,7 +221,7 @@ onMounted(fetchUserData)
   font-size: 1rem;
   font-weight: 600;
   color: var(--text);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--font-sans);
   flex: 1;
 }
 .copy-icon {
@@ -251,7 +251,7 @@ onMounted(fetchUserData)
   text-align: left;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--font-sans);
 }
 .user-menu-action span {
   font-size: 0.95rem;
