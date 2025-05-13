@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-interface User {
+export interface User {
   id: string
   email: string
   name?: string
+  username?: string
 }
 
 const USER_KEY = 'wiba_user'

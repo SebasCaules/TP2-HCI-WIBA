@@ -15,6 +15,7 @@ export interface RegisterRequest {
   password: string
   name: string
   lastName: string
+  username: string
 }
 
 export interface RegisterResponse {
@@ -39,19 +40,26 @@ export const authService = {
 
       const user = data.user
       if (user) {
-        // Guardar nombre de usuario en localStorage
-        const name = user.user_metadata.name
-        if (name) {
-          localStorage.setItem('user_name', encodeURIComponent(name))
+        // Get user data from users table to get first and last name
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', user.id)
+          .single()
+
+        if (userError) {
+          console.error('Error fetching user data:', userError)
         }
-        localStorage.setItem('user_id', user.id)
+
+        // Construct display name from first and last name
+        const displayName = userData ? `${userData.first_name} ${userData.last_name}`.trim() : user.email?.split('@')[0]
 
         return {
           success: true,
           user: {
             id: user.id,
             email: user.email!,
-            name: name
+            name: displayName
           }
         }
       }
@@ -67,15 +75,18 @@ export const authService = {
       }
     }
   },
-  async register({ email, password, name, lastName }: RegisterRequest): Promise<RegisterResponse> {
+  async register({ email, password, name, lastName, username }: RegisterRequest): Promise<RegisterResponse> {
     try {
+      // Create display name from first and last name
+      const displayName = `${name} ${lastName}`.trim()
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            name,
-            lastName,
+            name: displayName,  // Set display name in user metadata
+            username,
           },
         },
       })
@@ -89,6 +100,7 @@ export const authService = {
           id: user.id,
           first_name: name,
           last_name: lastName,
+          username: username,
         })
         if (userError) {
           return { success: false, message: userError.message }

@@ -48,6 +48,16 @@ const router = createRouter({
                     path: 'depositar',
                     name: 'depositar',
                     component: () => import('@/views/dashboard/DepositarView.vue')
+                },
+                {
+                    path: 'transferir',
+                    name: 'transferir',
+                    component: () => import('@/views/dashboard/TransferirView.vue')
+                },
+                {
+                    path: 'configuracion',
+                    name: 'configuracion',
+                    component: () => import('@/views/dashboard/SettingsView.vue')
                 }
             ]
         }

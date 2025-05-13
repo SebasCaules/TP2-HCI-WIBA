@@ -12,7 +12,7 @@
         />
       </div>
       <div class="deposit-form-group">
-        <div class="deposit-method-box" @click="showCardDialog = true">
+        <button type="button" class="deposit-method-box" @click="showCardDialog = true">
           <img :src="selectedCard?.logo" :alt="selectedCard?.brand" class="deposit-card-logo" v-if="selectedCard" />
           <span class="deposit-method-text" v-if="selectedCard">
             <b>{{ selectedCard.brand }}</b> *{{ selectedCard.number_last4 }}
@@ -21,7 +21,7 @@
             Selecciona una tarjeta
           </span>
           <v-icon class="deposit-select-icon">mdi-chevron-right</v-icon>
-        </div>
+        </button>
       </div>
       <FilledButton class="deposit-continue-btn" @click="handleDeposit" :disabled="!isAmountValid">
         Continuar
@@ -111,6 +111,18 @@
         </div>
       </v-card>
     </v-dialog>
+
+    <!-- Success Dialog -->
+    <v-dialog v-model="showSuccessDialog" max-width="400px" persistent>
+      <v-card class="success-dialog">
+        <div class="success-dialog-content">
+          <v-icon color="success" size="48">mdi-check-circle</v-icon>
+          <div class="success-dialog-title">¡Depósito realizado con éxito!</div>
+          <div class="success-dialog-message">El depósito fue completado correctamente.</div>
+          <FilledButton class="success-dialog-btn" @click="showSuccessDialog = false">Aceptar</FilledButton>
+        </div>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -129,6 +141,7 @@ const showAddCardDialog = ref(false)
 const cards = ref<any[]>([])
 const selectedCard = ref<any | null>(null)
 const showConfirmDialog = ref(false)
+const showSuccessDialog = ref(false)
 
 const authStore = useAuthStore()
 const userId = computed(() => authStore.user?.id)
@@ -196,12 +209,16 @@ function handleDeposit() {
 
 async function confirmDeposit() {
   if (!amount.value || !userId.value) return
-  const result = await depositToAccount(userId.value, Number(amount.value))
+  const result = await depositToAccount(
+    userId.value, 
+    Number(amount.value),
+    selectedCard.value?.number_last4
+  )
   if (result.success) {
     showConfirmDialog.value = false
     amount.value = ''
     selectedCard.value = null
-    // Optionally, emit an event or refresh balance here
+    showSuccessDialog.value = true
   } else {
     alert(result.message || 'Error al depositar')
   }
@@ -239,9 +256,13 @@ onMounted(fetchCards)
 }
 
 .deposit-form-group {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
   width: 100%;
   max-width: 400px;
+}
+
+.deposit-form-group:last-of-type {
+  margin-bottom: 0;
 }
 
 .deposit-label {
@@ -261,25 +282,29 @@ onMounted(fetchCards)
 .deposit-method-box {
   display: flex;
   align-items: center;
-  border: 2px solid var(--border);
+  border: 1.5px solid #BDBDBD;
   border-radius: 12px;
-  background: var(--card);
-  height: 50px;
-  padding: 0 1.2rem;
-  gap: 0.8rem;
-  cursor: pointer;
-  transition: border-color 0.2s;
+  background: transparent;
+  height: 48px;
+  padding: 0 1.1rem;
   width: 100%;
-  max-width: 400px;
+  box-sizing: border-box;
+  transition: border-color 0.18s;
+  font-size: 1.06rem;
+  font-family: var(--font-sans, sans-serif);
+  cursor: pointer;
+  outline: none;
+  gap: 0.8rem;
 }
 
-.deposit-method-box:hover {
-  border-color: var(--primary);
+.deposit-method-box:hover,
+.deposit-method-box:focus {
+  border-color: #489FB5;
 }
 
 .deposit-card-logo {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   display: flex;
   align-items: center;
@@ -305,7 +330,7 @@ onMounted(fetchCards)
 }
 
 .deposit-continue-btn {
-  margin-top: 0.5rem;
+  margin-top: 1.5rem;
   font-size: 1.1rem;
   font-weight: 700;
   height: 50px;
@@ -516,5 +541,40 @@ onMounted(fetchCards)
   font-weight: 600;
   border-radius: 1.5rem;
   padding: 0.8rem 2rem;
+}
+
+.success-dialog {
+  border-radius: 16px;
+  padding: 2rem 2.5rem;
+  text-align: center;
+}
+
+.success-dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.success-dialog-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 0.5rem;
+}
+
+.success-dialog-message {
+  font-size: 1.05rem;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+
+.success-dialog-btn {
+  min-width: 120px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 1.5rem;
+  padding: 0.7rem 2rem;
+  margin-top: 0.5rem;
 }
 </style> 
