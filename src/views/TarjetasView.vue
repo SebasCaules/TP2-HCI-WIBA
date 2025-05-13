@@ -1,9 +1,9 @@
 <template>
   <v-container>
     <h1 class="tarjetas-title">Tarjetas</h1>
-    <button class="primary-btn tarjetas-add-btn" @click="showDialog = true">
-      <v-icon left>mdi-plus</v-icon>Agregar
-    </button>
+    <IconFilledButton icon="mdi-plus" class="tarjetas-add-btn" @click="showDialog = true">
+      Nueva Tarjeta
+    </IconFilledButton>
     <v-divider class="mb-4" />
     <v-data-table
       :headers="headers"
@@ -32,83 +32,12 @@
       </template>
     </v-data-table>
 
-    <!-- Add Card Dialog -->
-    <v-dialog v-model="showDialog" max-width="520px">
-      <v-card class="add-card-dialog">
-        <v-card-text>
-          <v-btn icon class="dialog-close-btn" @click="showDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-          <div class="add-card-form-container">
-            <div class="card-preview card-preview-modern">
-              <div class="card-preview-bg-modern">
-                <div class="card-preview-row card-preview-header">
-                  <span class="card-preview-title"></span>
-                  <img :src="brandLogo || transparentPixel" alt="brand" class="card-preview-logo-modern" />
-                </div>
-                <div class="card-preview-row card-preview-number-row">
-                  <span class="card-preview-number-modern">{{ maskedCardNumber }}</span>
-                </div>
-                <div class="card-preview-row card-preview-bottom-modern">
-                  <div class="card-preview-expiry-block">
-                    <span class="card-preview-expiry-modern">{{ formattedExpiry }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <v-form @submit.prevent="addCard" class="add-card-form">
-              <v-text-field
-                v-model="newCard.number"
-                label="Numero de la tarjeta"
-                outlined
-                dense
-                class="add-card-input"
-                maxlength="19"
-                :error-messages="submitted && cardNumberError ? [cardNumberError] : []"
-                :hide-details="!(submitted && cardNumberError) ? true : 'auto'"
-                @input="formatCardNumber"
-              />
-              <div class="add-card-row">
-                <v-text-field
-                  v-model="newCard.expiry"
-                  label=""
-                  outlined
-                  dense
-                  class="add-card-input"
-                  maxlength="5"
-                  :error-messages="submitted && expiryError ? [expiryError] : []"
-                  :hide-details="!(submitted && expiryError) ? true : 'auto'"
-                  placeholder="MM/YY"
-                  @input="formatExpiry"
-                />
-                <v-text-field
-                  v-model="newCard.cvv"
-                  label="CVV"
-                  outlined
-                  dense
-                  class="add-card-input"
-                  :maxlength="getCardBrand(newCard.number) === 'Amex' ? 4 : 3"
-                  :error-messages="submitted && cvvError ? [cvvError] : []"
-                  :hide-details="!(submitted && cvvError) ? true : 'auto'"
-                  :placeholder="getCardBrand(newCard.number) === 'Amex' ? '1234' : '123'"
-                />
-              </div>
-              <v-text-field
-                v-model="newCard.holder"
-                label="Nombre del titular"
-                outlined
-                dense
-                class="add-card-input"
-                :error-messages="submitted && holderError ? [holderError] : []"
-                :hide-details="!(submitted && holderError) ? true : 'auto'"
-                placeholder="Nombre Apellido"
-              />
-              <button class="primary-btn add-card-btn" type="submit">Agregar</button>
-            </v-form>
-          </div>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+    <!-- Add Card Dialog (use component) -->
+    <AddCardDialog
+      :model-value="showDialog"
+      @update:model-value="showDialog = $event"
+      @card-added="fetchCards"
+    />
   </v-container>
 </template>
 
@@ -117,6 +46,10 @@ import { ref, computed, onMounted } from 'vue'
 import { supabase } from '@/plugins/supabase'
 import { useAuthStore } from '@/store/auth'
 import { v4 as uuidv4 } from 'uuid'
+import FilledButton from '@/components/ui/FilledButton.vue'
+import IconFilledButton from '@/components/ui/IconFilledButton.vue'
+import CustomTextField from '@/components/ui/CustomTextField.vue'
+import AddCardDialog from '@/components/AddCardDialog.vue'
 
 const showDialog = ref(false)
 const submitted = ref(false)
@@ -129,128 +62,10 @@ const userId = computed(() => authStore.user?.id)
 
 const headers = [
   { title: '', value: 'logo', width: 60 },
-  { title: 'Nombre', value: 'name', align: 'start' },
-  { title: 'Vencimiento', value: 'expiry', align: 'end', width: 120 },
-  { title: '', value: 'actions', align: 'end', width: 120 },
+  { title: 'Nombre', value: 'name', align: 'start' as const },
+  { title: 'Vencimiento', value: 'expiry', align: 'end' as const, width: 120 },
+  { title: '', value: 'actions', align: 'end' as const, width: 120 },
 ]
-
-const newCard = ref({
-  number: '',
-  expiry: '',
-  cvv: '',
-  holder: '',
-})
-
-function getCardBrand(number) {
-  const n = number.replace(/\D/g, '')
-  if (n.startsWith('4')) return 'Visa'
-  if (n.startsWith('5')) return 'Mastercard'
-  if (n.startsWith('3')) return 'Amex'
-  return 'Desconocida'
-}
-
-function getBrandLogo(brand) {
-  if (brand === 'Visa') return 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png'
-  if (brand === 'Mastercard') return 'https://brandlogos.net/wp-content/uploads/2021/11/mastercard-logo.png'
-  if (brand === 'Amex') return 'https://upload.wikimedia.org/wikipedia/commons/f/fa/American_Express_logo_%282018%29.svg'
-  return transparentPixel
-}
-
-const brand = computed(() => getCardBrand(newCard.value.number))
-const brandLogo = computed(() => getBrandLogo(brand.value))
-
-const maskedCardNumber = computed(() => {
-  let raw = newCard.value.number.replace(/\D/g, '')
-  const brand = getCardBrand(raw)
-  
-  if (brand === 'Amex') {
-    let masked = (raw + 'XXXXXXXXXXXXXXX').slice(0, 15)
-    let arr = masked.split('').map((c, i) => (i < raw.length ? raw[i] : 'X'))
-    let formatted = arr.join('')
-    if (formatted.length > 4) formatted = formatted.slice(0, 4) + ' ' + formatted.slice(4)
-    if (formatted.length > 11) formatted = formatted.slice(0, 11) + ' ' + formatted.slice(11)
-    return formatted
-  } else {
-    let masked = (raw + 'XXXXXXXXXXXXXXXX').slice(0, 16)
-    let arr = masked.split('').map((c, i) => (i < raw.length ? raw[i] : 'X'))
-    return arr.join('').replace(/(.{4})/g, '$1 ').trim()
-  }
-})
-
-const formattedExpiry = computed(() => {
-  let val = newCard.value.expiry.replace(/[^\d]/g, '')
-  if (val.length === 0) return 'MM/YY'
-  if (val.length <= 2) return val
-  return val.slice(0, 2) + '/' + val.slice(2, 4)
-})
-
-const transparentPixel =
-  'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='
-
-function formatCardNumber() {
-  let val = newCard.value.number.replace(/\D/g, '')
-  const brand = getCardBrand(val)
-  
-  if (brand === 'Amex') {
-    val = val.slice(0, 15)
-    if (val.length > 4) {
-      val = val.slice(0, 4) + ' ' + val.slice(4)
-    }
-    if (val.length > 11) {
-      val = val.slice(0, 11) + ' ' + val.slice(11)
-    }
-  } else {
-    val = val.slice(0, 16)
-    val = val.replace(/(.{4})/g, '$1 ').trim()
-  }
-  
-  newCard.value.number = val
-}
-
-function formatExpiry() {
-  let val = newCard.value.expiry.replace(/[^\d]/g, '')
-  if (val.length > 4) val = val.slice(0, 4)
-  if (val.length > 2) {
-    newCard.value.expiry = val.slice(0, 2) + '/' + val.slice(2, 4)
-  } else {
-    newCard.value.expiry = val
-  }
-}
-
-const cardNumberError = computed(() => {
-  if (!newCard.value.number) return 'Campo requerido'
-  const brand = getCardBrand(newCard.value.number)
-  
-  if (brand === 'Amex') {
-    if (!/^\d{4} \d{6} \d{5}$/.test(newCard.value.number)) return 'Formato: 0000 000000 00000'
-  } else {
-    if (!/^\d{4} \d{4} \d{4} \d{4}$/.test(newCard.value.number)) return 'Formato: 0000 0000 0000 0000'
-  }
-  return ''
-})
-const expiryError = computed(() => {
-  if (!newCard.value.expiry) return 'Campo requerido'
-  if (!/^\d{2}\/\d{2}$/.test(newCard.value.expiry)) return 'Formato: MM/AA'
-  const [mm, yy] = newCard.value.expiry.split('/')
-  if (mm && (parseInt(mm) < 1 || parseInt(mm) > 12)) return 'Mes inválido'
-  return ''
-})
-const cvvError = computed(() => {
-  if (!newCard.value.cvv) return 'Campo requerido'
-  const brand = getCardBrand(newCard.value.number)
-  
-  if (brand === 'Amex') {
-    if (!/^\d{4}$/.test(newCard.value.cvv)) return '4 dígitos'
-  } else {
-    if (!/^\d{3}$/.test(newCard.value.cvv)) return '3 dígitos'
-  }
-  return ''
-})
-const holderError = computed(() => {
-  if (!newCard.value.holder) return 'Campo requerido'
-  if (newCard.value.holder.length <= 2) return 'Nombre muy corto'
-  return ''
-})
 
 async function fetchCards() {
   if (!userId.value) return
@@ -278,39 +93,28 @@ async function fetchCards() {
 
 onMounted(fetchCards)
 
-async function addCard() {
-  submitted.value = true
-  if (
-    cardNumberError.value ||
-    expiryError.value ||
-    cvvError.value ||
-    holderError.value
-  ) return
-  if (!userId.value) return
-  const last4 = newCard.value.number.replace(/\D/g, '').slice(-4)
-  const brandVal = getCardBrand(newCard.value.number)
-  const { error } = await supabase.from('cards').insert([
-    {
-      id: uuidv4(),
-      user_id: userId.value,
-      brand: brandVal,
-      number_last4: last4,
-      expiry: newCard.value.expiry,
-      holder: newCard.value.holder,
-    }
-  ])
-  if (!error) {
-    showDialog.value = false
-    newCard.value = { number: '', expiry: '', cvv: '', holder: '' }
-    submitted.value = false
-    await fetchCards()
-  }
-}
-
 async function deleteCard(id: string) {
   await supabase.from('cards').delete().eq('id', id)
   await fetchCards()
 }
+
+function getCardBrand(number) {
+  const n = number.replace(/\D/g, '')
+  if (n.startsWith('4')) return 'Visa'
+  if (n.startsWith('5')) return 'Mastercard'
+  if (n.startsWith('3')) return 'Amex'
+  return 'Desconocida'
+}
+
+function getBrandLogo(brand) {
+  if (brand === 'Visa') return 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png'
+  if (brand === 'Mastercard') return 'https://brandlogos.net/wp-content/uploads/2021/11/mastercard-logo.png'
+  if (brand === 'Amex') return 'https://upload.wikimedia.org/wikipedia/commons/f/fa/American_Express_logo_%282018%29.svg'
+  return transparentPixel
+}
+
+const transparentPixel =
+  'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='
 </script>
 
 <style scoped>
@@ -342,7 +146,22 @@ async function deleteCard(id: string) {
   padding-bottom: 16px !important;
 }
 .add-card-dialog {
-  padding: 0;
+  padding: 2rem !important;
+  border-radius: 1.5rem !important;
+  overflow: hidden;
+}
+.add-card-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+}
+.add-card-dialog-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #232526;
+  letter-spacing: 0.5px;
+  font-family: var(--font-sans), sans-serif;
 }
 .add-card-form-container {
   display: flex;
@@ -402,6 +221,7 @@ async function deleteCard(id: string) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-left: 0.2rem;
 }
 .card-preview-bottom-modern {
   align-items: flex-end;
@@ -410,6 +230,7 @@ async function deleteCard(id: string) {
   flex-direction: row;
   justify-content: space-between;
   width: 100%;
+  position: relative;
 }
 .card-preview-name-modern {
   font-size: 1.05rem;
@@ -417,12 +238,22 @@ async function deleteCard(id: string) {
   font-weight: 500;
   letter-spacing: 1px;
   text-transform: uppercase;
+  position: absolute;
+  left: 0.2rem;
+  bottom: 0;
+  padding-left: 0;
+  padding-bottom: 0.7rem;
+  color: #fff;
+  opacity: 0.92;
 }
 .card-preview-expiry-block {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   margin-left: auto;
+  position: absolute;
+  right: 1.2rem;
+  bottom: 0.7rem;
 }
 .card-preview-expiry-modern {
   font-size: 1.05rem;
@@ -435,6 +266,11 @@ async function deleteCard(id: string) {
   flex-direction: column;
   align-items: center;
   width: 100%;
+  gap: 0.7rem;
+}
+.add-card-form :deep(.custom-text-field-wrapper) {
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
 }
 .add-card-input {
   width: 320px;
@@ -448,9 +284,11 @@ async function deleteCard(id: string) {
 }
 .add-card-row {
   display: flex;
-  gap: 1.2rem;
+  gap: 0.7rem;
   width: 320px;
-  margin-bottom: 1.1rem;
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+  padding: 0 !important;
 }
 .add-card-btn {
   width: 320px;
@@ -489,5 +327,15 @@ async function deleteCard(id: string) {
   top: 10px;
   right: 10px;
   z-index: 2;
+}
+.add-card-error {
+  color: var(--error);
+  font-size: 0.98rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  text-align: center;
+  width: 100%;
+  min-height: 1.5rem;
 }
 </style> 

@@ -18,13 +18,13 @@ import { useRouter } from "vue-router";
 import Sidebar from '@/components/shared/Sidebar.vue'
 import Topbar from '@/components/shared/Topbar.vue'
 
-const authStore = useAuthStore();
-const router = useRouter();
+        const authStore = useAuthStore();
+        const router = useRouter();
 
-const logout = () => {
+        const logout = () => {
     authStore.clearUser();
     router.push("/login");
-};
+        };
 </script>
 
 <style scoped>

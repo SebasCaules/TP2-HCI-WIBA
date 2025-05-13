@@ -9,7 +9,7 @@ interface User {
 
 const USER_KEY = 'wiba_user'
 const EXP_KEY = 'wiba_user_exp'
-const EXP_MINUTES = 5
+const EXP_MINUTES = 60
 
 function getStoredUser(): User | null {
   const userStr = localStorage.getItem(USER_KEY)
