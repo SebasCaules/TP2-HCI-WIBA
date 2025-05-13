@@ -2,6 +2,7 @@
   <v-container class="login-bg fill-height" fluid>
     <v-row justify="center" align="center" class="fill-height">
       <v-col cols="12" sm="8" md="5" lg="4">
+        <BackButton to="/" class="d-flex justify-center" />
         <v-card class="pa-8 login-bg-card" elevation="0">
           <div class="text-center mb-2">
             <h1 class="login-title mb-1">WIBA</h1>
@@ -82,6 +83,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
+import BackButton from '@/components/ui/BackButton.vue'
 import { authService } from '@/services/auth'
 
 const router = useRouter()
