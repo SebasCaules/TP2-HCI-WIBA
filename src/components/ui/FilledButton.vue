@@ -13,6 +13,7 @@
 defineProps<{
   type?: 'button' | 'submit' | 'reset'
   disabled?: boolean
+  fullWidth?: boolean
 }>()
 defineEmits(['click'])
 </script>
@@ -20,7 +21,7 @@ defineEmits(['click'])
 <style scoped>
 .filled-btn {
   width: 100%;
-  max-width: 340px;
+  max-width: v-bind('fullWidth ? "none" : "340px"');
   margin: 0 auto;
   display: block;
   font-size: 1.1rem;

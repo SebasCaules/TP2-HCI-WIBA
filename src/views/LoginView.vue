@@ -8,18 +8,40 @@
             <div class="login-subtitle mb-6">Virtual Wallet Application</div>
           </div>
           <v-form @submit.prevent="handleSubmit" ref="form">
-            <EmailInput v-model="email" />
-            <PasswordInput v-model="password" />
-            <v-btn
-              type="submit"
-              color="primary"
-              block
-              class="login-btn mb-4"
-              :loading="loading"
-              size="large"
+            <CustomTextField
+              v-model="email"
+              label="Email"
+              type="email"
+              placeholder="nombre@ejemplo.com"
+              :error="!!emailError"
+              :errorMessage="emailError"
+              autocomplete="email"
+            />
+            <CustomTextField
+              v-model="password"
+              label="Contraseña"
+              type="password"
+              placeholder="••••••••"
+              :error="!!passwordError"
+              :errorMessage="passwordError"
+              autocomplete="current-password"
             >
-              Iniciar sesión
-            </v-btn>
+              <template #right="{ isPasswordVisible }">
+                <v-icon
+                  :icon="isPasswordVisible ? 'mdi-eye-off' : 'mdi-eye'"
+                  style="cursor: pointer; color: var(--muted-text);"
+                />
+              </template>
+            </CustomTextField>
+            <FilledButton
+              type="submit"
+              class="login-btn mb-4"
+              :disabled="loading"
+              @click="handleSubmit"
+              :fullWidth="true"
+            >
+              {{ loading ? 'Iniciando sesión...' : 'Iniciar sesión' }}
+            </FilledButton>
           </v-form>
           <div class="text-center mt-2">
             <span>¿No tienes una cuenta?</span>
@@ -32,12 +54,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authService } from '@/services/auth'
 import { useAuthStore } from '@/store/auth'
-import EmailInput from '@/components/ui/EmailInput.vue'
-import PasswordInput from '@/components/ui/PasswordInput.vue'
+import CustomTextField from '@/components/ui/CustomTextField.vue'
+import FilledButton from '@/components/ui/FilledButton.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -45,9 +67,36 @@ const form = ref()
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
+const emailError = ref('')
+const passwordError = ref('')
+
+const validateForm = () => {
+  let valid = true
+  emailError.value = ''
+  passwordError.value = ''
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!email.value.trim()) {
+    emailError.value = 'El email es obligatorio.'
+    valid = false
+  } else if (!emailRegex.test(email.value)) {
+    emailError.value = 'Ingresá un email válido.'
+    valid = false
+  }
+
+  if (!password.value.trim()) {
+    passwordError.value = 'La contraseña es obligatoria.'
+    valid = false
+  } else if (password.value.length < 6) {
+    passwordError.value = 'La contraseña debe tener al menos 6 caracteres.'
+    valid = false
+  }
+
+  return valid
+}
 
 const handleSubmit = async () => {
-  // No validación extra, los componentes ya validan
+  if (!validateForm()) return
   loading.value = true
   try {
     const response = await authService.login(email.value, password.value)
@@ -55,7 +104,13 @@ const handleSubmit = async () => {
       authStore.setUser(response.user)
       router.push('/dashboard')
     } else {
-      // Puedes mostrar un alert aquí si quieres
+      // Show error message
+      if (response.message?.includes('Invalid login credentials')) {
+        emailError.value = 'Email o contraseña incorrectos.'
+        passwordError.value = 'Email o contraseña incorrectos.'
+      } else {
+        emailError.value = response.message || 'Error al iniciar sesión'
+      }
     }
   } finally {
     loading.value = false
@@ -82,12 +137,12 @@ const handleSubmit = async () => {
   font-weight: 400;
 }
 .login-btn {
-  background: var(--primary) !important;
-  color: var(--primary-foreground) !important;
-  border-radius: var(--radius-lg);
+  margin-top: 0.5rem;
   font-size: 1.1rem;
-  font-weight: 600;
-  text-transform: none;
+  font-weight: 700;
+  height: 50px;
+  width: 100%;
+  align-self: stretch;
 }
 .login-link {
   color: var(--primary);

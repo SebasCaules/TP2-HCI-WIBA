@@ -36,13 +36,14 @@
               maxlength="19"
               @input="formatCardNumber"
             />
-            <div class="add-card-row" style="width: 100%; max-width: 340px; margin: 0 auto 0.5rem auto;">
+            <div class="add-card-row">
               <CustomTextField
                 v-model="newCard.expiry"
                 placeholder="MM/YY"
                 type="text"
                 maxlength="5"
                 @input="formatExpiry"
+                class="add-card-row-field"
               />
               <CustomTextField
                 v-model="newCard.cvv"
@@ -50,6 +51,7 @@
                 type="number"
                 maxlength="4"
                 @input="newCard.cvv = newCard.cvv.toString().slice(0, 4)"
+                class="add-card-row-field"
               />
             </div>
             <CustomTextField
@@ -94,14 +96,14 @@ const submitted = ref(false)
 const transparentPixel =
   'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='
 
-function getCardBrand(number) {
+function getCardBrand(number: string) {
   const n = number.replace(/\D/g, '')
   if (n.startsWith('4')) return 'Visa'
   if (n.startsWith('5')) return 'Mastercard'
   if (n.startsWith('3')) return 'Amex'
   return 'Desconocida'
 }
-function getBrandLogo(brand) {
+function getBrandLogo(brand: string) {
   if (brand === 'Visa') return 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png'
   if (brand === 'Mastercard') return 'https://brandlogos.net/wp-content/uploads/2021/11/mastercard-logo.png'
   if (brand === 'Amex') return 'https://upload.wikimedia.org/wikipedia/commons/f/fa/American_Express_logo_%282018%29.svg'
@@ -371,10 +373,14 @@ async function addCard() {
 .add-card-row {
   display: flex;
   gap: 0.7rem;
-  width: 320px;
+  width: 100%;
   margin-bottom: 0 !important;
   margin-top: 0 !important;
   padding: 0 !important;
+}
+.add-card-row-field {
+  flex: 1 1 0;
+  min-width: 0;
 }
 .add-card-btn {
   width: 320px;
