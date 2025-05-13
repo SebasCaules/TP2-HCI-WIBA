@@ -47,8 +47,8 @@
             </FilledButton>
           </v-form>
           <div class="text-center mt-2">
-            <span>¿No tienes una cuenta?</span>
-            <router-link to="/register" class="login-link">Regístrate</router-link>
+            <span>¿No tenés una cuenta?</span>
+            <router-link to="/register" class="login-link">Registrate</router-link>
           </div>
         </v-card>
       </v-col>
@@ -207,20 +207,25 @@ const handleResetPassword = async () => {
 .login-bg {
   background: var(--background);
 }
+
 .login-bg-card {
   background: var(--card);
+  border-radius: var(--radius-lg);
 }
+
 .login-title {
   color: var(--primary);
   font-size: 2.5rem;
   font-weight: 700;
   letter-spacing: 1px;
 }
+
 .login-subtitle {
   color: var(--muted-text);
   font-size: 1.1rem;
   font-weight: 400;
 }
+
 .login-btn {
   margin-top: 0.5rem;
   font-size: 1.1rem;
@@ -229,12 +234,14 @@ const handleResetPassword = async () => {
   width: 100%;
   align-self: stretch;
 }
+
 .login-link {
   color: var(--primary);
   font-weight: 500;
   margin-left: 4px;
   text-decoration: none;
 }
+
 .login-link:hover {
   text-decoration: underline;
 }
@@ -256,6 +263,7 @@ const handleResetPassword = async () => {
   text-decoration: underline;
 }
 
+/* Reset Dialog styles */
 .reset-dialog {
   border-radius: 16px;
   padding: 2rem;
