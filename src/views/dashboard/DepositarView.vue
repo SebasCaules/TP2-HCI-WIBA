@@ -147,12 +147,13 @@ import FilledButton from '@/components/ui/FilledButton.vue'
 import AddCardDialog from '@/components/AddCardDialog.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import { depositToAccount } from '@/services/account'
+import type { Card } from '@/types/types'
 
 const amount = ref('')
 const showCardDialog = ref(false)
 const showAddCardDialog = ref(false)
-const cards = ref<any[]>([])
-const selectedCard = ref<any | null>(null)
+const cards = ref<Card[]>([])
+const selectedCard = ref<Card | null>(null)
 const showConfirmDialog = ref(false)
 const showSuccessDialog = ref(false)
 
@@ -210,7 +211,7 @@ async function fetchCards() {
   }
 }
 
-function selectCard(card: any) {
+function selectCard(card: Card) {
   selectedCard.value = card
   showCardDialog.value = false
 }

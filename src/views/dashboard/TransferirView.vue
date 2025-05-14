@@ -152,13 +152,7 @@ import FilledButton from '@/components/ui/FilledButton.vue'
 import AddContactDialog from '@/components/AddContactDialog.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import { v4 as uuidv4 } from 'uuid'
-
-interface Contact {
-  id: string;
-  name: string;
-  username: string;
-  emailOrAccount: string;
-}
+import type { Contact } from '@/types/types'
 
 interface ContactData {
   contact_id: string;

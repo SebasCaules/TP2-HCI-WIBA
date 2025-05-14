@@ -120,6 +120,7 @@ import { useAuthStore } from '@/store/auth'
 import { supabase } from '@/plugins/supabase'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
+import type { User } from '@/types/types'
 
 const authStore = useAuthStore()
 
