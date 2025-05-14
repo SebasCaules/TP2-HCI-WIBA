@@ -1,7 +1,7 @@
 import { supabase } from '@/plugins/supabase'
 import { v4 as uuidv4 } from 'uuid'
 
-export async function depositToAccount(userId: string, amount: number, cardLast4?: string): Promise<{ success: boolean; message?: string }> {
+export async function depositToAccount(userId: string, amount: number, cardLast4?: string, cardBrand?: string): Promise<{ success: boolean; message?: string }> {
   // Fetch the current account
   const { data: account, error: fetchError } = await supabase
     .from('accounts')
@@ -31,11 +31,12 @@ export async function depositToAccount(userId: string, amount: number, cardLast4
     .from('transactions')
     .insert({
       id: uuidv4(),
-      description: cardLast4 ? `Depósito desde tarjeta *${cardLast4}` : 'Depósito',
+      description: cardLast4 ? `Depósito desde *${cardLast4}` : 'Depósito',
       user_id: userId,
       transaction_type: 'deposit',
       amount: amount,
       recipient_id: null,
+      card_company: cardBrand?.toLowerCase() || null,
       created_at: new Date()
     });
 

@@ -212,7 +212,8 @@ async function confirmDeposit() {
   const result = await depositToAccount(
     userId.value, 
     Number(amount.value),
-    selectedCard.value?.number_last4
+    selectedCard.value?.number_last4,
+    selectedCard.value?.brand
   )
   if (result.success) {
     showConfirmDialog.value = false
