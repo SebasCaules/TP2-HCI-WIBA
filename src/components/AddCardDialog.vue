@@ -1,6 +1,6 @@
 <template>
-  <v-dialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" max-width="600px">
-    <v-card class="add-card-dialog">
+  <v-dialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" max-width="600px" :retain-focus="false" :scrim="true">
+    <v-card class="add-card-dialog" width="100%">
       <v-card-text>
         <div class="add-card-dialog-header">
           <span class="add-card-dialog-title">Nueva Tarjeta</span>
@@ -234,9 +234,12 @@ async function addCard() {
 
 <style scoped>
 .add-card-dialog {
-  padding: 2rem !important;
-  border-radius: 1.5rem !important;
-  overflow: hidden;
+  padding: 2rem 3rem !important;
+  border-radius: 2rem !important;
+  overflow: visible;
+  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
+  width: 100%;
+  margin: 0 auto;
 }
 .add-card-dialog-header {
   display: flex;

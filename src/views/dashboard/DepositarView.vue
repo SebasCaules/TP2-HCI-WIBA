@@ -1,5 +1,6 @@
 <template>
   <v-container class="deposit-container" fluid>
+    <BackButton to="/dashboard" class="deposit-back-btn" />
     <div class="deposit-content">
       <h1 class="deposit-title">Depositar</h1>
       <div class="deposit-form-group">
@@ -39,7 +40,7 @@
         <div class="select-card-dialog-header">
           <span class="select-card-title">Seleccionar tarjeta</span>
           <v-btn icon class="dialog-close-btn" @click="showCardDialog = false">
-            <v-icon>dialog-close</v-icon>
+            <v-icon>mdi-close</v-icon>
           </v-btn>
         </div>
         <div class="select-card-list-custom">
@@ -144,6 +145,7 @@ import { useAuthStore } from '@/store/auth'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import AddCardDialog from '@/components/AddCardDialog.vue'
+import BackButton from '@/components/ui/BackButton.vue'
 import { depositToAccount } from '@/services/account'
 
 const amount = ref('')
@@ -243,9 +245,18 @@ onMounted(fetchCards)
 .deposit-container {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
   background: var(--background);
+  position: relative;
+  padding-top: 1rem;
+}
+
+.deposit-back-btn {
+  position: absolute;
+  top: 2rem;
+  left: 2rem;
+  z-index: 1;
 }
 
 .deposit-content {
@@ -352,7 +363,7 @@ onMounted(fetchCards)
 }
 
 .select-card-dialog {
-  border-radius: 1.5rem;
+  border-radius: 2rem !important;
   overflow: visible;
   box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
   max-width: 960px;
@@ -467,7 +478,7 @@ onMounted(fetchCards)
 }
 
 .confirm-deposit-dialog {
-  border-radius: 1.5rem;
+  border-radius: 2rem !important;
   overflow: visible;
   box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
   width: 100%;

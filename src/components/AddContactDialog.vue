@@ -1,6 +1,6 @@
 <template>
-  <v-dialog v-model="dialog" max-width="500px">
-    <v-card class="add-contact-dialog">
+  <v-dialog v-model="dialog" max-width="500px" :retain-focus="false" :scrim="true">
+    <v-card class="add-contact-dialog" width="100%">
       <div class="dialog-header">
         <span class="dialog-title">Agregar Contacto</span>
         <v-btn icon class="dialog-close-btn" @click="closeDialog">
@@ -156,9 +156,12 @@ async function handleSubmit() {
 
 <style scoped>
 .add-contact-dialog {
-  padding: 1.5rem;
-  border-radius: 1.5rem !important;
-  overflow: hidden;
+  padding: 2rem 3rem;
+  border-radius: 2rem !important;
+  overflow: visible;
+  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
+  width: 100%;
+  margin: 0 auto;
 }
 
 .dialog-header {
@@ -183,7 +186,7 @@ async function handleSubmit() {
   width: 100%;
   max-width: 340px;
   margin: 0 auto;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .dialog-actions {
