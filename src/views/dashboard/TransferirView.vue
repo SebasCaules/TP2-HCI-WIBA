@@ -445,12 +445,12 @@ async function removeContact(contactId: string) {
 .transfer-container {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
   background: var(--background);
   position: relative;
+  padding-top: 1rem;
 }
-
 .back-btn-top-left {
   position: absolute;
   top: 32px;
@@ -511,7 +511,7 @@ async function removeContact(contactId: string) {
 }
 
 .confirm-transfer-dialog {
-  border-radius: 1.5rem;
+  border-radius: 2rem !important;
   overflow: visible;
   box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
   width: 100%;
