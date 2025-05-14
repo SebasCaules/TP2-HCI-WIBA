@@ -63,6 +63,11 @@ const router = createRouter({
                     path: 'pagos',
                     name: 'pagos',
                     component: () => import('@/views/dashboard/PagosView.vue')
+                },
+                {
+                    path: 'contactos',
+                    name: 'contactos',
+                    component: () => import('@/views/ContactsView.vue')
                 }
             ]
         }

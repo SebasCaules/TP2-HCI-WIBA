@@ -27,7 +27,7 @@ defineEmits(['click'])
 <style scoped>
 .icon-filled-btn {
   width: 100%;
-  max-width: 220px;
+  max-width: 280px;
   margin: 0 auto;
   display: flex;
   align-items: center;

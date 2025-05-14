@@ -223,6 +223,14 @@ function getAmountPrefix(transaction: Transaction): string {
 </script>
 
 <style scoped>
+.transactions-main {
+  padding: 0;
+}
+
+.transactions-row {
+  margin: 0;
+}
+
 .transactions-title {
   font-size: 2.2rem;
   font-weight: 800;

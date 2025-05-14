@@ -98,14 +98,16 @@
     </div>
 
     <!-- Success Dialog -->
-    <v-dialog v-model="showSuccessDialog" max-width="400px" persistent>
+    <v-dialog v-model="showSuccessDialog" max-width="400px">
       <v-card class="success-dialog">
+        <div class="success-dialog-header">
+          <v-btn icon class="dialog-close-btn" @click="showSuccessDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
         <div class="success-dialog-content">
           <v-icon color="success" size="48">mdi-check-circle</v-icon>
           <div class="success-dialog-title">{{ successMessage }}</div>
-          <FilledButton class="success-dialog-btn" @click="showSuccessDialog = false">
-            Aceptar
-          </FilledButton>
         </div>
       </v-card>
     </v-dialog>
@@ -416,9 +418,20 @@ onMounted(fetchUserData)
 }
 
 .success-dialog {
-  border-radius: 16px;
-  padding: 2rem 2.5rem;
+  border-radius: 1.5rem;
+  padding: 1.5rem;
   text-align: center;
+}
+
+.success-dialog-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.dialog-close-btn {
+  color: var(--muted-text) !important;
+  margin-right: -8px;
 }
 
 .success-dialog-content {
@@ -426,6 +439,7 @@ onMounted(fetchUserData)
   flex-direction: column;
   align-items: center;
   gap: 1.2rem;
+  padding: 0 1rem 1rem;
 }
 
 .success-dialog-title {
@@ -434,15 +448,6 @@ onMounted(fetchUserData)
   color: var(--primary);
   margin-top: 0.5rem;
   font-family: var(--font-sans), sans-serif;
-}
-
-.success-dialog-btn {
-  min-width: 120px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  border-radius: 1.5rem;
-  padding: 0.7rem 2rem;
-  margin-top: 0.5rem;
 }
 
 .settings-error-message {
