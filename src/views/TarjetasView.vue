@@ -1,36 +1,61 @@
 <template>
-  <v-container>
-    <h1 class="tarjetas-title">Tarjetas</h1>
-    <IconFilledButton icon="mdi-plus" class="tarjetas-add-btn" @click="showDialog = true">
-      Nueva Tarjeta
-    </IconFilledButton>
-    <v-divider class="mb-4" />
-    <v-data-table
-      :headers="headers"
-      :items="cards"
-      class="tarjetas-table"
-      hide-default-footer
-      item-value="id"
-      :loading="loading"
-    >
-      <template #no-data>
-        <div v-if="noCards" class="no-cards-message">No tienes tarjetas guardadas.</div>
-      </template>
-      <template #item.logo="{ item }">
-        <img :src="item.logo" :alt="item.brand" class="tarjeta-logo" />
-      </template>
-      <template #item.name="{ item }">
-        <span class="tarjeta-name">{{ item.brand }} *{{ item.number_last4 }}</span>
-      </template>
-      <template #item.expiry="{ item }">
-        <span class="tarjeta-expiry">{{ item.expiry }}</span>
-      </template>
-      <template #item.actions="{ item }">
-        <v-btn variant="text" color="error" class="tarjeta-delete-btn" @click="deleteCard(item.id)">
-          Eliminar
-        </v-btn>
-      </template>
-    </v-data-table>
+  <v-container fluid class="transactions-main">
+    <v-row class="transactions-row" no-gutters>
+      <v-col cols="12" class="px-md-8">
+        <h1 class="transactions-title">Tarjetas</h1>
+        <IconFilledButton icon="mdi-plus" class="tarjetas-add-btn" @click="showDialog = true">
+          Nueva Tarjeta
+        </IconFilledButton>
+        <div class="card">
+          <v-data-table
+            :headers="headers"
+            :items="cards"
+            class="transactions-table"
+            hide-default-footer
+            item-value="id"
+            :loading="loading"
+          >
+            <template #no-data>
+              <div class="text-center pa-4">
+                {{ loading ? 'Cargando tarjetas...' : 'No tienes tarjetas guardadas.' }}
+              </div>
+            </template>
+            <template #item.logo="{ item }">
+              <td class="transaction-icon-cell">
+                <img :src="item.logo" :alt="item.brand" class="transaction-card-logo" />
+              </td>
+            </template>
+            <template #[`header.name`]>
+              <th><div class="nombre-align">Nombre</div></th>
+            </template>
+            <template #item.name="{ item }">
+              <td class="transaction-description">
+                <div class="nombre-align">
+                  <span class="tarjeta-name">{{ item.brand }} *{{ item.number_last4 }}</span>
+                </div>
+              </td>
+            </template>
+            <template #[`header.expiry`]>
+              <th><div class="expiry-align">Vencimiento</div></th>
+            </template>
+            <template #item.expiry="{ item }">
+              <td class="transaction-date">
+                <div class="expiry-align">
+                  <span class="tarjeta-expiry">{{ item.expiry }}</span>
+                </div>
+              </td>
+            </template>
+            <template #item.actions="{ item }">
+              <td class="transaction-actions">
+                <v-btn variant="text" color="error" class="tarjeta-delete-btn" @click="deleteCard(item.id)">
+                  Eliminar
+                </v-btn>
+              </td>
+            </template>
+          </v-data-table>
+        </div>
+      </v-col>
+    </v-row>
 
     <!-- Add Card Dialog (use component) -->
     <AddCardDialog
@@ -118,13 +143,22 @@ const transparentPixel =
 </script>
 
 <style scoped>
-.tarjetas-title {
+.transactions-main {
+  padding: 0;
+}
+
+.transactions-row {
+  margin: 0;
+}
+
+.transactions-title {
   font-size: 2.2rem;
   font-weight: 800;
   margin-bottom: 1.5rem;
   margin-top: 0.5rem;
   font-family: var(--font-sans), sans-serif;
 }
+
 .tarjetas-add-btn {
   margin-bottom: 2.2rem;
   font-size: 1.1rem;
@@ -134,17 +168,96 @@ const transparentPixel =
   align-items: center;
   gap: 0.5rem;
 }
-.tarjetas-table {
-  width: 100%;
+
+.transactions-table {
   background: transparent;
+  table-layout: fixed;
 }
-.tarjetas-table :deep(.v-data-table__tr) {
-  height: 72px;
+
+.transactions-table :deep(th),
+.transactions-table :deep(td) {
+  padding: 5px 0 !important;
 }
-.tarjetas-table :deep(.v-data-table__td) {
-  padding-top: 16px !important;
-  padding-bottom: 16px !important;
+
+.transactions-table :deep(th) {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  white-space: nowrap;
+  background-color: var(--card);
+  border-bottom: none;
+  font-family: var(--font-sans), sans-serif;
 }
+
+.transaction-icon-cell {
+  width: auto;
+  min-width: 0;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 8px !important;
+  padding-right: 0 !important;
+}
+
+.transaction-card-logo {
+  width: 48px;
+  height: 32px;
+  object-fit: contain;
+  display: block;
+  margin: 0;
+}
+
+.transaction-description {
+  font-weight: 500;
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+  padding-right: 16px !important;
+  text-align: start !important;
+}
+
+.transaction-date {
+  color: var(--muted-text);
+  font-size: 0.95rem;
+  text-align: start !important;
+  padding-right: 16px !important;
+  padding-left: 16px !important;
+}
+
+.transaction-actions {
+  text-align: end !important;
+  padding-right: 16px !important;
+}
+
+.tarjeta-name {
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--text);
+  font-family: var(--font-sans), sans-serif;
+}
+
+.tarjeta-expiry {
+  color: var(--muted-text);
+  font-size: 0.95rem;
+  font-family: var(--font-sans), sans-serif;
+}
+
+.tarjeta-delete-btn {
+  font-family: var(--font-sans), sans-serif !important;
+  color: var(--error) !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  padding: 4px 8px !important;
+}
+
+.text-center {
+  text-align: center;
+  color: var(--muted-text);
+  font-size: 1.1rem;
+}
+
 .add-card-dialog {
   padding: 2rem !important;
   border-radius: 1.5rem !important;
@@ -298,36 +411,6 @@ const transparentPixel =
   padding: 0.7rem 2.5rem;
   color: #fff !important;
 }
-.tarjeta-logo {
-  width: 38px;
-  height: 38px;
-  object-fit: contain;
-}
-.tarjeta-name {
-  font-weight: 700;
-  font-size: 1.1rem;
-  padding-left: 0.5rem;
-}
-.tarjeta-expiry {
-  color: #888;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-.tarjeta-delete-btn,
-.tarjeta-delete-btn .v-btn__content {
-  font-family: var(--font-sans), sans-serif !important;
-  color: #e53935 !important;
-  font-weight: bold !important;
-  font-size: inherit !important;
-  letter-spacing: normal !important;
-  text-transform: none;
-}
-.dialog-close-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-}
 .add-card-error {
   color: var(--error);
   font-size: 0.98rem;
@@ -337,5 +420,12 @@ const transparentPixel =
   text-align: center;
   width: 100%;
   min-height: 1.5rem;
+}
+.nombre-align {
+  padding-left: 32px;
+}
+.expiry-align {
+  text-align: right;
+  padding-right: 24px;
 }
 </style> 
