@@ -43,19 +43,26 @@
           </v-btn>
         </div>
         <div class="select-card-list-custom">
-          <div
-            v-for="card in cards"
-            :key="card.id"
-            class="select-card-custom"
-            :class="{ selected: selectedCard && selectedCard.id === card.id }"
-            @click="selectCard(card)"
-          >
-            <img :src="card.logo" :alt="card.brand" class="select-card-logo" />
-            <div class="select-card-info">
-              <div class="select-card-brand">{{ card.brand }} *{{ card.number_last4 }}</div>
-              <div class="select-card-expiry">Vence {{ card.expiry }}</div>
+          <template v-if="cards.length > 0">
+            <div
+              v-for="card in cards"
+              :key="card.id"
+              class="select-card-custom"
+              :class="{ selected: selectedCard && selectedCard.id === card.id }"
+              @click="selectCard(card)"
+            >
+              <img :src="card.logo" :alt="card.brand" class="select-card-logo" />
+              <div class="select-card-info">
+                <div class="select-card-brand">{{ card.brand }} *{{ card.number_last4 }}</div>
+                <div class="select-card-expiry">Vence {{ card.expiry }}</div>
+              </div>
+              <v-icon v-if="selectedCard && selectedCard.id === card.id" color="primary" class="select-card-check">mdi-check-circle</v-icon>
             </div>
-            <v-icon v-if="selectedCard && selectedCard.id === card.id" color="primary" class="select-card-check">mdi-check-circle</v-icon>
+          </template>
+          <div v-else class="no-cards-message">
+            <v-icon size="48" :color="'#41a7b7'">mdi-credit-card-outline</v-icon>
+            <div class="no-cards-title">No tienes tarjetas guardadas</div>
+            <div class="no-cards-subtitle">Agrega una tarjeta para realizar depósitos</div>
           </div>
         </div>
         <v-card-actions class="select-card-actions">
@@ -577,5 +584,36 @@ onMounted(fetchCards)
   border-radius: 1.5rem;
   padding: 0.7rem 2rem;
   margin-top: 0.5rem;
+}
+
+.no-cards-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 2px dashed #e0e0e0;
+  width: 100%;
+  gap: 1rem;
+}
+
+.no-cards-icon {
+  color: var(--primary);
+}
+
+.no-cards-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-sans), sans-serif;
+}
+
+.no-cards-subtitle {
+  font-size: 1.05rem;
+  color: var(--muted-text);
+  font-family: var(--font-sans), sans-serif;
 }
 </style> 
