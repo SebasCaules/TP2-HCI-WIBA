@@ -20,6 +20,7 @@
           :title="item.label"
           :active="isActive(item.to)"
           class="sidebar-item"
+          :ripple="false"
         />
       </v-list>
     </v-navigation-drawer>
@@ -32,7 +33,7 @@ import { useRoute } from 'vue-router'
 
 const navItems = [
   { label: 'Inicio', to: '/dashboard', icon: 'mdi-home-variant' },
-  { label: 'Transacciones', to: '/dashboard/transacciones', icon: 'mdi-receipt-text' },
+  { label: 'Transacciones', to: '/dashboard/transacciones', icon: 'mdi-swap-horizontal' },
   { label: 'Tarjetas', to: '/dashboard/tarjetas', icon: 'mdi-credit-card-multiple' },
   { label: 'Inversiones', to: '/dashboard/inversiones', icon: 'mdi-finance' },
 ]
@@ -73,38 +74,125 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   border-radius: 12px;
-  margin-bottom: 2.5rem;
-  font-size: 1.25rem;
-  font-weight: 700;
-  min-height: 48px;
-  color: #444;
-  transition: background 0.2s, color 0.2s;
-  background: #fff !important;
-  padding-left: 2.2rem;
+  margin-bottom: 2rem;
+  font-size: 1.15rem;
+  font-weight: 700 !important;
+  min-height: 44px;
+  color: #7c7c7c !important;
+  opacity: 1 !important;
+  filter: none !important;
+  transition: color 0.2s;
+  background: transparent !important;
+  padding-left: 2.2rem !important;
   padding-right: 1rem;
 }
 .sidebar-item .v-icon {
-  font-size: 2rem;
-  margin-right: 0.7rem;
-  color: #444;
+  font-size: 1.8rem;
+  margin-right: 0.1rem !important;
+  opacity: 1 !important;
+  filter: none !important;
   transition: color 0.2s;
 }
+.sidebar-item .v-list-item__content,
+.sidebar-item .v-list-item__title {
+  font-weight: 700 !important;
+}
 .sidebar-item.v-list-item--active,
-.sidebar-item.v-list-item--active::before {
-  background: #fff !important;
+.sidebar-item.v-list-item--active::before,
+.sidebar-item.v-list-item--active .v-list-item__overlay {
+  background: transparent !important;
   box-shadow: none !important;
 }
 .sidebar-item.v-list-item--active {
-  color: #3db0c7 !important;
+  color: var(--primary) !important;
   font-weight: 700;
+  opacity: 1 !important;
+  filter: none !important;
 }
 .sidebar-item.v-list-item--active .v-icon {
-  color: #3db0c7 !important;
+  color: var(--primary) !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+.sidebar-item .v-list-item__title {
+  color: #444;
+  font-weight: 600 !important;
+  margin-left: -0.5rem;
 }
 @media (max-width: 960px) {
   .sidebar-drawer {
     position: fixed;
     z-index: 100;
   }
+}
+</style>
+
+<style>
+.v-list-item--active,
+.v-list-item--active::before,
+.v-list-item--active .v-list-item__overlay {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.sidebar-item:hover,
+.sidebar-item:focus,
+.sidebar-item:active,
+.sidebar-item:hover::before,
+.sidebar-item:focus::before,
+.sidebar-item:active::before,
+.sidebar-item:hover .v-list-item__overlay,
+.sidebar-item:focus .v-list-item__overlay,
+.sidebar-item:active .v-list-item__overlay {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.sidebar-item:hover,
+.sidebar-item:focus {
+  color: var(--primary) !important;
+}
+.sidebar-item:hover .v-icon,
+.sidebar-item:focus .v-icon {
+  color: var(--primary) !important;
+}
+
+.sidebar-item,
+.sidebar-item .v-icon {
+  color: #7c7c7c !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.sidebar-item:hover,
+.sidebar-item:focus,
+.sidebar-item.v-list-item--active {
+  color: var(--primary) !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.sidebar-item:hover .v-icon,
+.sidebar-item:focus .v-icon,
+.sidebar-item.v-list-item--active .v-icon {
+  color: var(--primary) !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.sidebar-item .v-list-item__content .v-list-item__title,
+.sidebar-item .v-list-item-title {
+  font-weight: 600 !important;
+}
+
+.sidebar-item:focus,
+.sidebar-item:active,
+.sidebar-item.v-list-item--active,
+.sidebar-item.v-list-item--active::before,
+.sidebar-item .v-list-item__overlay,
+.sidebar-item:focus-visible,
+.sidebar-item:focus .v-list-item__overlay,
+.sidebar-item:active .v-list-item__overlay {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 </style> 

@@ -60,7 +60,7 @@
             </div>
           </template>
           <div v-else class="no-cards-message">
-            <v-icon size="48" style="color: var(--primary)">mdi-credit-card-outline</v-icon>
+            <v-icon size="48" :color="'#41a7b7'">mdi-credit-card-outline</v-icon>
             <div class="no-cards-title">No tienes tarjetas guardadas</div>
             <div class="no-cards-subtitle">Agrega una tarjeta para realizar depósitos</div>
           </div>
@@ -600,6 +600,9 @@ onMounted(fetchCards)
   gap: 1rem;
 }
 
+.no-cards-icon {
+  color: var(--primary);
+}
 .no-cards-title {
   font-size: 1.2rem;
   font-weight: 700;
