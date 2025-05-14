@@ -603,7 +603,6 @@ onMounted(fetchCards)
 .no-cards-icon {
   color: var(--primary);
 }
-
 .no-cards-title {
   font-size: 1.2rem;
   font-weight: 700;
