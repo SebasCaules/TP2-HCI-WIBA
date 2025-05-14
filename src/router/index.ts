@@ -20,6 +20,11 @@ const router = createRouter({
             component: () => import('@/views/auth/RegisterView.vue')
         },
         {
+            path: '/reset-password',
+            name: 'reset-password',
+            component: () => import('@/views/auth/ResetPasswordView.vue')
+        },
+        {
             path: '/dashboard',
             component: () => import('@/layouts/DashboardLayout.vue'),
             meta: { requiresAuth: true },

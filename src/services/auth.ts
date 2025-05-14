@@ -149,5 +149,28 @@ export const authService = {
         message: error.message || 'Error al solicitar el restablecimiento de contraseña'
       }
     }
+  },
+  async resetPasswordWithToken(accessToken: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) {
+        console.error('Error resetting password:', error)
+        return { 
+          success: false, 
+          error: error.message 
+        }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Unexpected error resetting password:', error)
+      return { 
+        success: false, 
+        error: 'Error inesperado al restablecer la contraseña' 
+      }
+    }
   }
 } 
