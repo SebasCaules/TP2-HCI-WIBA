@@ -10,7 +10,7 @@
           <v-data-table
             :headers="headers"
             :items="cards"
-            class="transactions-table"
+            class="tarjetas-table"
             hide-default-footer
             item-value="id"
             :loading="loading"
@@ -20,37 +20,32 @@
                 {{ loading ? 'Cargando tarjetas...' : 'No tienes tarjetas guardadas.' }}
               </div>
             </template>
-            <template #item.logo="{ item }">
-              <td class="transaction-icon-cell">
-                <img :src="item.logo" :alt="item.brand" class="transaction-card-logo" />
-              </td>
-            </template>
-            <template #[`header.name`]>
-              <th><div class="nombre-align">Nombre</div></th>
-            </template>
-            <template #item.name="{ item }">
-              <td class="transaction-description">
-                <div class="nombre-align">
-                  <span class="tarjeta-name">{{ item.brand }} *{{ item.number_last4 }}</span>
-                </div>
-              </td>
-            </template>
-            <template #[`header.expiry`]>
-              <th><div class="expiry-align">Vencimiento</div></th>
-            </template>
-            <template #item.expiry="{ item }">
-              <td class="transaction-date">
-                <div class="expiry-align">
-                  <span class="tarjeta-expiry">{{ item.expiry }}</span>
-                </div>
-              </td>
-            </template>
-            <template #item.actions="{ item }">
-              <td class="transaction-actions">
-                <v-btn variant="text" color="error" class="tarjeta-delete-btn" @click="deleteCard(item.id)">
-                  Eliminar
-                </v-btn>
-              </td>
+            <template #item="{ item }">
+              <tr>
+                <td class="transaction-icon-cell">
+                  <img :src="item.logo" :alt="item.brand" class="transaction-card-logo" />
+                </td>
+                <td class="transaction-description">
+                  <div class="nombre-align">
+                    <span class="tarjeta-name">{{ item.brand }} *{{ item.number_last4 }}</span>
+                  </div>
+                </td>
+                <td class="transaction-date">
+                  <div class="expiry-align">
+                    <span class="tarjeta-expiry">{{ item.expiry }}</span>
+                  </div>
+                </td>
+                <td class="text-right">
+                  <v-btn
+                    icon="mdi-delete"
+                    variant="text"
+                    color="error"
+                    size="small"
+                    @click="deleteCard(item.id)"
+                    title="Eliminar tarjeta"
+                  ></v-btn>
+                </td>
+              </tr>
             </template>
           </v-data-table>
         </div>
@@ -89,7 +84,7 @@ const headers = [
   { title: '', value: 'logo', width: 60 },
   { title: 'Nombre', value: 'name', align: 'start' as const },
   { title: 'Vencimiento', value: 'expiry', align: 'end' as const, width: 120 },
-  { title: '', value: 'actions', align: 'end' as const, width: 120 },
+  { title: 'Acciones', value: 'actions', align: 'end' as const },
 ]
 
 async function fetchCards() {
@@ -163,7 +158,8 @@ const transparentPixel =
   margin-bottom: 2.2rem;
   font-size: 1.1rem;
   font-weight: 600;
-  padding: 0.5rem 2rem;
+  padding: 0.5rem 2.5rem;
+  min-width: 200px;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -242,14 +238,12 @@ const transparentPixel =
   font-family: var(--font-sans), sans-serif;
 }
 
+.tarjeta-delete-cell {
+  /* Remove custom styles */
+}
+
 .tarjeta-delete-btn {
-  font-family: var(--font-sans), sans-serif !important;
-  color: var(--error) !important;
-  font-weight: 600 !important;
-  font-size: 0.95rem !important;
-  letter-spacing: normal !important;
-  text-transform: none !important;
-  padding: 4px 8px !important;
+  /* Remove custom styles */
 }
 
 .text-center {
@@ -427,5 +421,25 @@ const transparentPixel =
 .expiry-align {
   text-align: right;
   padding-right: 24px;
+}
+
+.tarjetas-table :deep(th) {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  white-space: nowrap;
+  background-color: var(--card);
+  border-bottom: none;
+  font-family: var(--font-sans), sans-serif;
+}
+
+.custom-table-header {
+  font-weight: 700 !important;
+  font-size: 1rem;
+  color: var(--text);
+  white-space: nowrap;
+  background-color: #f5f6f7 !important;
+  border-bottom: none;
+  font-family: var(--font-sans), sans-serif;
 }
 </style> 

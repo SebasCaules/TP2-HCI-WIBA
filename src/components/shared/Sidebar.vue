@@ -36,6 +36,7 @@ const navItems = [
   { label: 'Transacciones', to: '/dashboard/transacciones', icon: 'mdi-swap-horizontal' },
   { label: 'Tarjetas', to: '/dashboard/tarjetas', icon: 'mdi-credit-card-multiple' },
   { label: 'Inversiones', to: '/dashboard/inversiones', icon: 'mdi-finance' },
+  { label: 'Contactos', to: '/dashboard/contactos', icon: 'mdi-account-multiple' },
 ]
 
 const route = useRoute()

@@ -83,13 +83,16 @@
           </div>
         </div>
         <div class="dashboard-section mt-8">
-          <div class="dashboard-section-title">Contactos</div>
+          <div class="dashboard-section-header" style="margin-bottom: 0.5rem;">
+            <span class="dashboard-section-title">Contactos</span>
+            <v-btn variant="text" color="primary" class="dashboard-seeall-btn" @click="$router.push('/dashboard/contactos')">
+              Ver todos
+              <v-icon size="16">mdi-chevron-right</v-icon>
+            </v-btn>
+          </div>
           <v-list class="dashboard-contacts-list">
-            <v-list-item v-for="(c, i) in contacts" :key="i" class="dashboard-contact-item">
-              <template #prepend>
-                <div class="dashboard-contact-avatar">{{ c.initials }}</div>
-              </template>
-              <v-list-item-title class="dashboard-contact-name">{{ c.name }}</v-list-item-title>
+            <v-list-item v-for="(c, i) in contacts.slice(0, 3)" :key="i" class="dashboard-contact-item">
+              <v-list-item-title class="dashboard-contact-name">{{ c.first_name }} {{ c.last_name }}</v-list-item-title>
             </v-list-item>
           </v-list>
         </div>
@@ -136,6 +139,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/store/auth'
 import IconFilledButton from '@/components/ui/IconFilledButton.vue'
 import { fetchDashboardData } from '@/services/dashboard'
+import { supabase } from '@/plugins/supabase'
 import type { DashboardData } from '@/services/dashboard'
 
 const authStore = useAuthStore()
@@ -144,18 +148,61 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const dashboardData = ref<DashboardData | null>(null)
 
+interface Contact {
+  id: string;
+  first_name: string;
+  last_name: string;
+  username: string;
+}
+
+const contacts = ref<Contact[]>([])
+
+async function fetchContacts() {
+  if (!userId.value) return;
+  try {
+    const { data, error } = await supabase
+      .from('user_contacts')
+      .select(`
+        contact_id,
+        contact:users!user_contacts_contact_id_fkey (
+          id,
+          first_name,
+          last_name,
+          username
+        )
+      `)
+      .eq('user_id', userId.value)
+      .order('created_at', { ascending: false });
+    if (error) {
+      contacts.value = [];
+      return;
+    }
+    if (data) {
+      contacts.value = data.map(row => ({
+        id: row.contact.id,
+        first_name: row.contact.first_name,
+        last_name: row.contact.last_name,
+        username: row.contact.username
+      }));
+    } else {
+      contacts.value = [];
+    }
+  } catch (e) {
+    contacts.value = [];
+  }
+}
+
 async function fetchData() {
   loading.value = true
   error.value = null
-  
   if (!userId.value) {
     error.value = 'Usuario no autenticado'
     loading.value = false
     return
   }
-
   try {
     dashboardData.value = await fetchDashboardData(userId.value)
+    await fetchContacts()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Error al cargar los datos'
     console.error('Error fetching dashboard data:', e)
@@ -169,10 +216,6 @@ onMounted(fetchData)
 const balance = computed(() => dashboardData.value?.account.balance ?? null)
 const transactions = computed(() => dashboardData.value?.transactions ?? [])
 const bills = computed(() => dashboardData.value?.bills ?? [])
-const contacts = computed(() => dashboardData.value?.contacts.map(c => ({
-  name: c.name,
-  initials: c.name.split(' ').map(n => n[0]).join('').toUpperCase()
-})) ?? [])
 </script>
 
 <style scoped>
@@ -463,5 +506,15 @@ const contacts = computed(() => dashboardData.value?.contacts.map(c => ({
   position: sticky;
   top: 24px;
   height: fit-content;
+}
+.dashboard-seeall-btn {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 0 0.5rem;
+  min-width: 0;
+  color: var(--primary) !important;
 }
 </style> 

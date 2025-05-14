@@ -38,7 +38,7 @@
     </div>
 
     <!-- Contact Picker Dialog -->
-    <v-dialog v-model="showContactDialog" max-width="480px" :retain-focus="false" :scrim="true">
+    <v-dialog v-model="showContactDialog" max-width="960px" :retain-focus="false" :scrim="true" style="border-radius: 1.5rem;">
       <v-card class="select-contact-dialog">
         <div class="select-contact-dialog-header">
           <span class="select-contact-title">Seleccionar contacto</span>
@@ -47,21 +47,44 @@
           </v-btn>
         </div>
         <div class="select-contact-list-custom">
-          <div
-            v-for="contact in contacts"
-            :key="contact.id"
-            class="select-contact-custom"
-            @click="selectContact(contact)"
-          >
-            <v-icon class="select-contact-avatar">mdi-account</v-icon>
-            <div class="select-contact-info">
-              <div class="select-contact-name">{{ contact.name }}</div>
-              <div class="select-contact-detail">{{ contact.emailOrAccount }}</div>
+          <template v-if="contacts.length > 0">
+            <div
+              v-for="contact in contacts"
+              :key="contact.id"
+              class="select-contact-custom"
+            >
+              <div class="select-contact-info" @click="selectContact(contact)">
+                <div class="select-contact-name">{{ contact.name }}</div>
+                <div class="select-contact-detail">{{ contact.username }}</div>
+              </div>
+              <v-btn 
+                icon 
+                color="error" 
+                variant="text" 
+                class="remove-contact-btn"
+                @click="removeContact(contact.id)"
+              >
+                <v-icon>mdi-delete</v-icon>
+              </v-btn>
             </div>
+          </template>
+          <div v-else class="no-contacts-message">
+            <v-icon size="48" color="primary">mdi-account-multiple</v-icon>
+            <div class="no-contacts-title">No tienes contactos guardados</div>
+            <div class="no-contacts-subtitle">Agrega contactos para transferir más rápido</div>
           </div>
+        </div>
+        <div class="select-contact-actions" style="display: flex; justify-content: center; margin-top: 1.5rem;">
+          <FilledButton @click="showAddContactDialog = true">
+            Agregar contacto
+          </FilledButton>
         </div>
       </v-card>
     </v-dialog>
+    <AddContactDialog
+      v-model="showAddContactDialog"
+      @contact-added="fetchContacts"
+    />
 
     <!-- Transfer Confirmation Dialog -->
     <v-dialog 
@@ -102,13 +125,17 @@
     </v-dialog>
 
     <!-- Success Dialog -->
-    <v-dialog v-model="showSuccessDialog" max-width="400px" persistent>
+    <v-dialog v-model="showSuccessDialog" max-width="400px">
       <v-card class="success-dialog">
+        <div class="success-dialog-header">
+          <v-btn icon class="dialog-close-btn" @click="showSuccessDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
         <div class="success-dialog-content">
           <v-icon color="success" size="48">mdi-check-circle</v-icon>
           <div class="success-dialog-title">¡Transferencia realizada con éxito!</div>
           <div class="success-dialog-message">La transferencia fue completada correctamente.</div>
-          <FilledButton class="success-dialog-btn" @click="showSuccessDialog = false">Aceptar</FilledButton>
         </div>
       </v-card>
     </v-dialog>
@@ -116,12 +143,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { supabase } from '@/plugins/supabase'
 import { useAuthStore } from '@/store/auth'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
+import AddContactDialog from '@/components/AddContactDialog.vue'
 import { v4 as uuidv4 } from 'uuid'
+
+interface Contact {
+  id: string;
+  name: string;
+  username: string;
+  emailOrAccount: string;
+}
+
+interface ContactData {
+  contact_id: string;
+  contacts: {
+    first_name: string;
+    last_name: string;
+    username: string;
+    account: Array<{ account_number: string }> | null;
+  };
+}
 
 const recipient = ref('')
 const amount = ref('')
@@ -132,20 +177,56 @@ const errorMessage = ref('')
 const recipientFirstName = ref('')
 const recipientLastName = ref('')
 const showSuccessDialog = ref(false)
+const contacts = ref<Contact[]>([])
+const loading = ref(false)
+const showAddContactDialog = ref(false)
 
-const contacts = [
-  { id: 1, name: 'Harvey Specter', emailOrAccount: 'harvey@pearsonhardman.com' },
-  { id: 2, name: 'Rachel Zane', emailOrAccount: 'rachel@pearsonhardman.com' },
-  { id: 3, name: 'Katrina Bennett', emailOrAccount: '1234567890' },
-]
+const authStore = useAuthStore()
+const userId = computed(() => authStore.user?.id)
+
+async function fetchContacts() {
+  if (!userId.value) return;
+  
+  try {
+    const { data, error } = await supabase
+      .from('user_contacts')
+      .select(`
+        contact_id,
+        contacts:users!user_contacts_contact_id_fkey (
+          first_name,
+          last_name,
+          username
+        )
+      `)
+      .eq('user_id', userId.value);
+
+    if (error) {
+      console.error('Error fetching contacts:', error);
+      return;
+    }
+
+    if (data) {
+      contacts.value = data.map(contact => {
+        const contactData = contact as unknown as ContactData;
+        return {
+          id: contactData.contact_id,
+          name: `${contactData.contacts.first_name} ${contactData.contacts.last_name}`,
+          username: contactData.contacts.username,
+          emailOrAccount: contactData.contacts.username
+        };
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching contacts:', error);
+  }
+}
+
+onMounted(fetchContacts);
 
 function selectContact(contact: any) {
   recipient.value = contact.emailOrAccount
   showContactDialog.value = false
 }
-
-const authStore = useAuthStore()
-const userId = computed(() => authStore.user?.id)
 
 const isTransferValid = computed(() => {
   const n = parseFloat(amount.value)
@@ -340,6 +421,28 @@ async function confirmTransfer() {
   errorMessage.value = ''
   showSuccessDialog.value = true
 }
+
+async function removeContact(contactId: string) {
+  if (!userId.value) return;
+  
+  try {
+    const { error } = await supabase
+      .from('user_contacts')
+      .delete()
+      .eq('user_id', userId.value)
+      .eq('contact_id', contactId);
+
+    if (error) {
+      console.error('Error removing contact:', error);
+      return;
+    }
+
+    // Refresh contacts list
+    await fetchContacts();
+  } catch (error) {
+    console.error('Error removing contact:', error);
+  }
+}
 </script>
 
 <style scoped>
@@ -404,7 +507,7 @@ async function confirmTransfer() {
 }
 
 .confirm-transfer-dialog {
-  border-radius: 16px;
+  border-radius: 1.5rem;
   overflow: visible;
   box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
   width: 100%;
@@ -435,7 +538,7 @@ async function confirmTransfer() {
 
 .confirm-transfer-table {
   background: var(--card);
-  border-radius: 16px;
+  border-radius: 1.5rem;
   padding: 1.5rem 2rem;
   margin-bottom: 2rem;
   width: 100%;
@@ -471,10 +574,10 @@ async function confirmTransfer() {
 }
 
 .select-contact-dialog {
-  border-radius: 16px;
+  border-radius: 1.5rem !important;
   overflow: visible;
   box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
-  max-width: 480px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 2rem 3rem;
 }
@@ -503,6 +606,7 @@ async function confirmTransfer() {
   width: 100%;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   background: #f8fafc;
   border-radius: 14px;
   border: 2px solid #e0e0e0;
@@ -512,7 +616,7 @@ async function confirmTransfer() {
   position: relative;
 }
 .select-contact-custom:hover {
-  border-color: var(--primary, #41a7b7);
+  border-color: var(--primary);
   background: #f0f4f8;
 }
 .select-contact-avatar {
@@ -527,18 +631,19 @@ async function confirmTransfer() {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  cursor: pointer;
 }
 .select-contact-name {
   font-weight: 700;
   font-size: 1.2rem;
-  color: #232526;
+  color: var(--text);
   display: flex;
   align-items: center;
   gap: 0.3rem;
 }
 .select-contact-detail {
   font-size: 1rem;
-  color: #888;
+  color: var(--muted-text);
   margin-top: 0.2rem;
 }
 .transfer-error-message {
@@ -551,14 +656,27 @@ async function confirmTransfer() {
 }
 .success-dialog {
   border-radius: 16px;
-  padding: 2rem 2.5rem;
+  padding: 1.5rem;
   text-align: center;
 }
+
+.success-dialog-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.dialog-close-btn {
+  color: var(--muted-text) !important;
+  margin-right: -8px;
+}
+
 .success-dialog-content {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1.2rem;
+  padding: 0 1rem 1rem;
 }
 .success-dialog-title {
   font-size: 1.3rem;
@@ -578,5 +696,41 @@ async function confirmTransfer() {
   border-radius: 1.5rem;
   padding: 0.7rem 2rem;
   margin-top: 0.5rem;
+}
+
+.remove-contact-btn {
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.remove-contact-btn:hover {
+  opacity: 1;
+}
+
+.no-contacts-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 2px dashed #e0e0e0;
+  width: 100%;
+  gap: 1rem;
+}
+
+.no-contacts-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-sans), sans-serif;
+}
+
+.no-contacts-subtitle {
+  font-size: 1.05rem;
+  color: var(--muted-text);
+  font-family: var(--font-sans), sans-serif;
 }
 </style> 

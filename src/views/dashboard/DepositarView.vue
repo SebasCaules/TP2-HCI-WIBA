@@ -39,7 +39,7 @@
         <div class="select-card-dialog-header">
           <span class="select-card-title">Seleccionar tarjeta</span>
           <v-btn icon class="dialog-close-btn" @click="showCardDialog = false">
-            <v-icon>mdi-close</v-icon>
+            <v-icon>dialog-close</v-icon>
           </v-btn>
         </div>
         <div class="select-card-list-custom">
@@ -120,13 +120,17 @@
     </v-dialog>
 
     <!-- Success Dialog -->
-    <v-dialog v-model="showSuccessDialog" max-width="400px" persistent>
+    <v-dialog v-model="showSuccessDialog" max-width="400px">
       <v-card class="success-dialog">
+        <div class="success-dialog-header">
+          <v-btn icon class="dialog-close-btn" @click="showSuccessDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
         <div class="success-dialog-content">
           <v-icon color="success" size="48">mdi-check-circle</v-icon>
           <div class="success-dialog-title">¡Depósito realizado con éxito!</div>
           <div class="success-dialog-message">El depósito fue completado correctamente.</div>
-          <FilledButton class="success-dialog-btn" @click="showSuccessDialog = false">Aceptar</FilledButton>
         </div>
       </v-card>
     </v-dialog>
@@ -348,7 +352,7 @@ onMounted(fetchCards)
 }
 
 .select-card-dialog {
-  border-radius: 16px;
+  border-radius: 1.5rem;
   overflow: visible;
   box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
   max-width: 960px;
@@ -370,7 +374,8 @@ onMounted(fetchCards)
 }
 
 .dialog-close-btn {
-  color: var(--muted-text);
+  color: var(--muted-text) !important;
+  margin-right: -8px;
 }
 
 .select-card-list-custom {
@@ -462,7 +467,7 @@ onMounted(fetchCards)
 }
 
 .confirm-deposit-dialog {
-  border-radius: 16px;
+  border-radius: 1.5rem;
   overflow: visible;
   box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
   width: 100%;
@@ -493,7 +498,7 @@ onMounted(fetchCards)
 
 .confirm-deposit-table {
   background: var(--card);
-  border-radius: 16px;
+  border-radius: 1.5rem;
   padding: 1.5rem 2rem;
   margin-bottom: 2rem;
   width: 100%;
@@ -552,9 +557,20 @@ onMounted(fetchCards)
 }
 
 .success-dialog {
-  border-radius: 16px;
-  padding: 2rem 2.5rem;
+  border-radius: 1.5rem;
+  padding: 1.5rem;
   text-align: center;
+}
+
+.success-dialog-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.dialog-close-btn {
+  color: var(--muted-text) !important;
+  margin-right: -8px;
 }
 
 .success-dialog-content {
@@ -562,6 +578,7 @@ onMounted(fetchCards)
   flex-direction: column;
   align-items: center;
   gap: 1.2rem;
+  padding: 0 1rem 1rem;
 }
 
 .success-dialog-title {
@@ -575,15 +592,6 @@ onMounted(fetchCards)
   font-size: 1.05rem;
   color: var(--text);
   margin-bottom: 1rem;
-}
-
-.success-dialog-btn {
-  min-width: 120px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  border-radius: 1.5rem;
-  padding: 0.7rem 2rem;
-  margin-top: 0.5rem;
 }
 
 .no-cards-message {

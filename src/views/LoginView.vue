@@ -59,7 +59,12 @@
     <v-dialog v-model="showResetDialog" max-width="400px">
       <v-card class="reset-dialog">
         <div class="reset-dialog-content">
-          <h2 class="reset-dialog-title">Restablecer contraseña</h2>
+          <div class="reset-dialog-header">
+            <h2 class="reset-dialog-title">Restablecer contraseña</h2>
+            <v-btn icon class="dialog-close-btn" @click="showResetDialog = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
           <p class="reset-dialog-subtitle">
             Ingresá tu email y te enviaremos instrucciones para restablecer tu contraseña.
           </p>
@@ -82,13 +87,6 @@
             >
               Enviar instrucciones
             </FilledButton>
-            <button
-              class="reset-cancel-btn"
-              @click="showResetDialog = false"
-              :disabled="isResetting"
-            >
-              Cancelar
-            </button>
           </div>
           <div v-if="resetSuccess" class="reset-success-message">
             {{ resetSuccess }}
@@ -267,8 +265,9 @@ const handleResetPassword = async () => {
 
 /* Reset Dialog styles */
 .reset-dialog {
-  border-radius: 16px;
-  padding: 2rem;
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  text-align: center;
 }
 
 .reset-dialog-content {
@@ -277,13 +276,23 @@ const handleResetPassword = async () => {
   gap: 0.8rem;
 }
 
+.reset-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.dialog-close-btn {
+  color: var(--muted-text) !important;
+  margin-right: -8px;
+}
+
 .reset-dialog-title {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text);
   margin: 0;
-  text-align: center;
-  margin-bottom: -0.2rem;
 }
 
 .reset-dialog-subtitle {
@@ -291,7 +300,7 @@ const handleResetPassword = async () => {
   text-align: center;
   margin: 0;
   font-size: 0.95rem;
-  margin-bottom: -0.2rem;
+  margin-bottom: 1rem;
 }
 
 .reset-email-input {
@@ -310,26 +319,6 @@ const handleResetPassword = async () => {
   height: 48px;
   font-size: 1rem;
   font-weight: 600;
-}
-
-.reset-cancel-btn {
-  background: none;
-  border: none;
-  color: var(--muted-text);
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 0.5rem;
-  width: 100%;
-}
-
-.reset-cancel-btn:hover {
-  color: var(--text);
-}
-
-.reset-cancel-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .reset-success-message {
