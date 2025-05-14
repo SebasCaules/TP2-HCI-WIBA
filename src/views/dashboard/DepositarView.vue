@@ -1,6 +1,6 @@
 <template>
   <v-container class="deposit-container" fluid>
-    <BackButton to="/dashboard" class="deposit-back-btn" />
+    <BackButton to="/dashboard" class="back-btn-top-left" />
     <div class="deposit-content">
       <h1 class="deposit-title">Depositar</h1>
       <div class="deposit-form-group">
@@ -147,12 +147,13 @@ import FilledButton from '@/components/ui/FilledButton.vue'
 import AddCardDialog from '@/components/AddCardDialog.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import { depositToAccount } from '@/services/account'
+import type { Card } from '@/types/types'
 
 const amount = ref('')
 const showCardDialog = ref(false)
 const showAddCardDialog = ref(false)
-const cards = ref<any[]>([])
-const selectedCard = ref<any | null>(null)
+const cards = ref<Card[]>([])
+const selectedCard = ref<Card | null>(null)
 const showConfirmDialog = ref(false)
 const showSuccessDialog = ref(false)
 
@@ -210,7 +211,7 @@ async function fetchCards() {
   }
 }
 
-function selectCard(card: any) {
+function selectCard(card: Card) {
   selectedCard.value = card
   showCardDialog.value = false
 }
@@ -252,11 +253,11 @@ onMounted(fetchCards)
   padding-top: 1rem;
 }
 
-.deposit-back-btn {
+.back-btn-top-left {
   position: absolute;
-  top: 2rem;
-  left: 2rem;
-  z-index: 1;
+  top: 32px;
+  left: 32px;
+  z-index: 10;
 }
 
 .deposit-content {

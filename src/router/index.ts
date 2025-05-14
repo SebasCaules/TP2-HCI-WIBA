@@ -12,12 +12,12 @@ const router = createRouter({
         {
             path: '/login',
             name: 'login',
-            component: () => import('@/views/LoginView.vue')
+            component: () => import('@/views/auth/LoginView.vue')
         },
         {
             path: '/register',
             name: 'register',
-            component: () => import('@/views/RegisterView.vue')
+            component: () => import('@/views/auth/RegisterView.vue')
         },
         {
             path: '/dashboard',
@@ -32,17 +32,17 @@ const router = createRouter({
                 {
                     path: 'transacciones',
                     name: 'transacciones',
-                    component: () => import('@/views/TransaccionesView.vue')
+                    component: () => import('@/views/dashboard/TransaccionesView.vue')
                 },
                 {
                     path: 'tarjetas',
                     name: 'tarjetas',
-                    component: () => import('@/views/TarjetasView.vue')
+                    component: () => import('@/views/dashboard/TarjetasView.vue')
                 },
                 {
                     path: 'inversiones',
                     name: 'inversiones',
-                    component: () => import('@/views/InversionesView.vue')
+                    component: () => import('@/views/dashboard/InversionesView.vue')
                 },
                 {
                     path: 'depositar',
@@ -67,7 +67,7 @@ const router = createRouter({
                 {
                     path: 'contactos',
                     name: 'contactos',
-                    component: () => import('@/views/ContactsView.vue')
+                    component: () => import('@/views/dashboard/ContactsView.vue')
                 }
             ]
         }

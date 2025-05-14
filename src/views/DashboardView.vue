@@ -15,7 +15,22 @@
                 {{ error }}
               </template>
               <template v-else>
-                $ {{ Number(balance).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                <div class="balance-container">
+                  <span v-if="isBalanceVisible">
+                    $ {{ Number(balance).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                  </span>
+                  <span v-else>
+                    $ ********
+                  </span>
+                  <v-btn
+                    icon
+                    variant="text"
+                    class="balance-toggle-btn"
+                    @click="toggleBalanceVisibility"
+                  >
+                    <v-icon>{{ isBalanceVisible ? 'mdi-eye' : 'mdi-eye-off' }}</v-icon>
+                  </v-btn>
+                </div>
               </template>
             </div>
             <div class="dashboard-actions">
@@ -39,12 +54,12 @@
           <v-list class="dashboard-list">
             <v-list-item v-for="(tx, i) in transactions" :key="i" class="dashboard-list-item">
               <template #prepend>
-                <v-icon :color="tx.type === 'deposit' ? 'primary' : 'grey'" size="20">
-                  {{ tx.type === 'deposit' ? 'mdi-arrow-bottom-right' : 'mdi-arrow-top-right' }}
+                <v-icon :color="tx.transaction_type === 'deposit' ? 'primary' : 'grey'" size="20">
+                  {{ tx.transaction_type === 'deposit' ? 'mdi-arrow-bottom-right' : 'mdi-arrow-top-right' }}
                 </v-icon>
               </template>
               <v-list-item-title class="dashboard-list-title">{{ tx.description }}</v-list-item-title>
-              <v-list-item-subtitle class="dashboard-list-date">{{ tx.date }}</v-list-item-subtitle>
+              <v-list-item-subtitle class="dashboard-list-date">{{ formatDate(tx.created_at) }}</v-list-item-subtitle>
               <template #append>
                 <span :class="['dashboard-list-amount', tx.amount < 0 ? 'negative' : 'positive']">
                   {{ tx.amount < 0 ? '- ' : '' }}${{ Math.abs(tx.amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
@@ -92,7 +107,14 @@
           </div>
           <v-list class="dashboard-contacts-list">
             <v-list-item v-for="(c, i) in contacts.slice(0, 3)" :key="i" class="dashboard-contact-item">
-              <v-list-item-title class="dashboard-contact-name">{{ c.first_name }} {{ c.last_name }}</v-list-item-title>
+              <div class="dashboard-contact-info" style="display: flex; align-items: center;">
+                <div class="dashboard-contact-avatar">
+                  {{ c.initials }}
+                </div>
+                <v-list-item-title class="dashboard-contact-name">
+                  {{ c.first_name }} {{ c.last_name }}
+                </v-list-item-title>
+              </div>
             </v-list-item>
           </v-list>
         </div>
@@ -139,7 +161,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/store/auth'
 import IconFilledButton from '@/components/ui/IconFilledButton.vue'
 import { fetchDashboardData } from '@/services/dashboard'
-import { supabase } from '@/plugins/supabase'
+import type { Contact } from '@/types/types'
 import type { DashboardData } from '@/services/dashboard'
 
 const authStore = useAuthStore()
@@ -148,46 +170,16 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const dashboardData = ref<DashboardData | null>(null)
 
-interface Contact {
-  id: string;
-  first_name: string;
-  last_name: string;
-  username: string;
-}
-
 const contacts = ref<Contact[]>([])
+const isBalanceVisible = ref(true)
 
-async function fetchContacts() {
+async function loadContacts() {
   if (!userId.value) return;
   try {
-    const { data, error } = await supabase
-      .from('user_contacts')
-      .select(`
-        contact_id,
-        contact:users!user_contacts_contact_id_fkey (
-          id,
-          first_name,
-          last_name,
-          username
-        )
-      `)
-      .eq('user_id', userId.value)
-      .order('created_at', { ascending: false });
-    if (error) {
-      contacts.value = [];
-      return;
-    }
-    if (data) {
-      contacts.value = data.map(row => ({
-        id: row.contact.id,
-        first_name: row.contact.first_name,
-        last_name: row.contact.last_name,
-        username: row.contact.username
-      }));
-    } else {
-      contacts.value = [];
-    }
+    const { contacts: fetchedContacts } = await fetchDashboardData(userId.value);
+    contacts.value = fetchedContacts;
   } catch (e) {
+    console.error('Error loading contacts:', e);
     contacts.value = [];
   }
 }
@@ -202,7 +194,7 @@ async function fetchData() {
   }
   try {
     dashboardData.value = await fetchDashboardData(userId.value)
-    await fetchContacts()
+    await loadContacts()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Error al cargar los datos'
     console.error('Error fetching dashboard data:', e)
@@ -216,6 +208,21 @@ onMounted(fetchData)
 const balance = computed(() => dashboardData.value?.account.balance ?? null)
 const transactions = computed(() => dashboardData.value?.transactions ?? [])
 const bills = computed(() => dashboardData.value?.bills ?? [])
+
+function formatDate(timestamp: string): string {
+  if (!timestamp) return 'Fecha no disponible';
+  const parsedDate = new Date(timestamp);
+  return isNaN(parsedDate.getTime()) ? 'Fecha inválida' : parsedDate.toLocaleDateString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+}
+
+function toggleBalanceVisibility() {
+  isBalanceVisible.value = !isBalanceVisible.value
+}
+
 </script>
 
 <style scoped>
@@ -416,17 +423,19 @@ const bills = computed(() => dashboardData.value?.bills ?? [])
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: var(--card);
+  background-color: #e0e0e0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  color: var(--muted-text);
-  font-size: 1rem;
+  font-weight: 700;
+  color: #444;
+  font-size: 1.1rem;
   margin-right: 16px;
 }
 .dashboard-contact-name {
   margin-left: 8px;
+  display: flex;
+  align-items: center;
 }
 .dashboard-services-carousel-wrapper {
   width: 100%;
@@ -516,5 +525,20 @@ const bills = computed(() => dashboardData.value?.bills ?? [])
   padding: 0 0.5rem;
   min-width: 0;
   color: var(--primary) !important;
+}
+.balance-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.balance-toggle-btn {
+  color: var(--muted-text);
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.balance-toggle-btn:hover {
+  opacity: 1;
 }
 </style> 

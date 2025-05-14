@@ -2,47 +2,24 @@ import { supabase } from '@/plugins/supabase'
 import { getUserProfile } from './users'
 import { getTransactions } from './transactions'
 import { getBills } from './bills'
-import { getContacts } from './contacts'
+import { fetchContacts } from './contacts'
 import { getCards } from './cards'
+import type {
+  User,
+  Account,
+  Transaction,
+  Bill,
+  Contact,
+  Card
+} from '@/types/types'
 
 export interface DashboardData {
-  user: {
-    first_name: string
-    last_name: string
-    username: string
-  }
-  account: {
-    balance: number
-    account_number: string
-  }
-  transactions: {
-    id: string
-    description: string
-    amount: number
-    date: string
-    type: string
-    card_company: string | null
-  }[]
-  bills: {
-    id: string
-    title: string
-    provider: string
-    amount: number
-    due_date: string
-    status: string
-  }[]
-  contacts: {
-    id: string
-    name: string
-    alias: string
-  }[]
-  cards: {
-    id: string
-    brand: string
-    number_last4: string
-    expiry: string
-    holder: string
-  }[]
+  user: User;
+  account: Account;
+  transactions: Transaction[];
+  bills: Bill[];
+  contacts: Contact[];
+  cards: Card[];
 }
 
 export async function fetchDashboardData(userId: string): Promise<DashboardData> {
@@ -70,48 +47,65 @@ export async function fetchDashboardData(userId: string): Promise<DashboardData>
   const bills = await getBills(userId)
 
   // Fetch contacts
-  const contacts = await getContacts(userId)
+  const { contacts } = await fetchContacts(userId)
 
   // Fetch cards
   const cards = await getCards(userId)
 
+  const dashboardUser: User = {
+    id: user.id,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    username: user.username
+  }
+
+  const dashboardAccount: Account = {
+    balance: account.balance,
+    account_number: account.account_number
+  }
+
+  const dashboardTransactions: Transaction[] = transactions.map(t => ({
+    id: t.id,
+    description: t.description,
+    user_id: t.user_id,
+    transaction_type: t.transaction_type as 'deposit' | 'withdraw' | 'transfer',
+    amount: t.amount,
+    recipient_id: t.recipient_id,
+    created_at: t.created_at,
+    card_company: t.card_company
+  }))
+
+  const dashboardBills: Bill[] = bills.map(b => ({
+    id: b.id,
+    title: b.title,
+    provider: b.provider,
+    amount: b.amount,
+    due_date: b.due_date,
+    status: b.status
+  }))
+
+  const dashboardContacts: Contact[] = contacts.map(c => ({
+    id: c.id,
+    first_name: c.first_name,
+    last_name: c.last_name,
+    username: c.username,
+    initials: c.initials
+  }))
+
+  const dashboardCards: Card[] = cards.map(c => ({
+    id: c.id,
+    brand: c.brand,
+    number_last4: c.number_last4,
+    expiry: c.expiry,
+    holder: c.holder
+  }))
+
   return {
-    user: {
-      first_name: user.first_name,
-      last_name: user.last_name,
-      username: user.username
-    },
-    account: {
-      balance: account.balance,
-      account_number: account.account_number
-    },
-    transactions: transactions.map(t => ({
-      id: t.id,
-      description: t.description,
-      amount: t.amount,
-      date: t.created_at,
-      type: t.transaction_type,
-      card_company: t.card_company
-    })),
-    bills: bills.map(b => ({
-      id: b.id,
-      title: b.title,
-      provider: b.provider,
-      amount: b.amount,
-      due_date: b.due_date,
-      status: b.status
-    })),
-    contacts: contacts.map(c => ({
-      id: c.id,
-      name: c.name,
-      alias: c.alias
-    })),
-    cards: cards.map(c => ({
-      id: c.id,
-      brand: c.brand,
-      number_last4: c.number_last4,
-      expiry: c.expiry,
-      holder: c.holder
-    }))
+    user: dashboardUser,
+    account: dashboardAccount,
+    transactions: dashboardTransactions,
+    bills: dashboardBills,
+    contacts: dashboardContacts,
+    cards: dashboardCards
   }
 } 

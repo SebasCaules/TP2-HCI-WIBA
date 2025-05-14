@@ -1,13 +1,6 @@
 <template>
-  <v-container>
-    <!-- Inversiones content will go here -->
-  </v-container>
-</template>
-
-<script lang="ts">
-import { defineComponent } from 'vue'
-
-export default defineComponent({
-  name: 'InversionesView'
-})
-</script> 
+  <div>
+    <h2>Inversiones</h2>
+    <p>Aquí irán las inversiones del usuario.</p>
+  </div>
+</template> 

@@ -1,6 +1,6 @@
 <template>
   <v-container class="transfer-container" fluid>
-    <BackButton to="/dashboard" class="transfer-back-btn" />
+    <BackButton to="/dashboard" class="back-btn-top-left" />
     <div class="transfer-content">
       <h1 class="transfer-title">Transferir</h1>
       <div class="transfer-form-group">
@@ -152,13 +152,7 @@ import FilledButton from '@/components/ui/FilledButton.vue'
 import AddContactDialog from '@/components/AddContactDialog.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import { v4 as uuidv4 } from 'uuid'
-
-interface Contact {
-  id: string;
-  name: string;
-  username: string;
-  emailOrAccount: string;
-}
+import type { Contact } from '@/types/types'
 
 interface ContactData {
   contact_id: string;
@@ -457,12 +451,11 @@ async function removeContact(contactId: string) {
   position: relative;
   padding-top: 1rem;
 }
-
-.transfer-back-btn {
+.back-btn-top-left {
   position: absolute;
-  top: 2rem;
-  left: 2rem;
-  z-index: 1;
+  top: 32px;
+  left: 32px;
+  z-index: 10;
 }
 
 .transfer-content {

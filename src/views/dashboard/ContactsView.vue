@@ -29,7 +29,7 @@
                     variant="text"
                     color="error"
                     size="small"
-                    @click="removeContact(item.id)"
+                    @click="handleRemoveContact(item.id)"
                     title="Eliminar contacto"
                   ></v-btn>
                 </td>
@@ -43,34 +43,18 @@
     <!-- Add Contact Dialog -->
     <AddContactDialog
       v-model="showDialog"
-      @contact-added="fetchContacts"
+      @contact-added="loadContacts"
     />
   </v-container>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { supabase } from '@/plugins/supabase';
 import { useAuthStore } from '@/store/auth';
 import IconFilledButton from '@/components/ui/IconFilledButton.vue';
 import AddContactDialog from '@/components/AddContactDialog.vue';
-
-interface Contact {
-  id: string;
-  first_name: string;
-  last_name: string;
-  username: string;
-}
-
-interface ContactResponse {
-  contact_id: string;
-  contact: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    username: string;
-  };
-}
+import { fetchContacts, removeContact } from '@/services/contacts';
+import type { Contact } from '@/types/types';
 
 const authStore = useAuthStore();
 const userId = authStore.user?.id;
@@ -85,74 +69,34 @@ const headers = [
   { key: 'actions', title: 'Acciones', align: 'end' as const }
 ];
 
-async function fetchContacts() {
+async function loadContacts() {
   if (!userId) {
     console.error('No user ID available');
     return;
   }
 
+  loading.value = true;
   try {
-    const { data, error } = await supabase
-      .from('user_contacts')
-      .select(`
-        contact_id,
-        contact:users!user_contacts_contact_id_fkey (
-          id,
-          first_name,
-          last_name,
-          username
-        )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching contacts:', error);
-      return;
-    }
-
-    if (data) {
-      const typedData = (data as unknown) as ContactResponse[];
-      contacts.value = typedData.map(row => ({
-        id: row.contact.id,
-        first_name: row.contact.first_name,
-        last_name: row.contact.last_name,
-        username: row.contact.username
-      }));
-    } else {
-      contacts.value = [];
-    }
+    const { contacts: fetchedContacts } = await fetchContacts(userId);
+    contacts.value = fetchedContacts;
   } catch (error) {
-    console.error('Unexpected error fetching contacts:', error);
+    console.error('Error loading contacts:', error);
   } finally {
     loading.value = false;
   }
 }
 
-async function removeContact(contactId: string) {
+async function handleRemoveContact(contactId: string) {
   if (!userId) return;
   
-  try {
-    const { error } = await supabase
-      .from('user_contacts')
-      .delete()
-      .eq('user_id', userId)
-      .eq('contact_id', contactId);
-
-    if (error) {
-      console.error('Error removing contact:', error);
-      return;
-    }
-
-    await fetchContacts();
-  } catch (error) {
-    console.error('Error removing contact:', error);
+  const success = await removeContact(userId, contactId);
+  if (success) {
+    await loadContacts();
   }
 }
 
 onMounted(async () => {
-  loading.value = true;
-  await fetchContacts();
+  await loadContacts();
 });
 </script>
 
