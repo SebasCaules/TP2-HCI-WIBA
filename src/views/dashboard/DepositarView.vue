@@ -1,5 +1,6 @@
 <template>
   <v-container class="deposit-container" fluid>
+    <BackButton to="/dashboard" class="back-btn-top-left" />
     <div class="deposit-content">
       <h1 class="deposit-title">Depositar</h1>
       <div class="deposit-form-group">
@@ -144,6 +145,7 @@ import { useAuthStore } from '@/store/auth'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import AddCardDialog from '@/components/AddCardDialog.vue'
+import BackButton from '@/components/ui/BackButton.vue'
 import { depositToAccount } from '@/services/account'
 
 const amount = ref('')
@@ -246,6 +248,14 @@ onMounted(fetchCards)
   align-items: flex-start;
   justify-content: center;
   background: var(--background);
+  position: relative;
+}
+
+.back-btn-top-left {
+  position: absolute;
+  top: 32px;
+  left: 32px;
+  z-index: 10;
 }
 
 .deposit-content {

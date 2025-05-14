@@ -1,5 +1,6 @@
 <template>
   <v-container class="transfer-container" fluid>
+    <BackButton to="/dashboard" class="back-btn-top-left" />
     <div class="transfer-content">
       <h1 class="transfer-title">Transferir</h1>
       <div class="transfer-form-group">
@@ -149,6 +150,7 @@ import { useAuthStore } from '@/store/auth'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import AddContactDialog from '@/components/AddContactDialog.vue'
+import BackButton from '@/components/ui/BackButton.vue'
 import { v4 as uuidv4 } from 'uuid'
 
 interface Contact {
@@ -452,6 +454,14 @@ async function removeContact(contactId: string) {
   align-items: flex-start;
   justify-content: center;
   background: var(--background);
+  position: relative;
+}
+
+.back-btn-top-left {
+  position: absolute;
+  top: 32px;
+  left: 32px;
+  z-index: 10;
 }
 
 .transfer-content {
