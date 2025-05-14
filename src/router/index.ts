@@ -58,6 +58,11 @@ const router = createRouter({
                     path: 'configuracion',
                     name: 'configuracion',
                     component: () => import('@/views/dashboard/SettingsView.vue')
+                },
+                {
+                    path: 'pagos',
+                    name: 'pagos',
+                    component: () => import('@/views/dashboard/PagosView.vue')
                 }
             ]
         }

@@ -1,5 +1,6 @@
 <template>
   <v-container fluid class="dashboard-main">
+    <!-- Primera fila con balance y columna lateral -->
     <v-row class="dashboard-row" no-gutters>
       <!-- Columna principal -->
       <v-col cols="12" md="8" class="pr-md-8">
@@ -10,8 +11,8 @@
               <template v-if="loading">
                 Cargando...
               </template>
-              <template v-else-if="balanceError">
-                {{ balanceError }}
+              <template v-else-if="error">
+                {{ error }}
               </template>
               <template v-else>
                 $ {{ Number(balance).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
@@ -33,54 +34,38 @@
         <div class="dashboard-section mt-8">
           <div class="dashboard-section-header">
             <span class="dashboard-section-title">Movimientos Recientes</span>
-            <a href="#" class="dashboard-link">Ver todo <v-icon size="16">mdi-chevron-right</v-icon></a>
+            <a href="/dashboard/transacciones" class="dashboard-link">Ver todo <v-icon size="16">mdi-chevron-right</v-icon></a>
           </div>
           <v-list class="dashboard-list">
             <v-list-item v-for="(tx, i) in transactions" :key="i" class="dashboard-list-item">
               <template #prepend>
                 <v-icon :color="tx.type === 'deposit' ? 'primary' : 'grey'" size="20">
-                  {{ tx.type === 'deposit' ? 'mdi-arrow-down-right' : 'mdi-arrow-up-right' }}
+                  {{ tx.type === 'deposit' ? 'mdi-arrow-bottom-right' : 'mdi-arrow-top-right' }}
                 </v-icon>
               </template>
               <v-list-item-title class="dashboard-list-title">{{ tx.description }}</v-list-item-title>
               <v-list-item-subtitle class="dashboard-list-date">{{ tx.date }}</v-list-item-subtitle>
               <template #append>
                 <span :class="['dashboard-list-amount', tx.amount < 0 ? 'negative' : 'positive']">
-                  {{ tx.amount < 0 ? '- ' : '+ ' }}${{ Math.abs(tx.amount).toFixed(2) }}
+                  {{ tx.amount < 0 ? '- ' : '' }}${{ Math.abs(tx.amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                 </span>
               </template>
             </v-list-item>
           </v-list>
         </div>
-        <div class="dashboard-section mt-8">
-          <div class="dashboard-section-title">Pago de Servicios</div>
-          <v-slide-group class="dashboard-services-group" show-arrows>
-            <v-slide-group-item v-for="(bill, i) in bills" :key="i">
-              <div class="dashboard-service-card">
-                <div class="dashboard-service-header">
-                  <div>
-                    <span class="dashboard-service-title">{{ bill.title }}</span>
-                    <span class="dashboard-service-provider">{{ bill.provider }}</span>
-                  </div>
-                  <span class="dashboard-service-pay">Pagar</span>
-                </div>
-                <div class="dashboard-service-body">
-                  <div class="dashboard-service-amount">${{ bill.amount.toLocaleString('es-AR') }}</div>
-                  <div class="dashboard-service-date">{{ bill.due_date }}</div>
-                </div>
-              </div>
-            </v-slide-group-item>
-          </v-slide-group>
-        </div>
       </v-col>
       <!-- Columna lateral -->
-      <v-col cols="12" md="4">
+      <v-col cols="12" md="4" class="dashboard-sidebar">
         <div class="dashboard-invest-card">
           <div class="dashboard-invest-header">
-            <span>Inversiones</span>
-            <a href="#" class="dashboard-link">Ver más <v-icon size="16">mdi-chevron-right</v-icon></a>
-            <div class="dashboard-invest-value">$ 873,06</div>
-            <div class="dashboard-invest-gain">+ $3,50 (0,40%)</div>
+            <div class="dashboard-invest-row">
+              <span class="dashboard-invest-title">Inversiones</span>
+              <a href="/dashboard/inversiones" class="dashboard-link-header">Ver más <v-icon size="16">mdi-chevron-right</v-icon></a>
+            </div>
+            <div class="dashboard-invest-row">
+              <div class="dashboard-invest-value">${{ 873.06.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</div>
+              <div class="dashboard-invest-gain">${{ 3.50.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} (0,40%)</div>
+            </div>
           </div>
           <div class="dashboard-invest-body">
             <div class="dashboard-invest-chart">
@@ -104,9 +89,42 @@
               <template #prepend>
                 <div class="dashboard-contact-avatar">{{ c.initials }}</div>
               </template>
-              <v-list-item-title>{{ c.name }}</v-list-item-title>
+              <v-list-item-title class="dashboard-contact-name">{{ c.name }}</v-list-item-title>
             </v-list-item>
           </v-list>
+        </div>
+      </v-col>
+    </v-row>
+
+    <!-- Segunda fila con pago de servicios -->
+    <v-row class="dashboard-row mt-8" no-gutters>
+      <v-col cols="12">
+        <div class="dashboard-section">
+          <div class="dashboard-section-header">
+            <span class="dashboard-section-title">Pago de Servicios</span>
+            <a href="/dashboard/pagos" class="dashboard-link">Ver más<v-icon size="16">mdi-chevron-right</v-icon></a>
+          </div>
+          <div class="dashboard-services-carousel-wrapper">
+            <v-slide-group class="dashboard-services-group" show-arrows>
+              <v-slide-group-item v-for="(bill, i) in bills" :key="i">
+                <div class="dashboard-service-card">
+                  <div class="dashboard-service-header">
+                    <div class="dashboard-service-header-left">
+                      <span class="dashboard-service-title">{{ bill.title }}</span>
+                      <span class="dashboard-service-provider">{{ bill.provider }}</span>
+                    </div>
+                    <div class="dashboard-service-header-right">
+                      <a href="/dashboard/pagos" class="dashboard-link-header">Pagar</a>
+                    </div>
+                  </div>
+                  <div class="dashboard-service-body">
+                    <div class="dashboard-service-amount">${{ bill.amount.toLocaleString('es-AR') }}</div>
+                    <div class="dashboard-service-date">{{ bill.due_date }}</div>
+                  </div>
+                </div>
+              </v-slide-group-item>
+            </v-slide-group>
+          </div>
         </div>
       </v-col>
     </v-row>
@@ -115,64 +133,46 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { supabase } from '@/plugins/supabase'
 import { useAuthStore } from '@/store/auth'
 import IconFilledButton from '@/components/ui/IconFilledButton.vue'
+import { fetchDashboardData } from '@/services/dashboard'
+import type { DashboardData } from '@/services/dashboard'
 
 const authStore = useAuthStore()
 const userId = computed(() => authStore.user?.id)
-const balance = ref<number | null>(null)
 const loading = ref(true)
-const balanceError = ref<string | null>(null)
+const error = ref<string | null>(null)
+const dashboardData = ref<DashboardData | null>(null)
 
-async function fetchBalance() {
+async function fetchData() {
   loading.value = true
-  balanceError.value = null
+  error.value = null
+  
   if (!userId.value) {
-    balanceError.value = 'Usuario no autenticado'
+    error.value = 'Usuario no autenticado'
     loading.value = false
     return
   }
-  const { data, error } = await supabase
-    .from('accounts')
-    .select('balance')
-    .eq('user_id', userId.value)
-    .single()
-  if (error) {
-    balanceError.value = 'Error al obtener el saldo'
-    console.error('Supabase error:', error)
+
+  try {
+    dashboardData.value = await fetchDashboardData(userId.value)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Error al cargar los datos'
+    console.error('Error fetching dashboard data:', e)
+  } finally {
     loading.value = false
-    return
   }
-  if (!data) {
-    balanceError.value = 'No se encontró cuenta'
-    loading.value = false
-    return
-  }
-  balance.value = data.balance
-  loading.value = false
 }
-onMounted(fetchBalance)
 
-const userName = computed(() => authStore.user?.name || 'Usuario')
+onMounted(fetchData)
 
-const transactions = [
-  { description: 'Starbucks', date: '4/3/2025', amount: -7.94, type: 'deposit' },
-  { description: 'Starbucks', date: '4/3/2025', amount: -7.94, type: 'deposit' },
-  { description: 'Harvey Specter', date: '3/27/2025', amount: -12.78, type: 'transfer' },
-  { description: 'Harvey Specter', date: '3/27/2025', amount: -12.78, type: 'transfer' },
-  { description: 'Uber', date: '3/24/2025', amount: -5.90, type: 'deposit' },
-]
-const bills = [
-  { title: 'ITBA - Inst Tecn Bs As', provider: 'ITBA', amount: 1534000, due_date: '4/10/2025' },
-  { title: 'ARCA - Monot Fisc', provider: 'ARCA (Ex AFIP)', amount: 53467, due_date: '4/24/2025' },
-  { title: 'Factura Edenor', provider: 'Edenor', amount: 23700, due_date: '6/8/2025' },
-]
-const contacts = [
-  { name: 'Harvey Specter', initials: 'HS' },
-  { name: 'Rachel Zane', initials: 'RZ' },
-  { name: 'Katrina Bennett', initials: 'KB' },
-]
+const balance = computed(() => dashboardData.value?.account.balance ?? null)
+const transactions = computed(() => dashboardData.value?.transactions ?? [])
+const bills = computed(() => dashboardData.value?.bills ?? [])
+const contacts = computed(() => dashboardData.value?.contacts.map(c => ({
+  name: c.name,
+  initials: c.name.split(' ').map(n => n[0]).join('').toUpperCase()
+})) ?? [])
 </script>
 
 <style scoped>
@@ -189,6 +189,7 @@ const contacts = [
   box-shadow: 0 2px 16px 0 rgba(60,60,60,0.06);
   padding: 2rem;
   margin-bottom: 1.5rem;
+  width: 100%;
 }
 .dashboard-balance-inner {
   display: flex;
@@ -246,6 +247,7 @@ const contacts = [
 }
 .dashboard-section {
   margin-bottom: 1.5rem;
+  width: 100%;
 }
 .dashboard-section-header {
   display: flex;
@@ -265,25 +267,33 @@ const contacts = [
   display: flex;
   align-items: center;
 }
+.dashboard-link-header {
+  color: white;
+  font-size: 0.95rem;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
 .dashboard-list {
   background: transparent;
 }
 .dashboard-list-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px;
   align-items: center;
-  border-bottom: 1px solid var(--border);
-  padding: 0.5rem 0;
+  padding: 12px 0;
 }
 .dashboard-list-title {
   font-weight: 600;
-  margin-right: 1rem;
 }
 .dashboard-list-date {
   color: var(--muted-text);
   font-size: 0.95rem;
-  margin-right: 1rem;
 }
 .dashboard-list-amount {
+  min-width: 120px;
+  text-align: right;
   font-weight: 600;
   font-size: 1.1rem;
 }
@@ -309,22 +319,26 @@ const contacts = [
   font-weight: 600;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 1rem;
 }
-.dashboard-invest-header a,
-.dashboard-invest-header span,
-.dashboard-invest-header .dashboard-invest-value,
-.dashboard-invest-header .dashboard-invest-gain {
-  color: var(--primary-foreground) !important;
+.dashboard-invest-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+.dashboard-invest-title {
+  font-size: 1.2rem;
+  font-weight: 600;
 }
 .dashboard-invest-value {
   font-size: 1.5rem;
   font-weight: 700;
 }
 .dashboard-invest-gain {
-  color: var(--success);
+  color: var(--primary-foreground);
   font-weight: 500;
-  margin-bottom: 0.5rem;
+  text-align: right;
 }
 .dashboard-invest-body {
   padding: 1.2rem 1.5rem 1.5rem 1.5rem;
@@ -356,28 +370,43 @@ const contacts = [
   padding: 0.5rem 0;
 }
 .dashboard-contact-avatar {
-  background: var(--icon-muted);
-  color: var(--card-foreground);
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  background-color: var(--card);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
+  color: var(--muted-text);
   font-size: 1rem;
-  margin-right: 10px;
+  margin-right: 16px;
+}
+.dashboard-contact-name {
+  margin-left: 8px;
+}
+.dashboard-services-carousel-wrapper {
+  width: 100%;
+  max-width: 75vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 .dashboard-services-group {
-  margin-top: 0.5rem;
+  width: 100%;
+  margin: 0;
+  padding: 0 8px;
 }
 .dashboard-service-card {
+  width: 300px;
+  min-width: 300px;
+  max-width: 300px;
+  margin-right: 16px;
   background: var(--card);
   border-radius: var(--radius-lg);
   box-shadow: 0 2px 8px 0 rgba(60,60,60,0.08);
-  margin-right: 1rem;
   padding: 0;
-  min-width: 220px;
+  display: flex;
+  flex-direction: column;
 }
 .dashboard-service-header {
   background: var(--primary);
@@ -389,6 +418,16 @@ const contacts = [
   justify-content: space-between;
   align-items: flex-start;
   font-weight: 600;
+}
+.dashboard-service-header-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.dashboard-service-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 .dashboard-service-title {
   font-size: 1.05rem;
@@ -419,5 +458,10 @@ const contacts = [
 .dashboard-service-date {
   font-size: 0.95rem;
   color: var(--muted-text);
+}
+.dashboard-sidebar {
+  position: sticky;
+  top: 24px;
+  height: fit-content;
 }
 </style> 
