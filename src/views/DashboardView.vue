@@ -54,8 +54,8 @@
           <v-list class="dashboard-list">
             <v-list-item v-for="(tx, i) in transactions" :key="i" class="dashboard-list-item">
               <template #prepend>
-                <v-icon :color="tx.transaction_type === 'deposit' ? 'primary' : 'grey'" size="20">
-                  {{ tx.transaction_type === 'deposit' ? 'mdi-arrow-bottom-right' : 'mdi-arrow-top-right' }}
+                <v-icon :color="tx.amount < 0 ? 'error' : 'success'" size="20">
+                  {{ tx.amount > 0 ? 'mdi-arrow-bottom-right' : 'mdi-arrow-top-right' }}
                 </v-icon>
               </template>
               <v-list-item-title class="dashboard-list-title">{{ tx.description }}</v-list-item-title>
@@ -107,7 +107,7 @@
           </div>
           <v-list class="dashboard-contacts-list">
             <v-list-item v-for="(c, i) in contacts.slice(0, 3)" :key="i" class="dashboard-contact-item">
-              <div class="dashboard-contact-info" style="display: flex; align-items: center;">
+              <div style="display: flex; align-items: center;">
                 <div class="dashboard-contact-avatar">
                   {{ c.initials }}
                 </div>

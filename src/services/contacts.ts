@@ -85,3 +85,24 @@ export async function removeContact(userId: string, contactId: string): Promise<
     return false;
   }
 }
+
+export async function addContact(userId: string, contactId: string): Promise<boolean> {
+  if (!userId || !contactId) return false;
+  try {
+    const { error } = await supabase
+      .from('user_contacts')
+      .insert({
+        user_id: userId,
+        contact_id: contactId,
+        created_at: new Date().toISOString(),
+      });
+    if (error) {
+      console.error('Error adding contact:', error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error adding contact:', error);
+    return false;
+  }
+}

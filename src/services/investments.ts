@@ -38,7 +38,6 @@ export async function updateStockPrices() {
       return false
     }
   
-    console.log('Precios actualizados correctamente')
     return true
   }
 

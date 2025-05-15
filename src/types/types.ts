@@ -4,6 +4,7 @@ export interface Contact {
     last_name: string;
     username: string;
     initials: string;
+    account_number?: string;
 }
 
 export interface ContactResponse {
@@ -13,6 +14,7 @@ export interface ContactResponse {
         first_name: string;
         last_name: string;
         username: string;
+        account_number?: string;
     };
 }
 

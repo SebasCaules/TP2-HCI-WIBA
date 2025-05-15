@@ -37,7 +37,7 @@
                   </template>
                   <template v-else-if="item.transaction_type === 'transfer'">
                     <v-icon :color="item.amount < 0 ? 'error' : 'success'" size="24">
-                      {{ item.amount < 0 ? 'mdi-arrow-up-right' : 'mdi-arrow-down-left' }}
+                      {{ item.amount < 0 ? 'mdi-arrow-top-right' : 'mdi-arrow-bottom-right' }}
                     </v-icon>
                   </template>
                   <template v-else>
@@ -70,12 +70,7 @@
 import { ref, onMounted } from 'vue';
 import { supabase } from '@/plugins/supabase';
 import { useAuthStore } from '@/store/auth';
-import type { User, Transaction } from '@/types/types';
-
-interface TransactionWithJoins extends Omit<Transaction, 'recipient' | 'sender'> {
-  recipient: User | null;
-  sender: User | null;
-}
+import type { Transaction } from '@/types/types';
 
 const authStore = useAuthStore();
 const userId = authStore.user?.id;
@@ -110,7 +105,6 @@ async function fetchTransactions() {
     return;
   }
   
-  console.log('Fetching transactions for user:', userId);
   
   try {
     const { data: transactionsData, error: transactionsError } = await supabase
@@ -125,7 +119,6 @@ async function fetchTransactions() {
     }
 
     if (!transactionsData) {
-      console.log('No transactions data returned');
       transactions.value = [];
       return;
     }
@@ -166,8 +159,6 @@ async function fetchTransactions() {
         sender: sender || undefined
       };
     });
-
-    console.log('Transformed transactions:', transformedTransactions);
     transactions.value = transformedTransactions;
   } catch (error) {
     console.error('Unexpected error fetching transactions:', error);
@@ -200,9 +191,9 @@ function getAmountClass(transaction: Transaction): string {
 
 function getAmountPrefix(transaction: Transaction): string {
   if (transaction.transaction_type === 'deposit') {
-    return '+ ';
+    return '';
   }
-  return transaction.amount < 0 ? '- ' : '+ ';
+  return transaction.amount < 0 ? '- ' : '';
 }
 </script>
 

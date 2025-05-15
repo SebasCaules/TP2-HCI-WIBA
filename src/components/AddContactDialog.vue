@@ -40,6 +40,7 @@ import { supabase } from '@/plugins/supabase';
 import FilledButton from '@/components/ui/FilledButton.vue';
 import CustomTextField from '@/components/ui/CustomTextField.vue';
 import { useAuthStore } from '@/store/auth';
+import type { Contact } from '@/types/types';
 
 const props = defineProps<{
   modelValue: boolean
@@ -47,7 +48,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:model-value': [value: boolean]
-  'contact-added': []
+  'contact-found': [contact: Contact]
 }>();
 
 const dialog = ref(props.modelValue);
@@ -96,7 +97,7 @@ async function handleSubmit() {
     // Try to find the user by username first
     let { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id')
+      .select('id, first_name, last_name, username')
       .eq('username', accountIdentifier.value)
       .single();
 
@@ -109,7 +110,12 @@ async function handleSubmit() {
         .single();
 
       if (accountData) {
-        userData = { id: accountData.user_id };
+        const { data: userDetails } = await supabase
+          .from('users')
+          .select('id, first_name, last_name, username')
+          .eq('id', accountData.user_id)
+          .single();
+        userData = userDetails;
       }
     }
 
@@ -124,30 +130,24 @@ async function handleSubmit() {
       return;
     }
 
-    // Add to contacts
-    const { error: contactError } = await supabase
-      .from('user_contacts')
-      .insert({
-        user_id: currentUserId,
-        contact_id: userData.id,
-        created_at: new Date().toISOString()
+    // Obtener número de cuenta
+    const { data: accountDetails } = await supabase
+      .from('accounts')
+      .select('account_number')
+      .eq('user_id', userData.id)
+      .single();
+    if (userData && accountDetails) {
+      const initials = userData.first_name.charAt(0).toUpperCase() + (userData.last_name.charAt(0)?.toUpperCase() || '');
+      emit('contact-found', {
+        ...userData,
+        initials,
+        account_number: accountDetails.account_number
       });
-
-    if (contactError) {
-      if (contactError.code === '23505') { // Unique constraint error
-        errorMessage.value = 'Este contacto ya existe en tu lista';
-      } else {
-        errorMessage.value = 'Error al agregar el contacto';
-        console.error('Error adding contact:', contactError);
-      }
-      return;
+      closeDialog();
     }
-
-    emit('contact-added');
-    closeDialog();
   } catch (error) {
     console.error('Error in handleSubmit:', error);
-    errorMessage.value = 'Error al agregar el contacto';
+    errorMessage.value = 'Error al buscar el contacto';
   } finally {
     loading.value = false;
   }

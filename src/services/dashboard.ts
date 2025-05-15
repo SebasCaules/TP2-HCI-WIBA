@@ -64,16 +64,35 @@ export async function fetchDashboardData(userId: string): Promise<DashboardData>
     account_number: account.account_number
   }
 
-  const dashboardTransactions: Transaction[] = transactions.map(t => ({
-    id: t.id,
-    description: t.description,
-    user_id: t.user_id,
-    transaction_type: t.transaction_type as 'deposit' | 'withdraw' | 'transfer',
-    amount: t.amount,
-    recipient_id: t.recipient_id,
-    created_at: t.created_at,
-    card_company: t.card_company
-  }))
+  const dashboardTransactions: Transaction[] = transactions.map(t => {
+    let description = t.description;
+    if (t.transaction_type === 'transfer') {
+      const isOutgoing = t.user_id === user.id;
+      if (isOutgoing) {
+        description = `Enviado a ${t.recipient_name || ''}`;
+      } else {
+        description = `Recibido de ${t.sender_name || ''}`;
+      }
+      if (t.description) {
+        description += `: ${t.description}`;
+      }
+    }
+    return {
+      id: t.id,
+      description,
+      user_id: t.user_id,
+      transaction_type: t.transaction_type as 'deposit' | 'withdraw' | 'transfer',
+      amount: t.amount,
+      recipient_id: t.recipient_id,
+      created_at: t.created_at,
+      card_company: t.card_company,
+      recipient_name: t.recipient_name,
+      sender_name: t.sender_name,
+      recipient: t.recipient,
+      sender: t.sender
+    };
+  })
+  .reverse();
 
   const dashboardBills: Bill[] = bills.map(b => ({
     id: b.id,
