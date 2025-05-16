@@ -105,7 +105,6 @@ async function fetchTransactions() {
     return;
   }
   
-  
   try {
     const { data: transactionsData, error: transactionsError } = await supabase
       .from('transactions')
@@ -159,6 +158,7 @@ async function fetchTransactions() {
         sender: sender || undefined
       };
     });
+
     transactions.value = transformedTransactions;
   } catch (error) {
     console.error('Unexpected error fetching transactions:', error);

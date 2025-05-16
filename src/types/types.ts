@@ -62,3 +62,46 @@ export interface Card {
     holder: string;
     logo?: string;
 }
+export interface Stock {
+    id: number;
+    symbol: string;
+    name: string;
+    current_price: number;
+    updated_at: string;
+}
+
+export interface Portfolio {
+    id: number;
+    user_id: string;
+    stock_id: number;
+    quantity: number;
+    average_price: number;
+    stock?: Stock; // Optional joined relation
+}
+
+export interface InvestmentTransaction {
+    id: number;
+    user_id: string;
+    stock_id: number;
+    transaction_type: 'buy' | 'sell';
+    quantity: number;
+    price_at_transaction: number;
+    created_at: string;
+    stock?: Stock; // Optional joined relation
+}
+
+export const investmentTypeColors = {
+  'FND-A': 'var(--chart-1)',
+  'FND-B': 'var(--chart-2)',
+  'FND-C': 'var(--chart-3)',
+  'FND-D': 'var(--chart-4)',
+  'FND-E': 'var(--chart-5)',
+} as const;
+
+export const investmentTypeLabels = {
+  'FND-A': 'Clase A',
+  'FND-B': 'Clase B',
+  'FND-C': 'Conservador',
+  'FND-D': 'Balanceado',
+  'FND-E': 'Clase C',
+} as const;
