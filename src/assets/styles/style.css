@@ -91,3 +91,16 @@ input,
 .v-text-field .v-field {
   border-radius: var(--radius-lg) !important;
 }
+
+.v-btn.primary-btn {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 500;
+  border-radius: var(--radius-xl);
+  transition: background-color 0.3s;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}

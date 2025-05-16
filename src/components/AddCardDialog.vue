@@ -220,7 +220,6 @@ async function addCard() {
     expiry: newCard.value.expiry,
     holder: newCard.value.holder,
   }
-  console.log('About to insert card:', cardToInsert)
   const { error } = await supabase.from('cards').insert([cardToInsert])
   if (error) {
     alert('No se pudo agregar la tarjeta: ' + error.message)

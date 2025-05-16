@@ -71,32 +71,19 @@
       </v-col>
       <!-- Columna lateral -->
       <v-col cols="12" md="4" class="dashboard-sidebar">
-        <div class="dashboard-invest-card">
-          <div class="dashboard-invest-header">
-            <div class="dashboard-invest-row">
-              <span class="dashboard-invest-title">Inversiones</span>
-              <a href="/dashboard/inversiones" class="dashboard-link-header">Ver más <v-icon size="16">mdi-chevron-right</v-icon></a>
-            </div>
-            <div class="dashboard-invest-row">
-              <div class="dashboard-invest-value">${{ 873.06.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</div>
-              <div class="dashboard-invest-gain">${{ 3.50.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} (0,40%)</div>
-            </div>
-          </div>
           <div class="dashboard-invest-body">
-            <div class="dashboard-invest-chart">
-              <!-- Gráfico circular simple -->
-              <svg width="90" height="90" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="16" fill="none" stroke="#e5e7eb" stroke-width="3" />
-                <circle cx="18" cy="18" r="16" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="39.5 60.5" stroke-dashoffset="25" />
-                <circle cx="18" cy="18" r="16" fill="none" stroke="#22c55e" stroke-width="3" stroke-dasharray="60.5 39.5" stroke-dashoffset="64.5" />
-              </svg>
-              <div class="dashboard-invest-legend">
-                <div><span class="legend-dot" style="background:#fbbf24"></span> 39.50% - Bonos</div>
-                <div><span class="legend-dot" style="background:#22c55e"></span> 60.50% - Acciones</div>
-              </div>
-            </div>
+            <InvestmentCard
+              v-if="userId"
+              title="Inversiones"
+              :total="dashboardTotal"
+              :gain="dashboardGain"
+              :percentage="dashboardPercentage"
+              :slices="dashboardChartSlices"
+              :showBalance="false"
+              :size="90"
+              :userId="userId"
+            />
           </div>
-        </div>
         <div class="dashboard-section mt-8">
           <div class="dashboard-section-header" style="margin-bottom: 0.5rem;">
             <span class="dashboard-section-title">Contactos</span>
@@ -163,6 +150,9 @@ import IconFilledButton from '@/components/ui/IconFilledButton.vue'
 import { fetchDashboardData } from '@/services/dashboard'
 import type { Contact } from '@/types/types'
 import type { DashboardData } from '@/services/dashboard'
+import InvestmentChart from '@/components/InvestmentChart.vue'
+import InvestmentCard from '@/components/InvestmentCard.vue'
+import { investmentTypeColors, investmentTypeLabels } from '@/types/types'
 
 const authStore = useAuthStore()
 const userId = computed(() => authStore.user?.id)
@@ -172,6 +162,29 @@ const dashboardData = ref<DashboardData | null>(null)
 
 const contacts = ref<Contact[]>([])
 const isBalanceVisible = ref(true)
+
+// Simulación de datos para el gráfico de inversiones del dashboard
+const dashboardChartSlices = [
+  {
+    type: 'FND-B',
+    color: 'var(--chart-2)',
+    label: 'Bonos',
+    value: 345,
+    percent: 39.5,
+    offset: 25
+  },
+  {
+    type: 'FND-A',
+    color: 'var(--chart-1)',
+    label: 'Acciones',
+    value: 528,
+    percent: 60.5,
+    offset: 64.5
+  }
+]
+const dashboardTotal = 873.06
+const dashboardGain = 3.5
+const dashboardPercentage = 0.4
 
 async function loadContacts() {
   if (!userId.value) return;

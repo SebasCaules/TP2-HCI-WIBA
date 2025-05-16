@@ -106,7 +106,6 @@ export const performInvestmentTransaction = async (
   amount: number
 ): Promise<void> => {
   try {
-    console.log('[performInvestmentTransaction] called with:', { userId, stockId, type, quantity, amount })
     // Validate type and quantity
     if (!['buy', 'sell'].includes(type)) throw new Error('Tipo de transacción inválido')
     quantity = typeof quantity === 'string' ? parseFloat(quantity) : quantity
@@ -118,7 +117,6 @@ export const performInvestmentTransaction = async (
       .select('current_price')
       .eq('id', stockId)
       .single()
-    console.log('[performInvestmentTransaction] stockData:', stockData, 'stockError:', stockError)
 
     if (stockError || !stockData) {
       console.error('[performInvestmentTransaction] Error fetching stock price', stockError)
@@ -126,12 +124,10 @@ export const performInvestmentTransaction = async (
     }
 
     const currentPrice = stockData.current_price
-    console.log('[performInvestmentTransaction] currentPrice:', currentPrice)
 
     // Validate balance for buy transactions
     if (type === 'buy') {
       const balance = await getAccountBalance(userId)
-      console.log('[performInvestmentTransaction] user balance:', balance)
       if (balance < amount) {
         throw new Error('Saldo insuficiente')
       }
@@ -145,14 +141,12 @@ export const performInvestmentTransaction = async (
       quantity,
       price_at_transaction: parseFloat(currentPrice)
     }
-    console.log('[performInvestmentTransaction] insertObj:', insertObj)
 
     const { data: transaction, error: transactionError } = await supabase
       .from('investment_transactions')
       .insert(insertObj)
       .select()
       .single()
-    console.log('[performInvestmentTransaction] transaction:', transaction, 'transactionError:', transactionError)
 
     if (transactionError) {
       console.error('[performInvestmentTransaction] Error creating transaction', transactionError)
@@ -166,7 +160,6 @@ export const performInvestmentTransaction = async (
       .eq('user_id', userId)
       .eq('stock_id', stockId)
       .single()
-    console.log('[performInvestmentTransaction] portfolioData:', portfolioData, 'portfolioError:', portfolioError)
 
     if (portfolioError && portfolioError.code !== 'PGRST116') {
       console.error('[performInvestmentTransaction] Error fetching portfolio', portfolioError)
@@ -178,7 +171,6 @@ export const performInvestmentTransaction = async (
       const newQuantity = type === 'buy'
         ? portfolioData.quantity + quantity
         : portfolioData.quantity - quantity
-      console.log('[performInvestmentTransaction] newQuantity:', newQuantity)
 
       if (newQuantity < 0) {
         throw new Error('Cantidad insuficiente de cuotapartes')
@@ -193,7 +185,6 @@ export const performInvestmentTransaction = async (
             : portfolioData.average_price
         })
         .eq('id', portfolioData.id)
-      console.log('[performInvestmentTransaction] update portfolio error:', updateError)
 
       if (updateError) {
         throw new Error('Error updating portfolio')
@@ -208,7 +199,6 @@ export const performInvestmentTransaction = async (
           quantity,
           average_price: currentPrice
         })
-      console.log('[performInvestmentTransaction] insert portfolio error:', insertError)
 
       if (insertError) {
         throw new Error('Error creating portfolio position')
@@ -220,7 +210,6 @@ export const performInvestmentTransaction = async (
     // Update account balance
     const balanceChange = type === 'buy' ? -amount : amount
     const updateBalanceResult = await updateAccountBalance(userId, balanceChange)
-    console.log('[performInvestmentTransaction] updateAccountBalance result:', updateBalanceResult)
   } catch (error: any) {
     console.error('Investment transaction error:', error)
     throw error
@@ -282,7 +271,6 @@ export async function updateStockPrices() {
     return false
   }
 
-  console.log('Precios actualizados correctamente')
   return true
 }
 
