@@ -1,49 +1,87 @@
 import { supabase } from '@/plugins/supabase'
 import { v4 as uuidv4 } from 'uuid'
 
-export async function depositToAccount(userId: string, amount: number, cardLast4?: string, cardBrand?: string): Promise<{ success: boolean; message?: string }> {
-  // Fetch the current account
-  const { data: account, error: fetchError } = await supabase
-    .from('accounts')
-    .select('id, balance')
-    .eq('user_id', userId)
-    .single();
+export const getAccountBalance = async (userId: string): Promise<number> => {
+  try {
+    const { data, error } = await supabase
+      .from('accounts')
+      .select('balance')
+      .eq('user_id', userId)
+      .single()
 
-  if (fetchError || !account) {
-    return { success: false, message: fetchError?.message || 'Cuenta no encontrada' }
+    if (error) {
+      console.error('Error fetching account balance:', error)
+      throw error
+    }
+
+    return data?.balance || 0
+  } catch (error) {
+    console.error('Error in getAccountBalance:', error)
+    return 0
   }
+}
 
-  // Calculate new balance
-  const newBalance = Number(account.balance) + Number(amount);
+export const updateAccountBalance = async (userId: string, amount: number): Promise<boolean> => {
+  try {
+    // Get current balance
+    const currentBalance = await getAccountBalance(userId)
+    const newBalance = currentBalance + amount
 
-  // Update the balance
-  const { error: updateError } = await supabase
-    .from('accounts')
-    .update({ balance: newBalance })
-    .eq('id', account.id);
+    if (newBalance < 0) {
+      throw new Error('Saldo insuficiente')
+    }
 
-  if (updateError) {
-    return { success: false, message: updateError.message }
+    // Update balance
+    const { error } = await supabase
+      .from('accounts')
+      .update({ balance: newBalance })
+      .eq('user_id', userId)
+
+    if (error) {
+      console.error('Error updating account balance:', error)
+      throw error
+    }
+
+    return true
+  } catch (error) {
+    console.error('Error in updateAccountBalance:', error)
+    throw error
   }
+}
 
-  // Insert transaction record
-  const { error: transactionError } = await supabase
-    .from('transactions')
-    .insert({
-      id: uuidv4(),
-      description: cardLast4 ? `Depósito desde *${cardLast4}` : 'Depósito',
-      user_id: userId,
-      transaction_type: 'deposit',
-      amount: amount,
-      recipient_id: null,
-      card_company: cardBrand?.toLowerCase() || null,
-      created_at: new Date()
-    });
+export const depositToAccount = async (
+  userId: string,
+  amount: number,
+  cardLast4?: string,
+  cardBrand?: string
+): Promise<{ success: boolean; message?: string }> => {
+  try {
+    // Update balance
+    await updateAccountBalance(userId, amount)
 
-  if (transactionError) {
-    console.error('Error inserting transaction:', transactionError);
-    // We don't return error here since the deposit was successful
+    // Log transaction
+    const { error } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: userId,
+        type: 'deposit',
+        amount,
+        status: 'completed',
+        card_last4: cardLast4,
+        card_brand: cardBrand
+      })
+
+    if (error) {
+      console.error('Error logging deposit transaction:', error)
+      throw error
+    }
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error in depositToAccount:', error)
+    return {
+      success: false,
+      message: error.message || 'Error al procesar el depósito'
+    }
   }
-
-  return { success: true }
 } 

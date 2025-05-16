@@ -60,3 +60,30 @@ export interface Card {
     holder: string;
     logo?: string;
 }
+export interface Stock {
+    id: number;
+    symbol: string;
+    name: string;
+    current_price: number;
+    updated_at: string;
+}
+
+export interface Portfolio {
+    id: number;
+    user_id: string;
+    stock_id: number;
+    quantity: number;
+    average_price: number;
+    stock?: Stock; // Optional joined relation
+}
+
+export interface InvestmentTransaction {
+    id: number;
+    user_id: string;
+    stock_id: number;
+    transaction_type: 'buy' | 'sell';
+    quantity: number;
+    price_at_transaction: number;
+    created_at: string;
+    stock?: Stock; // Optional joined relation
+}
