@@ -40,7 +40,7 @@
               <IconFilledButton icon="mdi-arrow-right" class="dashboard-action-btn" @click="$router.push('/dashboard/transferir')">
                 Transferir
               </IconFilledButton>
-              <IconFilledButton icon="mdi-wallet" class="dashboard-action-btn">
+              <IconFilledButton icon="mdi-wallet" class="dashboard-action-btn" @click="$router.push('/dashboard/cobrar')">
                 Cobrar
               </IconFilledButton>
             </div>

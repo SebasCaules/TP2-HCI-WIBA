@@ -73,6 +73,11 @@ const router = createRouter({
                     path: 'contactos',
                     name: 'contactos',
                     component: () => import('@/views/dashboard/ContactsView.vue')
+                },
+                {
+                    path: 'cobrar',
+                    name: 'cobrar',
+                    component: () => import('@/views/dashboard/CobrarView.vue')
                 }
             ]
         }
