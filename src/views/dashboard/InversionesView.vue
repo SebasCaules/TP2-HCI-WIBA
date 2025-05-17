@@ -38,7 +38,15 @@
                                     @click:row="openWithdrawDialog"
                                 >
                                     <template #item.name="{ item }">
-                                        <div class="text-center font-weight-medium">{{ item.name }}</div>
+                                        <div class="d-flex align-center justify-center">
+                                            <v-icon :color="item.variation >= 0 ? 'success' : 'error'" size="20" class="mr-2">
+                                                {{ item.variation >= 0 ? 'mdi-arrow-up' : 'mdi-arrow-down' }}
+                                            </v-icon>
+                                            <div class="text-center">
+                                                <div class="font-weight-medium">{{ item.name }}</div>
+                                                <div class="text-caption text-grey">{{ formatDate(item.stock?.updated_at) }}</div>
+                                            </div>
+                                        </div>
                                     </template>
 
                                     <template #item.quantity="{ item }">
@@ -521,41 +529,25 @@ const chartSlices = computed(() => {
 
 // Tabla de inversiones: columnas visibles (nuevo formato)
 const investmentHeaders = [
-    {
-        title: "Fondo",
-        key: "name",
-        align: "center" as const,
-        sortable: true,
-    },
-    {
-        title: "Cuotapartes",
-        key: "quantity",
-        align: "center" as const,
-        sortable: true,
-    },
-    {
-        title: "Precio",
-        key: "price",
-        align: "center" as const,
-        sortable: true,
-    },
-    {
-        title: "Variación",
-        key: "variation",
-        align: "center" as const,
-        sortable: true,
-    },
-    {
-        title: "Valor Total",
-        key: "total_value",
-        align: "center" as const,
-        sortable: true,
-    },
+    { title: 'Fondo', key: 'name', align: 'center' as const },
+    { title: 'Cuotapartes', key: 'quantity', align: 'center' as const },
+    { title: 'Precio', key: 'price', align: 'center' as const },
+    { title: 'Variación', key: 'variation', align: 'center' as const },
+    { title: 'Valor Total', key: 'total_value', align: 'center' as const },
 ];
 
 // Agregar estas variables al script setup
 const currentPage = ref(1);
 const itemsPerPage = ref(5);
+
+function formatDate(timestamp: string | undefined): string {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('es-AR', {
+        day: '2-digit',
+        month: '2-digit'
+    });
+}
 </script>
 
 <style scoped>
@@ -708,6 +700,14 @@ const itemsPerPage = ref(5);
     padding-top: 0.7rem;
     padding-bottom: 0.7rem;
 }
+.v-data-table tbody td .d-flex {
+    justify-content: center;
+    width: 100%;
+}
+.v-data-table tbody td .text-center {
+    text-align: center;
+    width: 100%;
+}
 .v-data-table tbody td.font-weight-medium {
     font-weight: 700;
     color: var(--primary);
@@ -719,9 +719,6 @@ const itemsPerPage = ref(5);
 .v-data-table .text-error {
     color: var(--error) !important;
     font-weight: 600;
-}
-.v-data-table .text-center {
-    text-align: center !important;
 }
 .v-data-table .v-pagination {
     margin-top: 0.5rem;
