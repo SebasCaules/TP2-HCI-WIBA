@@ -52,7 +52,7 @@
             <a href="/dashboard/transacciones" class="dashboard-link">Ver todo <v-icon size="16">mdi-chevron-right</v-icon></a>
           </div>
           <v-list class="dashboard-list">
-            <v-list-item v-for="(tx, i) in transactions" :key="i" class="dashboard-list-item">
+            <v-list-item v-for="(tx, i) in transactions.slice(0, 7)" :key="i" class="dashboard-list-item">
               <template #prepend>
                 <v-icon :color="tx.amount < 0 ? 'error' : 'success'" size="20">
                   {{ tx.amount > 0 ? 'mdi-arrow-bottom-right' : 'mdi-arrow-top-right' }}

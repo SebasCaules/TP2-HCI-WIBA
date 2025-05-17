@@ -13,7 +13,7 @@
             </div>
 
             <v-form
-                v-if="!resetSuccess"
+                v-if="!resetSuccess && !error"
                 @submit.prevent="handleSubmit"
                 class="reset-password-form"
             >
@@ -42,14 +42,21 @@
                     Actualizar Contraseña
                 </FilledButton>
             </v-form>
+
+            <div v-if="error" class="reset-password-actions">
+                <router-link to="/login" class="reset-password-link">
+                    Volver al inicio de sesión
+                </router-link>
+            </div>
         </div>
     </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeMount } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { authService } from "@/services/auth";
+import { supabase } from "@/plugins/supabase";
 import CustomTextField from "@/components/ui/CustomTextField.vue";
 import FilledButton from "@/components/ui/FilledButton.vue";
 
@@ -61,19 +68,6 @@ const confirmPassword = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
 const resetSuccess = ref(false);
-
-// Check for token before component mount
-const accessToken = ref<string | null>(null);
-
-onBeforeMount(() => {
-    // Get token from URL query parameters before Supabase consumes it
-    const token = window.location.search.split('access_token=')[1]?.split('&')[0];
-    if (!token) {
-        error.value = "Token de acceso no válido. Por favor, solicita un nuevo enlace de restablecimiento de contraseña.";
-        return;
-    }
-    accessToken.value = token;
-});
 
 const passwordRules = [
     (v: string) => !!v || "La contraseña es requerida",
@@ -95,16 +89,22 @@ const isFormValid = computed(() => {
     );
 });
 
-const handleSubmit = async () => {
-    if (!validateForm()) return;
-    if (!accessToken.value) {
-        error.value = "Token de acceso no válido. Por favor, solicita un nuevo enlace de restablecimiento de contraseña.";
+onMounted(async () => {
+    // Verificar si hay un token de recuperación en la sesión
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+        error.value = "El enlace de recuperación ha expirado o no es válido. Por favor, solicita un nuevo enlace.";
         return;
     }
+});
+
+const handleSubmit = async () => {
+    if (!validateForm()) return;
 
     loading.value = true;
     try {
-        const { success, error: resetError } = await authService.resetPasswordWithToken(accessToken.value, password.value);
+        const { success, error: resetError } = await authService.resetPasswordWithToken(password.value);
 
         if (success) {
             resetSuccess.value = true;
@@ -188,5 +188,20 @@ const validateForm = () => {
     border-radius: var(--radius-md);
     margin-bottom: 1rem;
     text-align: center;
+}
+
+.reset-password-actions {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.reset-password-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.reset-password-link:hover {
+    text-decoration: underline;
 }
 </style>

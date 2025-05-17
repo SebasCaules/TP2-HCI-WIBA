@@ -150,7 +150,7 @@ export const authService = {
       }
     }
   },
-  async resetPasswordWithToken(accessToken: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+  async resetPasswordWithToken(newPassword: string): Promise<{ success: boolean; error?: string }> {
     try {
       const { error } = await supabase.auth.updateUser({
         password: newPassword
