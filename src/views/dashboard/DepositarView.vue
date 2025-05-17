@@ -61,7 +61,7 @@
             </div>
           </template>
           <div v-else class="no-cards-message">
-            <v-icon size="48" :color="'#41a7b7'">mdi-credit-card-outline</v-icon>
+            <v-icon size="48" color="primary">mdi-credit-card-outline</v-icon>
             <div class="no-cards-title">No tienes tarjetas guardadas</div>
             <div class="no-cards-subtitle">Agrega una tarjeta para realizar depósitos</div>
           </div>
@@ -227,7 +227,7 @@ async function confirmDeposit() {
     userId.value, 
     Number(amount.value),
     selectedCard.value?.number_last4,
-    selectedCard.value?.brand
+    selectedCard.value?.brand.toLocaleLowerCase()
   )
   if (result.success) {
     showConfirmDialog.value = false
@@ -306,7 +306,7 @@ onMounted(fetchCards)
 .deposit-method-box {
   display: flex;
   align-items: center;
-  border: 1.5px solid #BDBDBD;
+  border: 1.5px solid var(--border);
   border-radius: 12px;
   background: transparent;
   height: 48px;
@@ -323,7 +323,7 @@ onMounted(fetchCards)
 
 .deposit-method-box:hover,
 .deposit-method-box:focus {
-  border-color: #489FB5;
+  border-color: var(--primary);
 }
 
 .deposit-card-logo {
@@ -355,18 +355,22 @@ onMounted(fetchCards)
 
 .deposit-continue-btn {
   margin-top: 1.5rem;
-  font-size: 1.1rem;
-  font-weight: 700;
-  height: 50px;
   width: 100%;
   max-width: 400px;
   align-self: center;
 }
 
+.deposit-continue-btn :deep(.v-btn) {
+  font-size: 1.1rem;
+  font-weight: 700;
+  height: 50px;
+  width: 100%;
+}
+
 .select-card-dialog {
   border-radius: 2rem !important;
   overflow: visible;
-  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
+  box-shadow: var(--shadow-card);
   max-width: 960px;
   margin: 0 auto;
   padding: 2rem 3rem;
@@ -405,9 +409,9 @@ onMounted(fetchCards)
   width: 100%;
   display: flex;
   align-items: center;
-  background: #f8fafc;
+  background: var(--input);
   border-radius: 14px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--card-border);
   padding: 1rem 1.5rem;
   cursor: pointer;
   transition: border-color 0.18s, background 0.18s;
@@ -415,13 +419,13 @@ onMounted(fetchCards)
 }
 
 .select-card-custom.selected {
-  border-color: var(--primary, #41a7b7);
-  background: #e3f6f3;
+  border-color: var(--primary);
+  background: var(--muted);
 }
 
 .select-card-custom:hover {
-  border-color: var(--primary, #41a7b7);
-  background: #f0f4f8;
+  border-color: var(--primary);
+  background: var(--card);
 }
 
 .select-card-logo {
@@ -441,7 +445,7 @@ onMounted(fetchCards)
 .select-card-brand {
   font-weight: 700;
   font-size: 1.2rem;
-  color: #232526;
+  color: var(--text);
   display: flex;
   align-items: center;
   gap: 0.3rem;
@@ -453,7 +457,7 @@ onMounted(fetchCards)
 
 .select-card-expiry {
   font-size: 1rem;
-  color: #888;
+  color: var(--muted-text);
   margin-top: 0.2rem;
 }
 
@@ -481,7 +485,7 @@ onMounted(fetchCards)
 .confirm-deposit-dialog {
   border-radius: 2rem !important;
   overflow: visible;
-  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
+  box-shadow: var(--shadow-card);
   width: 100%;
   max-width: 650px;
   margin: 0 auto;
@@ -514,7 +518,7 @@ onMounted(fetchCards)
   padding: 1.5rem 2rem;
   margin-bottom: 2rem;
   width: 100%;
-  box-shadow: 0 1px 6px 0 rgba(60,60,60,0.06);
+  box-shadow: var(--shadow-card-light);
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
@@ -613,9 +617,9 @@ onMounted(fetchCards)
   justify-content: center;
   padding: 3rem 2rem;
   text-align: center;
-  background: #f8fafc;
+  background: var(--input);
   border-radius: 14px;
-  border: 2px dashed #e0e0e0;
+  border: 2px dashed var(--card-border-dashed);
   width: 100%;
   gap: 1rem;
 }

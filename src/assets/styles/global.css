@@ -36,12 +36,12 @@
   --sidebar-primary-foreground: #ffffffff;
   --sidebar-primary: #489fb5ff;
   --sidebar-foreground: #454545ff;
-  --sidebar: #f8fafcff;
-  --chart-1: #ff9f1cff;
-  --chart-2: #22c55eff;
-  --chart-3: #9966ffff;
-  --chart-4: #36a2ebff;
-  --chart-5: #ff6384ff;
+  --sidebar: black;
+  --chart-1: black;
+  --chart-2: black;
+  --chart-3: black;
+  --chart-4: black;
+  --chart-5: black;
   --ring: #489fb5ff;
   --input: #f8fafcff;
   --border: #d2d2d2ff;

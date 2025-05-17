@@ -32,7 +32,7 @@
             </v-card-text>
             <v-card-actions class="dialog-actions-row">
                 <FilledButton
-                class="action-button secondary-btn"
+                class="btn-secondary"
                 style="margin-left: 1rem;"
                 @click="onBack"
                 >No, volver atrás</FilledButton>

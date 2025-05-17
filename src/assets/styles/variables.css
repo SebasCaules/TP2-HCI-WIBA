@@ -1,0 +1,161 @@
+/* Base Colors */
+:root {
+    /* Light Theme (default) */
+    --text: #05080a;
+    --background: #ffffffff;
+    --primary: #49a0b6;
+    --primary-foreground: #ffffff;
+    --secondary: #8fccdb;
+    --secondary-foreground: #454545;
+    --accent: #69bcd8;
+    --accent-foreground: #f3f4f6;
+    --hover: #0891b2;
+
+    /* UI Colors */
+    --foreground: #0a0a0a;
+    --muted-text: #6b7280;
+    --label: #374151;
+    --input-border: #d1d5db;
+    --error-bg: #fef2f2;
+    --error-text: #b91c1c;
+    --icon-muted: #9ca3af;
+    --input: #f8fafc;
+    --border: #d2d2d2;
+    --border-hover: #9ca3af;
+    --destructive: #ef4444;
+    --muted-foreground: #7d7d7d;
+    --muted-foreground-hover: #1f2937;
+    --muted: #f3f4f6;
+    --muted-hover: #e5e7eb;
+    --popover-foreground: #454545;
+    --popover: #ffffff;
+    --card-foreground: #454545;
+    --card: #f3f4f6;
+    --surface-alt: #ffffff;
+
+    /* Additional UI Colors */
+    --card-border: #e0e0e0;
+    --card-border-dashed: #e0e0e0;
+    --card-shadow: rgba(60, 60, 60, 0.1);
+    --card-shadow-light: rgba(60, 60, 60, 0.06);
+    --card-shadow-medium: rgba(60, 60, 60, 0.08);
+    --card-shadow-dark: rgba(60, 60, 60, 0.12);
+    --card-shadow-hover: rgba(60, 60, 60, 0.18);
+    --overlay-light: rgba(255, 255, 255, 0.1);
+    --overlay-dark: rgba(0, 0, 0, 0.06);
+    --gradient-dark: #232526;
+    --gradient-dark-alt: #414345;
+    --gradient-primary-alt: #2c7873;
+
+    /* Sidebar Colors */
+    --sidebar-ring: #489fb555;
+    --sidebar-border: #d2d2d2;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-accent: #489fb5;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-primary: #489fb5;
+    --sidebar-foreground: #454545;
+    --sidebar: #f8fafc;
+
+    /* Chart Colors */
+    /* --chart-1: #ff9f1c;
+    --chart-2: #22c55e;
+    --chart-3: #9966ff;
+    --chart-4: #36a2eb;
+    --chart-5: #ff6384; */
+
+    --chart-1: #ff8a5c;   /* coral */
+    --chart-2: #4cc9f0;   /* celeste */
+    --chart-3: #f72585;   /* rosa fuerte */
+    --chart-4: #b5179e;   /* magenta oscuro */
+    --chart-5: #2dd4bf;   /* verde turquesa */
+
+    
+    /* Gradients */
+    --linear-primary-secondary: linear-gradient(
+        to right,
+        var(--primary),
+        var(--secondary)
+    );
+    --linear-primary-accent: linear-gradient(
+        to right,
+        var(--primary),
+        var(--accent)
+    );
+    --linear-secondary-accent: linear-gradient(
+        to right,
+        var(--secondary),
+        var(--accent)
+    );
+    --linear-dark: linear-gradient(
+        120deg,
+        var(--gradient-dark) 60%,
+        var(--gradient-dark-alt) 100%
+    );
+    --linear-primary-alt: linear-gradient(
+        135deg,
+        var(--primary) 0%,
+        var(--gradient-primary-alt) 100%
+    );
+    --radial-primary-secondary: radial-gradient(
+        circle,
+        var(--primary),
+        var(--secondary)
+    );
+    --radial-primary-accent: radial-gradient(
+        circle,
+        var(--primary),
+        var(--accent)
+    );
+    --radial-secondary-accent: radial-gradient(
+        circle,
+        var(--secondary),
+        var(--accent)
+    );
+
+    /* Semantic Colors */
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --info: #3b82f6;
+
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+
+    /* Border Radius */
+    --radius: 0.65rem;
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --radius-full: 9999px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    --shadow-card: 0 2px 16px 0 var(--card-shadow);
+    --shadow-card-light: 0 1px 6px 0 var(--card-shadow-light);
+    --shadow-card-medium: 0 2px 8px 0 var(--card-shadow-medium);
+    --shadow-card-dark: 0 2px 8px 0 var(--card-shadow-dark);
+    --shadow-card-hover: 0 2px 16px 0 var(--card-shadow-hover);
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-normal: 250ms ease;
+    --transition-slow: 350ms ease;
+
+    /* Z-index */
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+}

@@ -189,7 +189,7 @@ const handleRegister = async () => {
 .login-bg-card {
   background: var(--card);
   border-radius: var(--radius-lg);
-  box-shadow: 0 2px 16px 0 rgba(60, 60, 60, 0.06);
+  box-shadow: var(--shadow-card);
 }
 .login-title {
   color: var(--primary);

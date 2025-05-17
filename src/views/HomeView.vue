@@ -60,7 +60,7 @@ import FilledButton from '@/components/ui/FilledButton.vue'
 /* Hero Section */
 .hero-section {
   padding: 4rem 2rem;
-  background: linear-gradient(135deg, var(--primary) 0%, #2c7873 100%);
+  background: var(--linear-primary-alt);
   color: white;
 }
 
@@ -154,7 +154,7 @@ import FilledButton from '@/components/ui/FilledButton.vue'
   padding: 2rem;
   border-radius: 16px;
   text-align: center;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-card);
   transition: transform 0.2s;
 }
 

@@ -63,12 +63,12 @@ export const depositToAccount = async (
     const { error } = await supabase
       .from('transactions')
       .insert({
+        id: uuidv4(),
         user_id: userId,
-        type: 'deposit',
+        transaction_type: 'deposit',
         amount,
-        status: 'completed',
-        card_last4: cardLast4,
-        card_brand: cardBrand
+        card_company: cardBrand || null,
+        description: cardLast4 ? `Depósito desde *${cardLast4}` : null
       })
 
     if (error) {

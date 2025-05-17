@@ -1,119 +1,288 @@
 <template>
-  <v-card class="investment-card">
-    <v-card-title class="d-flex justify-space-between align-center">
-      <div>
-        <div class="text-h6">{{ investment.name }}</div>
-        <div class="text-subtitle-2 text-medium-emphasis">{{ investment.symbol }}</div>
-      </div>
-      <v-avatar color="primary" size="40">
-        <span class="text-h6">{{ investment.symbol.charAt(0) }}</span>
-      </v-avatar>
-    </v-card-title>
-
-    <v-card-text>
-      <div class="d-flex justify-space-between align-center mb-4">
-        <div>
-          <div class="text-caption text-medium-emphasis">Precio Actual</div>
-          <div class="text-h5">{{ formatCurrency(investment.current_price ?? 0) }}</div>
-        </div>
-        <div class="text-right">
-          <div class="text-caption text-medium-emphasis">Variación</div>
-          <div
-            :class="[
-              'text-h6',
-              (investment.variation_percentage ?? 0) >= 0 ? 'text-success' : 'text-error'
-            ]"
-          >
-            {{ formatPercentage(investment.variation_percentage ?? 0) }}
+  <div class="dashboard-invest-card">
+      <div class="dashboard-invest-header">
+          <div class="dashboard-invest-title">{{ title }}</div>
+          <div class="dashboard-invest-summary">
+              <span class="dashboard-invest-value">
+                  {{ formatMoney(totalBalance) }}
+              </span>
+              <span class="dashboard-invest-gain">
+                  {{ percentageChange >= 0 ? '+' : '' }}{{ formatMoney(totalGain) }}
+                  ({{ percentageChange >= 0 ? '+' : '' }}{{ formatPercent(percentageChange) }})
+              </span>
           </div>
-        </div>
-      </div>
-
-      <div class="chart-wrapper">
-        <InvestmentChart :stock="investment" />
-      </div>
-
-      <div v-if="investment.quantity" class="mt-4">
-        <v-divider class="mb-4"></v-divider>
-        <div class="d-flex justify-space-between">
-          <div>
-            <div class="text-caption text-medium-emphasis">Cuotapartes</div>
-            <div class="text-body-1">{{ formatNumber(investment.quantity ?? 0) }}</div>
+          <div v-if="showBalance" class="dashboard-invest-balance-row">
+              <span class="dashboard-invest-balance-label">Saldo disponible:</span>
+              <span class="dashboard-invest-balance-value">
+                  {{ formatMoney(balance ?? 0) }}
+              </span>
           </div>
-          <div class="text-right">
-            <div class="text-caption text-medium-emphasis">Valor Total</div>
-            <div class="text-body-1">{{ formatCurrency(investment.total_value ?? 0) }}</div>
-          </div>
-        </div>
       </div>
-    </v-card-text>
-
-    <v-card-actions>
-      <v-spacer></v-spacer>
-      <v-btn
-        v-if="investment.quantity"
-        color="error"
-        variant="text"
-        @click="$emit('sell', investment)"
-      >
-        Vender
-      </v-btn>
-      <v-btn
-        color="primary"
-        @click="$emit('buy', investment)"
-      >
-        {{ investment.quantity ? 'Comprar más' : 'Comprar' }}
-      </v-btn>
-    </v-card-actions>
-  </v-card>
+      <div class="dashboard-invest-body">
+          <div class="dashboard-invest-chart" style="position: relative">
+              <svg
+                  :width="size"
+                  :height="size"
+                  :viewBox="`0 0 36 36`"
+                  style="z-index: 1"
+              >
+                  <circle
+                      cx="18"
+                      cy="18"
+                      r="16"
+                      fill="none"
+                      stroke="#e5e7eb"
+                      stroke-width="3"
+                  />
+                  <template v-for="(slice, idx) in chartSlices" :key="slice.type">
+                      <circle
+                          cx="18"
+                          cy="18"
+                          r="16"
+                          fill="none"
+                          :stroke="String(slice.color)"
+                          stroke-width="3"
+                          :stroke-dasharray="
+                              slice.percent + ' ' + (100 - slice.percent)
+                          "
+                          :stroke-dashoffset="slice.offset"
+                          @mousemove="showTooltip($event, slice)"
+                          @mouseleave="hideTooltip"
+                          style="cursor: pointer"
+                      />
+                  </template>
+              </svg>
+              <div
+                  v-if="tooltip.show"
+                  class="dashboard-invest-tooltip"
+                  :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
+              >
+                  <strong>{{ tooltip.label }}</strong
+                  ><br />
+                  {{ formatPercent(tooltip.percent) }}<br />
+                  {{ formatMoney(tooltip.value) }}
+              </div>
+              <div class="dashboard-invest-legend">
+                  <div v-for="slice in chartSlices" :key="slice.type">
+                      <span
+                          class="legend-dot"
+                          :style="{ background: String(slice.color) }"
+                      ></span>
+                      {{ formatPercent(slice.percent) }} - {{ slice.label }}
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { type Stock } from '@/services/investments'
-import InvestmentChart from './InvestmentChart.vue'
+import { ref, computed, onMounted } from 'vue'
+import { getPortfolio } from '@/services/investments'
+import { investmentTypeColors, investmentTypeLabels } from '@/types/types'
 
 const props = defineProps<{
-  investment: Stock & {
-    quantity?: number;
-    total_value?: number;
+  userId: string
+  showBalance?: boolean
+  balance?: number
+  size?: number
+  title?: string
+}>()
+
+const title = props.title || 'Inversiones'
+const size = props.size || 160
+
+const portfolio = ref<any[]>([])
+const loading = ref(true)
+const error = ref<string | null>(null)
+
+onMounted(async () => {
+  try {
+      loading.value = true
+      portfolio.value = await getPortfolio(props.userId)
+  } catch (e: any) {
+      error.value = e.message || 'Error al cargar inversiones'
+  } finally {
+      loading.value = false
   }
-}>()
+})
 
-defineEmits<{
-  (e: 'buy', investment: Stock): void;
-  (e: 'sell', investment: Stock): void;
-}>()
+const investments = computed(() => portfolio.value)
 
-const formatCurrency = (value: number) => {
-  return `$${value.toFixed(2)}`
+const totalBalance = computed(() => {
+  return investments.value.reduce((sum, inv) => sum + inv.total_value, 0)
+})
+
+const totalInitialBalance = computed(() => {
+  return investments.value.reduce((sum, inv) => {
+      const initial = inv.total_value / (1 + inv.variation_percentage / 100)
+      return sum + initial
+  }, 0)
+})
+
+const totalGain = computed(() => {
+  return totalBalance.value - totalInitialBalance.value
+})
+
+const percentageChange = computed(() => {
+  return totalInitialBalance.value > 0
+      ? (totalGain.value / totalInitialBalance.value) * 100
+      : 0
+})
+
+const chartSlices = computed(() => {
+  const total = totalBalance.value
+  const grouped: Record<string, number> = {}
+  investments.value.forEach(inv => {
+      const type = inv.stock?.symbol ?? 'FND-A'
+      grouped[type] = (grouped[type] || 0) + (inv.total_value ?? 0)
+  })
+  let offset = 25
+  return Object.entries(investmentTypeColors)
+      .map(([type, color]) => {
+          const value = grouped[type] || 0
+          const percent = total > 0 ? (value / total) * 100 : 0
+          const slice = {
+              type,
+              color: String(color),
+              label: String(investmentTypeLabels[type as keyof typeof investmentTypeLabels] || type),
+              value,
+              percent,
+              offset
+          }
+          offset -= (percent / 100) * 100
+          return slice
+      })
+      .filter(slice => slice.percent > 0)
+})
+
+const tooltip = ref({ show: false, x: 0, y: 0, label: '', percent: 0, value: 0 })
+function showTooltip(e: MouseEvent, slice: any) {
+  tooltip.value = {
+      show: true,
+      x: e.offsetX - 125,
+      y: e.offsetY - 85,
+      label: slice.label,
+      percent: slice.percent,
+      value: slice.value
+  }
+}
+function hideTooltip() {
+  tooltip.value.show = false
 }
 
-const formatPercentage = (value: number) => {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+function formatMoney(value: number) {
+  return value.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
-
-const formatNumber = (value: number) => {
-  return value.toFixed(6)
+function formatPercent(value: number) {
+  return value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%'
 }
 </script>
 
 <style scoped>
-.investment-card {
-  height: 100%;
+.dashboard-invest-card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 16px 0 rgba(60, 60, 60, 0.06);
+  margin-bottom: 1.5rem;
+  padding: 0;
+  width: 100%;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  container-type: inline-size;
+}
+.dashboard-invest-header {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  padding: 1.2rem 1.5rem 1rem 1.5rem;
+  font-weight: 600;
   display: flex;
   flex-direction: column;
+  gap: 1rem;
+}
+.dashboard-invest-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--primary-foreground);
+}
+.dashboard-invest-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-foreground);
+}
+.dashboard-invest-gain {
+  color: var(--primary-foreground);
+  font-weight: 500;
+  text-align: right;
+}
+.dashboard-invest-balance-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  color: var(--muted-text);
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
+}
+.dashboard-invest-balance-label {
+  font-size: 1rem;
+  color: var(--primary-foreground);
+  font-weight: 400;
+}
+.dashboard-invest-balance-value {
+  font-size: 1rem;
+  color: var(--primary-foreground);
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+.dashboard-invest-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+.dashboard-invest-body {
+  padding: 1.2rem 1.5rem 1.5rem 1.5rem;
+}
+.dashboard-invest-chart {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin-top: 1rem;
 }
 
-.chart-wrapper {
-  height: 300px;
-  margin: 0 -16px;
+@container (max-width: 350px) {
+  .dashboard-invest-chart {
+    flex-direction: column;
+    align-items: flex-center;
+  }
 }
 
-.text-success {
-  color: #4CAF50;
+.dashboard-invest-legend {
+  font-size: 0.95rem;
+  color: var(--muted-text);
 }
-
-.text-error {
-  color: #FF5252;
+.legend-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 6px;
 }
-</style> 
+.dashboard-invest-tooltip {
+  position: absolute;
+  background: #fff;
+  color: #222;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px 0 rgba(60, 60, 60, 0.12);
+  padding: 8px 14px;
+  font-size: 0.95rem;
+  pointer-events: none;
+  z-index: 10;
+  min-width: 120px;
+  text-align: center;
+}
+</style>

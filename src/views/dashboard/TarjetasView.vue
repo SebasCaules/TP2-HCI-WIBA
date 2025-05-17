@@ -299,9 +299,9 @@ const transparentPixel =
     width: 340px;
     height: 215px;
     border-radius: 18px;
-    background: linear-gradient(120deg, #232526 60%, #414345 100%);
-    box-shadow: 0 2px 16px 0 rgba(60, 60, 60, 0.18);
-    color: #fff;
+    background: var(--linear-dark);
+    box-shadow: var(--shadow-card-hover);
+    color: var(--primary-foreground);
     font-family: "Menlo", "Consolas", monospace;
     display: flex;
     flex-direction: column;
@@ -363,7 +363,7 @@ const transparentPixel =
     bottom: 0;
     padding-left: 0;
     padding-bottom: 0.7rem;
-    color: #fff;
+    color: var(--primary-foreground);
     opacity: 0.92;
 }
 .card-preview-expiry-block {
@@ -416,7 +416,7 @@ const transparentPixel =
     font-size: 1.1rem;
     font-weight: 600;
     padding: 0.7rem 2.5rem;
-    color: #fff !important;
+    color: var(--primary-foreground) !important;
 }
 .add-card-error {
     color: var(--error);

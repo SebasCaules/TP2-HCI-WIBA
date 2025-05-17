@@ -150,9 +150,7 @@ import IconFilledButton from '@/components/ui/IconFilledButton.vue'
 import { fetchDashboardData } from '@/services/dashboard'
 import type { Contact } from '@/types/types'
 import type { DashboardData } from '@/services/dashboard'
-import InvestmentChart from '@/components/InvestmentChart.vue'
-import InvestmentCard from '@/components/InvestmentCard.vue'
-import { investmentTypeColors, investmentTypeLabels } from '@/types/types'
+import InvestmentCard from '@/components/investments/InvestmentCard.vue'
 
 const authStore = useAuthStore()
 const userId = computed(() => authStore.user?.id)
@@ -249,7 +247,7 @@ function toggleBalanceVisibility() {
 .dashboard-balance-card {
   background: var(--card);
   border-radius: var(--radius-lg);
-  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.06);
+  box-shadow: var(--shadow-card);
   padding: 2rem;
   margin-bottom: 1.5rem;
   width: 100%;
@@ -369,7 +367,7 @@ function toggleBalanceVisibility() {
 .dashboard-invest-card {
   background: var(--card);
   border-radius: var(--radius-lg);
-  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.06);
+  box-shadow: var(--shadow-card);
   margin-bottom: 1.5rem;
   padding: 0;
 }
@@ -436,12 +434,12 @@ function toggleBalanceVisibility() {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #e0e0e0;
+  background-color: var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  color: #444;
+  color: var(--text);
   font-size: 1.1rem;
   margin-right: 16px;
 }
@@ -468,7 +466,7 @@ function toggleBalanceVisibility() {
   margin-right: 16px;
   background: var(--card);
   border-radius: var(--radius-lg);
-  box-shadow: 0 2px 8px 0 rgba(60,60,60,0.08);
+  box-shadow: var(--shadow-card-medium);
   padding: 0;
   display: flex;
   flex-direction: column;

@@ -1,0 +1,80 @@
+/* Dark Theme Overrides */
+/* Removed the prefers-color-scheme media query to ensure light theme by default */
+
+/* Manual Dark Theme Toggle */
+:root[data-theme="dark"] {
+    /* Base Colors */
+    --text: #f5f8fa;
+    --background: #05090a;
+    --primary: #49a0b6;
+    --secondary: #246170;
+    --accent: #277a96;
+
+    /* UI Colors */
+    --border: #1e293b;
+    --input-border: #334155;
+    --input-bg: #0f172a;
+    --input-text: var(--text);
+    --input-placeholder: #64748b;
+
+    /* Semantic Colors */
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --info: #3b82f6;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4);
+}
+
+/* Dark Theme Component Overrides */
+:root[data-theme="dark"] .card {
+    background-color: #0f172a;
+    border: 1px solid var(--border);
+}
+
+:root[data-theme="dark"] .btn-outline {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+:root[data-theme="dark"] .btn-outline:hover:not(:disabled) {
+    background-color: var(--primary);
+    color: var(--text);
+}
+
+:root[data-theme="dark"] .form-input {
+    background-color: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--input-text);
+}
+
+:root[data-theme="dark"] .form-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary);
+}
+
+:root[data-theme="dark"] .divider {
+    background-color: var(--border);
+}
+
+/* Dark Theme Scrollbar */
+:root[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--background);
+}
+
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--primary);
+}
+
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
+/* Dark Theme Selection */
+:root[data-theme="dark"] ::selection {
+    background-color: var(--primary);
+    color: var(--text);
+}

@@ -91,17 +91,17 @@ export interface InvestmentTransaction {
 }
 
 export const investmentTypeColors = {
-  'FND-A': 'var(--chart-1)',
-  'FND-B': 'var(--chart-2)',
-  'FND-C': 'var(--chart-3)',
-  'FND-D': 'var(--chart-4)',
-  'FND-E': 'var(--chart-5)',
+    'FND-A': 'var(--chart-1)',
+    'FND-B': 'var(--chart-2)',
+    'FND-C': 'var(--chart-3)',
+    'FND-D': 'var(--chart-4)',
+    'FND-E': 'var(--chart-5)',
 } as const;
 
 export const investmentTypeLabels = {
-  'FND-A': 'Clase A',
-  'FND-B': 'Clase B',
-  'FND-C': 'Conservador',
-  'FND-D': 'Balanceado',
-  'FND-E': 'Clase C',
+    'FND-A': 'Clase A',
+    'FND-B': 'Clase B',
+    'FND-C': 'Conservador',
+    'FND-D': 'Balanceado',
+    'FND-E': 'Clase C',
 } as const;

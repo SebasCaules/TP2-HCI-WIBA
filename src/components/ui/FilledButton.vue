@@ -33,23 +33,28 @@ defineEmits(['click'])
   font-weight: 700;
   border-radius: 2rem;
   height: 50px;
-  background: #41a7b7 !important;
-  color: #fff !important;
   box-shadow: none;
   text-transform: none;
   letter-spacing: normal;
   border: none;
   outline: none;
-  transition: background 0.2s;
+  transition: all 0.2s;
   cursor: pointer;
   text-decoration: none;
   padding: 0 1.5rem;
 }
+
+.filled-btn:not(.btn-secondary) {
+  background: #41a7b7 !important;
+  color: #fff !important;
+}
+
+.filled-btn:not(.btn-secondary):active {
+  background: #368a97 !important;
+}
+
 .filled-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-.filled-btn:active {
-  background: #368a97 !important;
 }
 </style> 

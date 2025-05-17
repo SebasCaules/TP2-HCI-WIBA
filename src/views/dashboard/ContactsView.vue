@@ -126,6 +126,7 @@ async function handleRemoveContact(contactId: string) {
 }
 
 function onContactFound(contact: Contact) {
+    console.log(contact)
     contactToConfirm.value = contact;
     showDialog.value = false;
     showConfirmDialog.value = true;
@@ -206,12 +207,12 @@ onMounted(async () => {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background-color: #e0e0e0;
+    background-color: var(--border);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    color: #444;
+    color: var(--text);
     font-size: 1.1rem;
     margin-right: 16px;
 }
@@ -222,7 +223,7 @@ onMounted(async () => {
 }
 
 .delete-action {
-    color: #a00;
+    color: var(--error);
     cursor: pointer;
     font-weight: 500;
     transition: text-decoration 0.2s;

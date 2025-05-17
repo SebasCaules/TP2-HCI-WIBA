@@ -1,8 +1,8 @@
 <template>
   <v-dialog v-model="dialog" max-width="500px" :retain-focus="false" :scrim="true">
     <v-card class="add-contact-dialog" width="100%">
-      <div class="dialog-header">
-        <span class="dialog-title">Agregar Contacto</span>
+      <div class="dialog-header" style="justify-content: center; text-align: center; width: 100%;">
+        <span class="dialog-title" style="margin: 0 auto; display: block;">Agregar Contacto</span>
         <v-btn icon class="dialog-close-btn" @click="closeDialog">
           <v-icon>mdi-close</v-icon>
         </v-btn>

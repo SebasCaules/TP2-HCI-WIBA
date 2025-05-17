@@ -377,7 +377,7 @@ onMounted(fetchUserData)
   border-radius: 16px;
   overflow: hidden;
   background: var(--card);
-  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
+  box-shadow: var(--shadow-card);
 }
 
 .settings-card-header {
@@ -452,7 +452,7 @@ onMounted(fetchUserData)
 }
 
 .settings-error-message {
-  color: #E53935;
+  color: var(--error);
   font-size: 1.02rem;
   margin-top: 0.7rem;
   margin-bottom: 0.5rem;
