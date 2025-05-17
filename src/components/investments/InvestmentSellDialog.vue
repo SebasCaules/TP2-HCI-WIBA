@@ -138,13 +138,7 @@ const isButtonDisabled = computed(() => {
 
 // Debug function to check form state
 const checkFormState = () => {
-    console.log('Form State:', {
-        isFormValid: isFormValid.value,
-        withdrawAmount: withdrawAmount.value,
-        withdrawShares: withdrawShares.value,
-        selectedInvestment: props.selectedInvestment,
-        formRef: form.value
-    });
+
 };
 
 function formatShares(value: number) {
@@ -165,11 +159,6 @@ const syncWithdrawSharesFromAmount = () => {
     } else {
         withdrawShares.value = 0;
     }
-    console.log('After sync shares from amount:', {
-        amount: withdrawAmount.value,
-        shares: withdrawShares.value,
-        price
-    });
     checkFormState();
 };
 
@@ -184,26 +173,14 @@ const syncWithdrawAmountFromShares = () => {
     } else {
         withdrawAmount.value = 0;
     }
-    console.log('After sync amount from shares:', {
-        amount: withdrawAmount.value,
-        shares: withdrawShares.value,
-        price
-    });
     checkFormState();
 };
 
 const handleWithdraw = async () => {
     if (!props.selectedInvestment) return;
     
-    console.log('Before validation:', {
-        form: form.value,
-        isValid: isFormValid.value,
-        amount: withdrawAmount.value,
-        shares: withdrawShares.value
-    });
 
     const { valid } = await form.value?.validate();
-    console.log('After validation:', { valid });
 
     if (!valid) return;
 
@@ -220,29 +197,18 @@ const closeDialog = () => {
     withdrawShares.value = 0;
     form.value?.reset();
     showConfirmDialog.value = false;
-    console.log('Dialog closed, form reset');
 };
 
 // Initialize values when dialog opens
 watch(() => props.modelValue, (newValue: boolean) => {
-    console.log('Dialog state changed:', { newValue, selectedInvestment: props.selectedInvestment });
     if (newValue && props.selectedInvestment) {
         withdrawAmount.value = Number(props.selectedInvestment.total_value) || 0;
         withdrawShares.value = Number(props.selectedInvestment.quantity) || 0;
-        console.log('Initialized values:', {
-            amount: withdrawAmount.value,
-            shares: withdrawShares.value
-        });
     }
 });
 
 // Watch for changes in form validity
 watch([withdrawAmount, withdrawShares], () => {
-    console.log('Values changed:', {
-        amount: withdrawAmount.value,
-        shares: withdrawShares.value,
-        isValid: isFormValid.value
-    });
 });
 </script>
 

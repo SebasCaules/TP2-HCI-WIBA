@@ -1,19 +1,130 @@
 <template>
     <v-container>
         <template v-if="authStore.isAuthenticated">
-            <InvestmentCard
-                v-if="authStore.user?.id"
-                title="Inversiones"
-                :total="totalBalance"
-                :gain="totalGain"
-                :percentage="percentageChange"
-                :slices="chartSlices"
-                :showBalance="true"
-                :balance="availableBalance"
-                :userId="authStore.user.id"
-            />
-            <v-row class="investments-row" no-gutters>
+            <v-row>
                 <v-col cols="12" class="px-md-8">
+                    <h1 class="transactions-title">Inversiones</h1>
+                </v-col>
+            </v-row>
+            <v-row>
+                <v-col cols="12" class="px-md-8">
+                    <!-- Stats Row -->
+                    <v-row class="mb-6">
+                        <v-col cols="12" md="8">
+                            <div class="stats-card">
+                                <div class="stats-row">
+                                    <div class="stats-item">
+                                        <div class="stats-label">Invertido</div>
+                                        <div class="stats-value">
+                                            {{ formatMoney(totalBalance) }}
+                                        </div>
+                                    </div>
+                                    <div class="stats-item">
+                                        <div class="stats-label">Ganancia</div>
+                                        <div
+                                            :class="[
+                                                'stats-value',
+                                                totalGain >= 0
+                                                    ? 'text-success'
+                                                    : 'text-error',
+                                            ]"
+                                        >
+                                            {{
+                                                (totalGain >= 0 ? "+" : "") +
+                                                formatMoney(totalGain)
+                                            }}
+                                            <span class="stats-percentage"
+                                                >({{
+                                                    (percentageChange >= 0 ? "+" : "") +
+                                                    formatPercent(percentageChange)
+                                                }})</span
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="stats-balance-row">
+                                    <div class="stats-item">
+                                        <div class="stats-label">Poder de compra</div>
+                                        <div class="stats-value">
+                                            {{ formatMoney(availableBalance) }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <div class="chart-card">
+                                <div class="chart-title">
+                                    Distribución de Inversiones
+                                </div>
+                                <div class="chart-container">
+                                    <svg
+                                        :width="160"
+                                        :height="160"
+                                        :viewBox="`0 0 36 36`"
+                                        style="z-index: 1; margin-bottom: 1.5rem"
+                                    >
+                                        <circle
+                                            cx="18"
+                                            cy="18"
+                                            r="16"
+                                            fill="none"
+                                            stroke="#e5e7eb"
+                                            stroke-width="3"
+                                        />
+                                        <template
+                                            v-for="(slice, idx) in chartSlices"
+                                            :key="slice.type"
+                                        >
+                                            <circle
+                                                cx="18"
+                                                cy="18"
+                                                r="16"
+                                                fill="none"
+                                                :stroke="slice.color"
+                                                stroke-width="3"
+                                                :stroke-dasharray="
+                                                    slice.percent +
+                                                    ' ' +
+                                                    (100 - slice.percent)
+                                                "
+                                                :stroke-dashoffset="slice.offset"
+                                                @mousemove="showTooltip($event, slice)"
+                                                @mouseleave="hideTooltip"
+                                                style="cursor: pointer"
+                                            />
+                                        </template>
+                                    </svg>
+                                    <div
+                                        v-if="tooltip.show"
+                                        class="chart-tooltip"
+                                        :style="{
+                                            left: tooltip.x + 'px',
+                                            top: tooltip.y + 'px',
+                                        }"
+                                    >
+                                        <strong>{{ tooltip.label }}</strong
+                                        ><br />
+                                        {{ formatPercent(tooltip.percent) }}<br />
+                                        {{ formatMoney(tooltip.value) }}
+                                    </div>
+                                    <div class="chart-legend">
+                                        <div
+                                            v-for="slice in chartSlices"
+                                            :key="slice.type"
+                                        >
+                                            <span
+                                                class="legend-dot"
+                                                :style="{ background: slice.color }"
+                                            ></span>
+                                            {{ formatPercent(slice.percent) }} -
+                                            {{ slice.label }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </v-col>
+                    </v-row>
                     <IconFilledButton
                         icon="mdi-plus"
                         class="investments-add-btn"
@@ -27,66 +138,102 @@
                                 <v-card-title class="text-h6 font-weight-bold">
                                     Mis Inversiones
                                 </v-card-title>
-                                <v-data-table
+                                <BaseDataTable
                                     v-if="investments.length > 0"
                                     :items="investments"
                                     :headers="investmentHeaders"
                                     :items-per-page="5"
-                                    class="elevation-0"
-                                    item-value="id"
-                                    hover
-                                    @click:row="openWithdrawDialog"
+                                    :row-clickable="true"
+                                    :pagination="true"
+                                    :loading="isLoading"
+                                    empty-icon="mdi-chart-line"
+                                    no-data-message="Aún no tenés inversiones"
+                                    @row-click="
+                                        (item) => openWithdrawDialog(item)
+                                    "
                                 >
                                     <template #item.name="{ item }">
-                                        <div class="d-flex align-center justify-center">
-                                            <v-icon :color="item.variation >= 0 ? 'success' : 'error'" size="20" class="mr-2">
-                                                {{ item.variation >= 0 ? 'mdi-arrow-up' : 'mdi-arrow-down' }}
+                                        <div
+                                            class="d-flex align-center justify-center"
+                                        >
+                                            <v-icon
+                                                :color="
+                                                    item.variation >= 0
+                                                        ? 'success'
+                                                        : 'error'
+                                                "
+                                                size="20"
+                                                class="mr-2"
+                                            >
+                                                {{
+                                                    item.variation >= 0
+                                                        ? "mdi-arrow-up"
+                                                        : "mdi-arrow-down"
+                                                }}
                                             </v-icon>
                                             <div class="text-center">
-                                                <div class="font-weight-medium">{{ item.name }}</div>
-                                                <div class="text-caption text-grey">{{ formatDate(item.stock?.updated_at) }}</div>
+                                                <div class="font-weight-medium">
+                                                    {{ item.name }}
+                                                </div>
+                                                <div
+                                                    class="text-caption text-grey"
+                                                >
+                                                    {{
+                                                        formatDate(
+                                                            item.stock
+                                                                ?.updated_at
+                                                        )
+                                                    }}
+                                                </div>
                                             </div>
                                         </div>
                                     </template>
 
                                     <template #item.quantity="{ item }">
-                                        <div class="text-center">{{ formatShares(item.quantity) }}</div>
+                                        <div class="text-center">
+                                            {{ formatShares(item.quantity) }}
+                                        </div>
                                     </template>
 
                                     <template #item.price="{ item }">
-                                        <div class="text-center">{{ formatMoney(item.price) }}</div>
+                                        <div class="text-center">
+                                            {{ formatMoney(item.price) }}
+                                        </div>
                                     </template>
 
                                     <template #item.variation="{ item }">
-                                        <div :class="['text-center', getVariationClass(item.variation)]">
-                                            {{ (item.variation >= 0 ? '+' : '') + formatPercent(item.variation) }}
+                                        <div
+                                            :class="[
+                                                'text-center',
+                                                getVariationClass(
+                                                    item.variation
+                                                ),
+                                            ]"
+                                        >
+                                            {{
+                                                (item.variation >= 0
+                                                    ? "+"
+                                                    : "") +
+                                                formatPercent(item.variation)
+                                            }}
                                         </div>
                                     </template>
 
                                     <template #item.total_value="{ item }">
-                                        <div class="text-center font-weight-medium">{{ formatMoney(item.total_value) }}</div>
-                                    </template>
-
-                                    <template #bottom>
-                                        <div class="text-center pt-2">
-                                            <v-pagination
-                                                v-model="currentPage"
-                                                :length="Math.ceil(investments.length / itemsPerPage)"
-                                                rounded
-                                            ></v-pagination>
+                                        <div
+                                            class="text-center font-weight-medium"
+                                        >
+                                            {{ formatMoney(item.total_value) }}
                                         </div>
                                     </template>
 
-                                    <template #no-data>
-                                        <div class="pa-4 text-center">
-                                            <v-icon size="large" color="grey" class="mb-2">mdi-chart-line</v-icon>
-                                            <div class="text-h6 text-grey">Aún no tenés inversiones</div>
-                                            <div class="text-body-2 text-grey mt-2">
-                                                Comenzá a invertir haciendo clic en el botón "Invertir"
-                                            </div>
+                                    <template #no-data-content>
+                                        <div class="text-body-2 text-grey mt-2">
+                                            Comenzá a invertir haciendo clic en
+                                            el botón "Invertir"
                                         </div>
                                     </template>
-                                </v-data-table>
+                                </BaseDataTable>
                             </v-card>
                         </v-col>
                     </v-row>
@@ -139,12 +286,12 @@ import {
     getAccountBalance as fetchAccountBalance,
     updateAccountBalance,
 } from "@/services/account";
-import InvestmentCard from "@/components/investments/InvestmentCard.vue";
 import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import InvestmentBuyDialog from "@/components/investments/InvestmentBuyDialog.vue";
 import InvestmentSellDialog from "@/components/investments/InvestmentSellDialog.vue";
 import SuccessDialog from "@/components/ui/SuccessDialog.vue";
 import { investmentTypeColors, investmentTypeLabels } from "@/types/types";
+import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 
 const authStore = useAuthStore();
 
@@ -186,8 +333,8 @@ const selectedInvestment = ref<null | (PortfolioItem & { stock?: Stock })>(
 
 const showSuccessDialog = ref(false);
 const successDialog = ref({
-    title: '',
-    message: ''
+    title: "",
+    message: "",
 });
 
 // Available balance from service
@@ -262,42 +409,54 @@ const openInvestDialog = () => {
 };
 
 const openWithdrawDialog = (item: any) => {
-  const tr = item.currentTarget as HTMLTableRowElement;
-  const firstCell = tr.querySelector('td:first-child div');
-  const name = firstCell?.textContent?.trim();
-  if (!name) {
-    console.warn('No se pudo obtener el nombre de la inversión');
-    return;
-  }
+    const tr = item.currentTarget as HTMLTableRowElement;
 
-  const investment = investments.value.find(inv => inv.name === name);
-  if (!investment) {
-    console.warn('No se encontró ninguna inversión con ese nombre');
-    return;
-  }
+    // Nueva lógica para extraer el nombre de la inversión desde .font-weight-medium
+    const nameElement = tr?.querySelector("td:first-child .font-weight-medium");
+    const name = nameElement?.textContent?.trim();
 
-  withdrawDialog.value = true;
-  selectedInvestment.value = {
-    id: investment.id,
-    user_id: authStore.user?.id || '',
-    stock_id: investment.stock?.id || 0,
-    quantity: investment.quantity,
-    average_price: investment.price,
-    total_value: investment.total_value,
-    stock: investment.stock,
-    variation_percentage: investment.variation
-  };
-}
+    if (!name) {
+        console.warn(
+            "InversionesView - No se pudo obtener el nombre de la inversión"
+        );
+        return;
+    }
 
-const handleInvestment = async (data: { amount: number; shares: number; stockId: number }) => {
+    const investment = investments.value.find((inv) => inv.name === name);
+
+    if (!investment) {
+        console.warn(
+            "InversionesView - No se encontró ninguna inversión con ese nombre"
+        );
+        return;
+    }
+
+    withdrawDialog.value = true;
+    selectedInvestment.value = {
+        id: investment.id,
+        user_id: authStore.user?.id || "",
+        stock_id: investment.stock?.id || 0,
+        quantity: investment.quantity,
+        average_price: investment.price,
+        total_value: investment.total_value,
+        stock: investment.stock,
+        variation_percentage: investment.variation,
+    };
+};
+
+const handleInvestment = async (data: {
+    amount: number;
+    shares: number;
+    stockId: number;
+}) => {
     if (!authStore.user?.id) {
         return;
     }
 
     if (data.amount > availableBalance.value) {
         successDialog.value = {
-            title: 'Error',
-            message: 'Saldo insuficiente para realizar la inversión'
+            title: "Error",
+            message: "Saldo insuficiente para realizar la inversión",
         };
         showSuccessDialog.value = true;
         return;
@@ -358,16 +517,16 @@ const handleInvestment = async (data: { amount: number; shares: number; stockId:
         await fetchPortfolio();
 
         successDialog.value = {
-            title: '¡Inversión exitosa!',
-            message: 'La inversión fue realizada con éxito'
+            title: "¡Inversión exitosa!",
+            message: "La inversión fue realizada con éxito",
         };
         showSuccessDialog.value = true;
 
         investDialog.value = false;
     } catch (error: any) {
         successDialog.value = {
-            title: 'Error',
-            message: error.message || 'Error al realizar la inversión'
+            title: "Error",
+            message: error.message || "Error al realizar la inversión",
         };
         showSuccessDialog.value = true;
     } finally {
@@ -375,7 +534,11 @@ const handleInvestment = async (data: { amount: number; shares: number; stockId:
     }
 };
 
-const handleWithdraw = async (data: { amount: number; shares: number; stockId: number }) => {
+const handleWithdraw = async (data: {
+    amount: number;
+    shares: number;
+    stockId: number;
+}) => {
     if (!selectedInvestment.value || !authStore.user?.id) {
         return;
     }
@@ -384,8 +547,8 @@ const handleWithdraw = async (data: { amount: number; shares: number; stockId: n
         data.amount > selectedInvestment.value.total_value
     ) {
         successDialog.value = {
-            title: 'Error',
-            message: 'Cantidad inválida para retirar'
+            title: "Error",
+            message: "Cantidad inválida para retirar",
         };
         showSuccessDialog.value = true;
         return;
@@ -394,8 +557,8 @@ const handleWithdraw = async (data: { amount: number; shares: number; stockId: n
     const price = selectedInvestment.value.stock?.current_price;
     if (typeof price !== "number") {
         successDialog.value = {
-            title: 'Error',
-            message: 'No se pudo obtener el precio actual del fondo'
+            title: "Error",
+            message: "No se pudo obtener el precio actual del fondo",
         };
         showSuccessDialog.value = true;
         return;
@@ -437,16 +600,16 @@ const handleWithdraw = async (data: { amount: number; shares: number; stockId: n
         await fetchPortfolio();
 
         successDialog.value = {
-            title: '¡Retiro exitoso!',
-            message: 'El retiro fue realizado con éxito'
+            title: "¡Retiro exitoso!",
+            message: "El retiro fue realizado con éxito",
         };
         showSuccessDialog.value = true;
 
         withdrawDialog.value = false;
     } catch (error: any) {
         successDialog.value = {
-            title: 'Error',
-            message: error.message || 'Error al realizar el retiro'
+            title: "Error",
+            message: error.message || "Error al realizar el retiro",
         };
         showSuccessDialog.value = true;
     } finally {
@@ -462,8 +625,8 @@ const fetchPortfolio = async () => {
         portfolio.value = portfolioData;
     } catch (error: any) {
         successDialog.value = {
-            title: 'Error',
-            message: 'Error al cargar el portafolio: ' + error.message
+            title: "Error",
+            message: "Error al cargar el portafolio: " + error.message,
         };
         showSuccessDialog.value = true;
     }
@@ -473,8 +636,8 @@ const fetchPortfolio = async () => {
 onMounted(async () => {
     if (!authStore.isAuthenticated || !authStore.user?.id) {
         successDialog.value = {
-            title: 'Error',
-            message: 'Por favor inicie sesión para ver sus inversiones'
+            title: "Error",
+            message: "Por favor inicie sesión para ver sus inversiones",
         };
         showSuccessDialog.value = true;
         return;
@@ -487,8 +650,8 @@ onMounted(async () => {
         availableBalance.value = await fetchAccountBalance(authStore.user.id);
     } catch (error: any) {
         successDialog.value = {
-            title: 'Error',
-            message: 'Error al cargar los datos: ' + error.message
+            title: "Error",
+            message: "Error al cargar los datos: " + error.message,
         };
         showSuccessDialog.value = true;
     }
@@ -529,11 +692,11 @@ const chartSlices = computed(() => {
 
 // Tabla de inversiones: columnas visibles (nuevo formato)
 const investmentHeaders = [
-    { title: 'Fondo', key: 'name', align: 'center' as const },
-    { title: 'Cuotapartes', key: 'quantity', align: 'center' as const },
-    { title: 'Precio', key: 'price', align: 'center' as const },
-    { title: 'Variación', key: 'variation', align: 'center' as const },
-    { title: 'Valor Total', key: 'total_value', align: 'center' as const },
+    { title: "Fondo", key: "name", align: "center" as const },
+    { title: "Cuotapartes", key: "quantity", align: "center" as const },
+    { title: "Precio", key: "price", align: "center" as const },
+    { title: "Variación", key: "variation", align: "center" as const },
+    { title: "Valor Total", key: "total_value", align: "center" as const },
 ];
 
 // Agregar estas variables al script setup
@@ -541,12 +704,36 @@ const currentPage = ref(1);
 const itemsPerPage = ref(5);
 
 function formatDate(timestamp: string | undefined): string {
-    if (!timestamp) return '';
+    if (!timestamp) return "";
     const date = new Date(timestamp);
-    return date.toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: '2-digit'
+    return date.toLocaleDateString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
     });
+}
+// Add tooltip-related declarations
+const tooltip = ref({
+    show: false,
+    x: 0,
+    y: 0,
+    label: "",
+    percent: 0,
+    value: 0,
+});
+
+function showTooltip(e: MouseEvent, slice: any) {
+    tooltip.value = {
+        show: true,
+        x: e.offsetX + 10,
+        y: e.offsetY - 10,
+        label: slice.label,
+        percent: slice.percent,
+        value: slice.value,
+    };
+}
+
+function hideTooltip() {
+    tooltip.value.show = false;
 }
 </script>
 
@@ -925,5 +1112,193 @@ function formatDate(timestamp: string | undefined): string {
     background: var(--secondary) !important;
     color: var(--secondary-foreground) !important;
     border: none;
+}
+.transactions-main {
+    background: var(--background);
+    min-height: 100vh;
+    padding: 0;
+}
+
+.transactions-row {
+    margin: 0;
+}
+
+.transactions-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    margin-top: 0.5rem;
+    margin-left: 0;
+    font-family: var(--font-sans), sans-serif;
+}
+
+.stats-card {
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: 0 2px 16px 0 rgba(60, 60, 60, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    height: 100%;
+}
+
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+}
+
+.stats-balance-row {
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--border);
+}
+
+.stats-balance-row .stats-item {
+    width: 100%;
+}
+
+.stats-balance-row .stats-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.stats-item {
+    flex: 1;
+}
+
+.stats-label {
+    font-size: 1rem;
+    color: var(--muted-text);
+    margin-bottom: 0.5rem;
+}
+
+.stats-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.stats-percentage {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-left: 0.5rem;
+}
+
+.chart-card {
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: 0 2px 16px 0 rgba(60, 60, 60, 0.06);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 1rem;
+}
+
+.chart-container {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1.2rem;
+    margin-top: 1rem;
+}
+
+.chart-svg {
+    width: 100%;
+    height: 200px;
+}
+
+.chart-tooltip {
+    position: absolute;
+    background: white;
+    border-radius: 8px;
+    padding: 0.8rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    z-index: 10;
+    min-width: 120px;
+}
+
+.tooltip-label {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.3rem;
+}
+
+.tooltip-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.tooltip-percent {
+    font-size: 0.9rem;
+    color: var(--muted-text);
+    margin-top: 0.2rem;
+}
+
+.chart-legend {
+    font-size: 0.95rem;
+    color: var(--muted-text);
+}
+
+.chart-legend > div {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.legend-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    min-height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.invest-add-btn {
+    margin-bottom: 2.2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 0.5rem 2.5rem;
+    min-width: 200px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.investments-table {
+    background: transparent;
+}
+
+.investments-table :deep(th) {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text);
+    white-space: nowrap;
+    background-color: var(--card);
+    border-bottom: none;
+    font-family: var(--font-sans), sans-serif;
+}
+
+.text-success {
+    color: var(--success) !important;
+}
+
+.text-error {
+    color: var(--error) !important;
 }
 </style>

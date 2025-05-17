@@ -11,51 +11,37 @@
                     Nuevo Contacto
                 </IconFilledButton>
                 <div class="card">
-                    <v-data-table
+                    <BaseDataTable
                         :items="contacts"
                         :headers="headers"
-                        class="contacts-table"
                         :items-per-page="5"
                         :loading="loading"
+                        empty-icon="mdi-account-group"
+                        no-data-message="No hay contactos disponibles"
                     >
-                        <template v-slot:no-data>
-                            <div class="text-center pa-4">
-                                {{
-                                    loading
-                                        ? "Cargando contactos..."
-                                        : "No hay contactos disponibles"
-                                }}
+                        <template #item.name="{ item }">
+                            <div class="d-flex align-items-center">
+                                <div class="contact-avatar">
+                                    {{ item.initials }}
+                                </div>
+                                <span class="contact-name">
+                                    {{ item.first_name }} {{ item.last_name }}
+                                </span>
                             </div>
                         </template>
-                        <template v-slot:item="{ item }">
-                            <tr>
-                                <td>
-                                    <div
-                                        style="
-                                            display: flex;
-                                            align-items: center;
-                                        "
-                                    >
-                                        <div class="contact-avatar">
-                                            {{ item.initials }}
-                                        </div>
-                                        <span class="contact-name">
-                                            {{ item.first_name }}
-                                            {{ item.last_name }}</span
-                                        >
-                                    </div>
-                                </td>
-                                <td>{{ item.username }}</td>
-                                <td class="text-right">
-                                    <span
-                                        class="delete-action"
-                                        @click="handleRemoveContact(item.id)"
-                                        >Eliminar</span
-                                    >
-                                </td>
-                            </tr>
+
+                        <template #item.username="{ item }">
+                            {{ item.username }}
                         </template>
-                    </v-data-table>
+
+                        <template #item.actions="{ item }">
+                            <div class="text-right">
+                                <span class="delete-action" @click="handleRemoveContact(item.id)">
+                                    Eliminar
+                                </span>
+                            </div>
+                        </template>
+                    </BaseDataTable>
                 </div>
             </v-col>
         </v-row>
@@ -78,6 +64,7 @@
 import { ref, onMounted } from "vue";
 import { useAuthStore } from "@/store/auth";
 import IconFilledButton from "@/components/ui/IconFilledButton.vue";
+import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 import AddContactDialog from "@/components/AddContactDialog.vue";
 import ConfirmContactDialog from "@/components/ConfirmContactDialog.vue";
 import { fetchContacts, removeContact, addContact } from "@/services/contacts";
@@ -126,7 +113,6 @@ async function handleRemoveContact(contactId: string) {
 }
 
 function onContactFound(contact: Contact) {
-    console.log(contact)
     contactToConfirm.value = contact;
     showDialog.value = false;
     showConfirmDialog.value = true;

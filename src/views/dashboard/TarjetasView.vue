@@ -11,58 +11,41 @@
                     Nueva Tarjeta
                 </IconFilledButton>
                 <div class="card">
-                    <v-data-table
+                    <BaseDataTable
                         :headers="headers"
                         :items="cards"
-                        class="tarjetas-table"
-                        hide-default-footer
-                        item-value="id"
                         :loading="loading"
+                        empty-icon="mdi-credit-card-off"
+                        no-data-message="No tienes tarjetas guardadas"
                     >
-                        <template #no-data>
-                            <div class="text-center pa-4">
-                                {{
-                                    loading
-                                        ? "Cargando tarjetas..."
-                                        : "No tienes tarjetas guardadas."
-                                }}
+                        <template #item.logo="{ item }">
+                            <div class="transaction-icon-cell">
+                                <img
+                                    :src="item.logo"
+                                    :alt="item.brand"
+                                    class="transaction-card-logo"
+                                />
                             </div>
                         </template>
-                        <template #item="{ item }">
-                            <tr>
-                                <td class="transaction-icon-cell">
-                                    <img
-                                        :src="item.logo"
-                                        :alt="item.brand"
-                                        class="transaction-card-logo"
-                                    />
-                                </td>
-                                <td class="transaction-description">
-                                    <div class="nombre-align">
-                                        <span class="tarjeta-name"
-                                            >{{ item.brand }} *{{
-                                                item.number_last4
-                                            }}</span
-                                        >
-                                    </div>
-                                </td>
-                                <td class="transaction-date">
-                                    <div class="expiry-align">
-                                        <span class="tarjeta-expiry">{{
-                                            item.expiry
-                                        }}</span>
-                                    </div>
-                                </td>
-                                <td class="text-right">
-                                    <span
-                                        class="delete-action"
-                                        @click="deleteCard(item.id)"
-                                        >Eliminar</span
-                                    >
-                                </td>
-                            </tr>
+
+                        <template #item.name="{ item }">
+                            <div class="nombre-align">
+                                <span class="tarjeta-name">{{ item.brand }} *{{ item.number_last4 }}</span>
+                            </div>
                         </template>
-                    </v-data-table>
+
+                        <template #item.expiry="{ item }">
+                            <div class="expiry-align">
+                                <span class="tarjeta-expiry">{{ item.expiry }}</span>
+                            </div>
+                        </template>
+
+                        <template #item.actions="{ item }">
+                            <div class="text-right">
+                                <span class="delete-action" @click="deleteCard(item.id)">Eliminar</span>
+                            </div>
+                        </template>
+                    </BaseDataTable>
                 </div>
             </v-col>
         </v-row>
@@ -81,6 +64,7 @@ import { ref, computed, onMounted } from "vue";
 import { supabase } from "@/plugins/supabase";
 import { useAuthStore } from "@/store/auth";
 import IconFilledButton from "@/components/ui/IconFilledButton.vue";
+import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 import AddCardDialog from "@/components/AddCardDialog.vue";
 import type { Card } from "@/types/types";
 
@@ -94,15 +78,16 @@ const authStore = useAuthStore();
 const userId = computed(() => authStore.user?.id);
 
 const headers = [
-    { title: "", value: "logo", width: 60 },
-    { title: "Nombre", value: "name", align: "start" as const },
+    { title: "", key: "logo", width: 60, align: "center" as const, class: "priority-high" },
+    { title: "Nombre", key: "name", align: "start" as const, class: "priority-high" },
     {
         title: "Vencimiento",
-        value: "expiry",
+        key: "expiry",
         align: "end" as const,
         width: 120,
+        class: "priority-medium"
     },
-    { title: "Acciones", value: "actions", align: "end" as const },
+    { title: "Acciones", key: "actions", align: "end" as const, class: "priority-high" },
 ];
 
 async function fetchCards() {
@@ -218,11 +203,18 @@ const transparentPixel =
 }
 
 .transaction-card-logo {
-    width: 48px;
-    height: 32px;
+    min-width: 40px;
+    min-height: 24px;
+    width: auto;
+    height: auto;
+    max-width: 64px;
+    max-height: 40px;
     object-fit: contain;
     display: block;
-    margin: 0;
+    margin: 0 auto;
+    background: white;
+    padding: 4px;
+    border-radius: 4px;
 }
 
 .transaction-description {

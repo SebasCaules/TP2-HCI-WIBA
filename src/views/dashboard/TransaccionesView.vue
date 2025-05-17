@@ -4,62 +4,53 @@
       <v-col cols="12" class="px-md-8">
         <h1 class="transactions-title">Transacciones</h1>
         <div class="card">
-          <v-data-table 
+          <BaseDataTable 
             :items="transactions" 
             :headers="headers" 
-            class="transactions-table" 
             :items-per-page="5"
             :loading="loading"
+            empty-icon="mdi-cash-multiple"
+            no-data-message="No hay transacciones disponibles"
           >
-            <template #[`header.icon`]>
-              <th class="transaction-icon-cell"></th>
-            </template>
-            <template #[`header.description`]>
-              <th class="transaction-description">Descripción</th>
-            </template>
-            <template #[`header.amount`]>
-              <th class="transaction-amount" style="text-align: right">Monto</th>
-            </template>
-            <template #[`header.created_at`]>
-              <th class="transaction-date" style="text-align: right">Fecha</th>
-            </template>
-            <template v-slot:no-data>
-              <div class="text-center pa-4">
-                {{ loading ? 'Cargando transacciones...' : 'No hay transacciones disponibles' }}
+            <template #item.icon="{ item }">
+              <div class="transaction-icon-cell">
+                <template v-if="item.transaction_type === 'deposit'">
+                  <img :src="getCardLogo(item.card_company)" :alt="item.card_company" class="transaction-card-logo" v-if="item.card_company" />
+                  <v-icon v-else color="primary">mdi-credit-card</v-icon>
+                </template>
+                <template v-else-if="item.transaction_type === 'transfer'">
+                  <v-icon :color="item.amount < 0 ? 'error' : 'success'" size="24">
+                    {{ item.amount < 0 ? 'mdi-arrow-top-right' : 'mdi-arrow-bottom-right' }}
+                  </v-icon>
+                </template>
+                <template v-else>
+                  <v-icon color="error">mdi-arrow-up</v-icon>
+                </template>
               </div>
             </template>
-            <template v-slot:item="{ item }">
-              <tr>
-                <td class="transaction-icon-cell">
-                  <template v-if="item.transaction_type === 'deposit'">
-                    <img :src="getCardLogo(item.card_company)" :alt="item.card_company" class="transaction-card-logo" v-if="item.card_company" />
-                    <v-icon v-else color="primary">mdi-credit-card</v-icon>
-                  </template>
-                  <template v-else-if="item.transaction_type === 'transfer'">
-                    <v-icon :color="item.amount < 0 ? 'error' : 'success'" size="24">
-                      {{ item.amount < 0 ? 'mdi-arrow-top-right' : 'mdi-arrow-bottom-right' }}
-                    </v-icon>
-                  </template>
-                  <template v-else>
-                    <v-icon color="error">mdi-arrow-up</v-icon>
-                  </template>
-                </td>
-                <td class="transaction-description">
-                  <template v-if="item.transaction_type === 'transfer'">
-                    {{ item.amount < 0 ? 'Enviado a ' + item.recipient_name : 'Recibido de ' + item.sender_name }}
-                    {{ item.description ? ': ' + item.description : '' }}
-                  </template>
-                  <template v-else>
-                    {{ item.description }}
-                  </template>
-                </td>
-                <td :class="['transaction-amount', getAmountClass(item), 'amount-cell']">
-                  {{ getAmountPrefix(item) }}${{ Math.abs(item.amount).toFixed(2) }}
-                </td>
-                <td class="transaction-date date-cell">{{ formatDate(item.created_at) }}</td>
-              </tr>
+
+            <template #item.description="{ item }">
+              <div class="transaction-description">
+                <template v-if="item.transaction_type === 'transfer'">
+                  {{ item.amount < 0 ? 'Enviado a ' + item.recipient_name : 'Recibido de ' + item.sender_name }}
+                  {{ item.description ? ': ' + item.description : '' }}
+                </template>
+                <template v-else>
+                  {{ item.description }}
+                </template>
+              </div>
             </template>
-          </v-data-table>
+
+            <template #item.amount="{ item }">
+              <div :class="['transaction-amount', getAmountClass(item), 'amount-cell']">
+                {{ getAmountPrefix(item) }}${{ Math.abs(item.amount).toFixed(2) }}
+              </div>
+            </template>
+
+            <template #item.created_at="{ item }">
+              <div class="transaction-date date-cell">{{ formatDate(item.created_at) }}</div>
+            </template>
+          </BaseDataTable>
         </div>
       </v-col>
     </v-row>
@@ -70,6 +61,7 @@
 import { ref, onMounted } from 'vue';
 import { supabase } from '@/plugins/supabase';
 import { useAuthStore } from '@/store/auth';
+import BaseDataTable from '@/components/ui/BaseDataTable.vue';
 import type { Transaction } from '@/types/types';
 
 const authStore = useAuthStore();
@@ -79,10 +71,10 @@ const transactions = ref<Transaction[]>([]);
 const loading = ref(true);
 
 const headers = [
-  { key: 'icon', value: 'icon' },
-  { key: 'description', value: 'description' },
-  { key: 'amount', value: 'amount' },
-  { key: 'created_at', value: 'created_at' }
+  { title: "", key: "icon", width: 60 },
+  { title: "Descripción", key: "description", align: "center" as const },
+  { title: "Monto", key: "amount", align: "end" as const },
+  { title: "Fecha", key: "created_at", align: "end" as const }
 ];
 
 function getCardLogo(company: string | null): string {

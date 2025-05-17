@@ -4,62 +4,63 @@
             <v-col cols="12" class="px-md-8">
                 <h1 class="pagos-title">Pago de Servicios</h1>
                 <div class="card">
-                    <v-data-table
+                    <BaseDataTable
                         :items="bills"
                         :headers="headers"
-                        class="pagos-table"
                         :items-per-page="10"
                         :loading="loading"
+                        empty-icon="mdi-receipt"
+                        no-data-message="No hay facturas disponibles"
                     >
-                        <template #no-data>
-                            <div class="text-center pa-4">
-                                {{
-                                    loading
-                                        ? "Cargando facturas..."
-                                        : "No hay facturas disponibles"
+                        <template #item.title="{ item }">
+                            <div class="pago-title">{{ item.title }}</div>
+                        </template>
+
+                        <template #item.provider="{ item }">
+                            <div class="pago-provider">{{ item.provider }}</div>
+                        </template>
+
+                        <template #item.amount="{ item }">
+                            <div class="pago-amount">
+                                ${{
+                                    item.amount.toLocaleString("es-AR", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })
                                 }}
                             </div>
                         </template>
-                        <template v-slot:item="{ item }">
-                            <tr>
-                                <td class="pago-title">{{ item.title }}</td>
-                                <td class="pago-provider">
-                                    {{ item.provider }}
-                                </td>
-                                <td class="pago-amount">
-                                    ${{
-                                        item.amount.toLocaleString("es-AR", {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                        })
-                                    }}
-                                </td>
-                                <td class="pago-date">
-                                    {{ formatDate(item.due_date) }}
-                                </td>
-                                <td class="pago-status">
-                                    <v-chip
-                                        :color="getStatusColor(item.status)"
-                                        size="small"
-                                        class="status-chip"
-                                    >
-                                        {{ getStatusText(item.status) }}
-                                    </v-chip>
-                                </td>
-                                <td class="pago-actions">
-                                    <v-btn
-                                        v-if="item.status !== 'paid'"
-                                        color="primary"
-                                        size="small"
-                                        @click="payBill(item.id)"
-                                        :loading="payingBillId === item.id"
-                                    >
-                                        Pagar
-                                    </v-btn>
-                                </td>
-                            </tr>
+
+                        <template #item.due_date="{ item }">
+                            <div class="pago-date">{{ formatDate(item.due_date) }}</div>
                         </template>
-                    </v-data-table>
+
+                        <template #item.status="{ item }">
+                            <div class="pago-status">
+                                <v-chip
+                                    :color="getStatusColor(item.status)"
+                                    size="small"
+                                    class="status-chip"
+                                >
+                                    {{ getStatusText(item.status) }}
+                                </v-chip>
+                            </div>
+                        </template>
+
+                        <template #item.actions="{ item }">
+                            <div class="pago-actions">
+                                <v-btn
+                                    v-if="item.status !== 'paid'"
+                                    color="primary"
+                                    size="small"
+                                    @click="payBill(item.id)"
+                                    :loading="payingBillId === item.id"
+                                >
+                                    Pagar
+                                </v-btn>
+                            </div>
+                        </template>
+                    </BaseDataTable>
                 </div>
             </v-col>
         </v-row>
@@ -69,6 +70,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { useAuthStore } from "@/store/auth";
+import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 import { getBills, updateBillStatus } from "@/services/bills";
 import type { Bill } from "@/types/types";
 
