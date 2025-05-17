@@ -68,6 +68,7 @@ export interface Stock {
     name: string;
     current_price: number;
     updated_at: string;
+    logo?: string;  // Optional logo URL
 }
 
 export interface Portfolio {

@@ -1,61 +1,112 @@
 <template>
-    <v-container>
+  <v-container fluid class="transactions-main">
+    <v-row class="transactions-row" no-gutters>
+      <v-col cols="12" class="px-md-8">
         <template v-if="authStore.isAuthenticated">
-            <InvestmentCard
-                v-if="authStore.user?.id"
-                title="Inversiones"
-                :total="totalBalance"
-                :gain="totalGain"
-                :percentage="percentageChange"
-                :slices="chartSlices"
-                :showBalance="true"
-                :balance="availableBalance"
-                :userId="authStore.user.id"
-            />
-            <v-row class="investments-row" no-gutters>
-                <v-col cols="12" class="px-md-8">
-                    <IconFilledButton
-                        icon="mdi-plus"
-                        class="investments-add-btn"
-                        @click="openInvestDialog"
-                    >
-                        Invertir
-                    </IconFilledButton>
-                    <v-row>
-                        <v-col cols="12">
-                            <v-card class="elevation-1">
-                                <v-card-title class="text-h6 font-weight-bold">
-                                    Mis Inversiones
-                                </v-card-title>
-                                <v-data-table
-                                    v-if="investments.length > 0"
-                                    :items="investments"
-                                    :headers="investmentHeaders"
-                                    :items-per-page="5"
-                                    class="elevation-0"
-                                    item-value="id"
-                                    hover
-                                    @click:row="openWithdrawDialog"
-                                >
-                                    <template #item.name="{ item }">
-                                        <div class="d-flex align-center justify-center">
-                                            <v-icon :color="item.variation >= 0 ? 'success' : 'error'" size="20" class="mr-2">
-                                                {{ item.variation >= 0 ? 'mdi-arrow-up' : 'mdi-arrow-down' }}
-                                            </v-icon>
-                                            <div class="text-center">
-                                                <div class="font-weight-medium">{{ item.name }}</div>
-                                                <div class="text-caption text-grey">{{ formatDate(item.stock?.updated_at) }}</div>
-                                            </div>
-                                        </div>
-                                    </template>
+          <h1 class="transactions-title">Inversiones</h1>
+          
+          <!-- Stats Row -->
+          <v-row class="mb-6">
+            <v-col cols="12" md="8">
+              <div class="stats-card">
+                <div class="stats-row">
+                  <div class="stats-item">
+                    <div class="stats-label">Invertido</div>
+                    <div class="stats-value">{{ formatMoney(totalBalance) }}</div>
+                  </div>
+                  <div class="stats-item">
+                    <div class="stats-label">Ganancia</div>
+                    <div :class="['stats-value', totalGain >= 0 ? 'text-success' : 'text-error']">
+                      {{ (totalGain >= 0 ? '+' : '') + formatMoney(totalGain) }}
+                      <span class="stats-percentage">({{ (percentageChange >= 0 ? '+' : '') + formatPercent(percentageChange) }})</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="stats-balance-row">
+                  <div class="stats-item">
+                    <div class="stats-label">Poder de compra</div>
+                    <div class="stats-value">{{ formatMoney(availableBalance) }}</div>
+                  </div>
+                </div>
+              </div>
+            </v-col>
+            <v-col cols="12" md="4">
+              <div class="chart-card">
+                <div class="chart-title">Distribución de Inversiones</div>
+                <div class="chart-container">
+                  <svg
+                    :width="160"
+                    :height="160"
+                    :viewBox="`0 0 36 36`"
+                    style="z-index: 1; margin-bottom: 1.5rem;"
+                  >
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="16"
+                      fill="none"
+                      stroke="#e5e7eb"
+                      stroke-width="3"
+                    />
+                    <template v-for="(slice, idx) in chartSlices" :key="slice.type">
+                      <circle
+                        cx="18"
+                        cy="18"
+                        r="16"
+                        fill="none"
+                        :stroke="slice.color"
+                        stroke-width="3"
+                        :stroke-dasharray="slice.percent + ' ' + (100 - slice.percent)"
+                        :stroke-dashoffset="slice.offset"
+                        @mousemove="showTooltip($event, slice)"
+                        @mouseleave="hideTooltip"
+                        style="cursor: pointer"
+                      />
+                    </template>
+                  </svg>
+                  <div
+                    v-if="tooltip.show"
+                    class="chart-tooltip"
+                    :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
+                  >
+                    <strong>{{ tooltip.label }}</strong><br />
+                    {{ formatPercent(tooltip.percent) }}<br />
+                    {{ formatMoney(tooltip.value) }}
+                  </div>
+                  <div class="chart-legend">
+                    <div v-for="slice in chartSlices" :key="slice.type">
+                      <span
+                        class="legend-dot"
+                        :style="{ background: slice.color }"
+                      ></span>
+                      {{ formatPercent(slice.percent) }} - {{ slice.label }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </v-col>
+          </v-row>
 
-                                    <template #item.quantity="{ item }">
-                                        <div class="text-center">{{ formatShares(item.quantity) }}</div>
-                                    </template>
+          <!-- Invest Button -->
+          <IconFilledButton icon="mdi-plus" class="invest-add-btn" @click="openInvestDialog">
+            Invertir
+          </IconFilledButton>
 
-                                    <template #item.price="{ item }">
-                                        <div class="text-center">{{ formatMoney(item.price) }}</div>
-                                    </template>
+          <!-- Investment Table -->
+          <div class="card">
+            <v-data-table
+              v-if="investments.length > 0"
+              :items="investments"
+              :headers="investmentHeaders"
+              :items-per-page="5"
+              class="investments-table"
+              item-value="id"
+              hover
+              @click:row="openWithdrawDialog"
+            >
+              <template #item.name="{ item }">
+                <div class="text-center font-weight-medium">{{ item.name }}</div>
+              </template>
 
                                     <template #item.variation="{ item }">
                                         <div :class="['text-center', getVariationClass(item.variation)]">
@@ -93,58 +144,215 @@
                 </v-col>
             </v-row>
 
-            <!-- Investment Dialog -->
-            <InvestmentBuyDialog
-                v-model="investDialog"
-                :fund-options="fundOptions"
-                :available-balance="availableBalance"
-                :stocks="stocks"
-                @invest="handleInvestment"
-            />
+              <template #no-data>
+                <div class="pa-4 text-center">
+                  <v-icon size="large" color="grey" class="mb-2">mdi-chart-line</v-icon>
+                  <div class="text-h6 text-grey">Aún no tenés inversiones</div>
+                  <div class="text-body-2 text-grey mt-2">
+                    Comenzá a invertir haciendo clic en el botón "Invertir"
+                  </div>
+                </div>
+              </template>
+            </v-data-table>
+          </div>
 
-            <!-- Withdraw Dialog -->
-            <InvestmentSellDialog
-                v-model="withdrawDialog"
-                :selected-investment="selectedInvestment"
-                @withdraw="handleWithdraw"
-            />
+          <!-- Investment Dialog -->
+          <v-dialog v-model="investDialog" max-width="500">
+            <v-card>
+              <div class="dialog-header">
+                <span class="dialog-title" style="font-family: var(--font-sans);">Realizar Inversión</span>
+                <v-btn icon class="dialog-close-btn" @click="closeInvestDialog">
+                  <v-icon>mdi-close</v-icon>
+                </v-btn>
+              </div>
+              <v-card-text>
+                <v-form v-model="isFormValid">
+                  <button type="button" class="deposit-method-box" @click="showFundDialog = true">
+                    <img :src="selectedFund?.logo" :alt="selectedFund?.name" class="deposit-card-logo" v-if="selectedFund" />
+                    <span class="deposit-method-text" v-if="selectedFund">
+                      <b>{{ selectedFund.name }}</b>
+                    </span>
+                    <span class="deposit-method-text" v-else style="font-weight: 400;">
+                      Seleccionar fondo
+                    </span>
+                    <v-icon class="deposit-select-icon">mdi-chevron-right</v-icon>
+                  </button>
 
-            <!-- Success Dialog -->
-            <SuccessDialog
-                v-model="showSuccessDialog"
-                :title="successDialog.title"
-                :message="successDialog.message"
-            />
+                  <CustomTextField
+                    v-model="investmentAmount"
+                    label="Monto a invertir"
+                    type="number"
+                    placeholder="0.00"
+                    :error="investmentAmount > availableBalance"
+                    :errorMessage="investmentAmount > availableBalance ? 'Saldo insuficiente' : ''"
+                    @input="syncSharesFromAmount"
+                  >
+                    <template #left>
+                      <span style="color: var(--muted-text);">$</span>
+                    </template>
+                  </CustomTextField>
+
+                  <CustomTextField
+                    v-model="investmentShares"
+                    label="Cantidad de cuotapartes"
+                    type="number"
+                    placeholder="0.00"
+                    :error="investmentShares <= 0"
+                    :errorMessage="investmentShares <= 0 ? 'La cantidad debe ser mayor a 0' : ''"
+                    @input="syncAmountFromShares"
+                  />
+
+                  <div class="mt-2" style="font-family: var(--font-sans);">
+                    <span>Saldo disponible: {{ formatMoney(availableBalance) }}</span>
+                  </div>
+                </v-form>
+              </v-card-text>
+              <v-card-actions class="dialog-actions">
+                <FilledButton
+                  :loading="isLoading"
+                  :disabled="!isFormValid || isLoading"
+                  @click="handleInvestment"
+                  class="action-button"
+                >
+                  Confirmar
+                </FilledButton>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+
+          <!-- Withdraw Dialog -->
+          <v-dialog v-model="withdrawDialog" max-width="500">
+            <v-card>
+              <v-card-title>Retirar Inversión</v-card-title>
+              <v-card-text>
+                <v-form v-model="isWithdrawFormValid">
+                  <div class="mb-2">
+                    <strong>Fondo:</strong> {{ selectedInvestment?.stock?.name }}
+                  </div>
+                  <div class="mb-2">
+                    <strong>Cuotapartes disponibles:</strong> {{ formatShares(selectedInvestment?.quantity ?? 0) }}
+                  </div>
+                  <v-text-field
+                    v-model.number="withdrawAmount"
+                    label="Monto a retirar"
+                    prefix="$"
+                    type="number"
+                    :rules="[
+                      v => v > 0 || 'El monto debe ser mayor a 0',
+                      v => v <= (selectedInvestment?.total_value ?? 0) || 'No puede retirar más de lo que posee'
+                    ]"
+                    required
+                    @input="syncWithdrawSharesFromAmount"
+                  ></v-text-field>
+
+                  <v-text-field
+                    v-model.number="withdrawShares"
+                    label="Cantidad a retirar (cuotapartes)"
+                    type="number"
+                    :rules="[
+                      v => v > 0 || 'La cantidad debe ser mayor a 0',
+                      v => v <= (selectedInvestment?.quantity ?? 0) || 'No puede retirar más de lo que posee'
+                    ]"
+                    required
+                    @input="syncWithdrawAmountFromShares"
+                  ></v-text-field>
+                </v-form>
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="grey" variant="text" @click="closeWithdrawDialog">Cancelar</v-btn>
+                <v-btn
+                  color="primary"
+                  class="rounded"
+                  :loading="isLoading"
+                  :disabled="!isWithdrawFormValid || isLoading"
+                  @click="handleWithdraw"
+                >
+                  Confirmar
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+
+          <!-- Snackbar for notifications -->
+          <v-snackbar
+            v-model="snackbar.show"
+            :color="snackbar.color"
+            timeout="3000"
+          >
+            {{ snackbar.text }}
+          </v-snackbar>
+
+          <!-- Fund Selection Dialog -->
+          <v-dialog 
+            v-model="showFundDialog" 
+            max-width="960px" 
+            :retain-focus="false"
+            :scrim="true"
+          >
+            <v-card class="select-card-dialog">
+              <div class="select-card-dialog-header">
+                <span class="select-card-title">Seleccionar fondo</span>
+                <v-btn icon class="dialog-close-btn" @click="showFundDialog = false">
+                  <v-icon>mdi-close</v-icon>
+                </v-btn>
+              </div>
+              <div class="select-card-list-custom">
+                <template v-if="fundOptions.length > 0">
+                  <div
+                    v-for="fund in fundOptions"
+                    :key="fund.id"
+                    class="select-card-custom"
+                    :class="{ selected: selectedFund && selectedFund.id === fund.id }"
+                    @click="selectFund(fund)"
+                  >
+                    <img :src="fund.logo" :alt="fund.name" class="select-card-logo" />
+                    <div class="select-card-info">
+                      <div class="select-card-brand">{{ fund.name }}</div>
+                      <div class="select-card-expiry">Precio actual: {{ formatMoney(fund.current_price) }}</div>
+                    </div>
+                    <v-icon v-if="selectedFund && selectedFund.id === fund.id" color="primary" class="select-card-check">mdi-check-circle</v-icon>
+                  </div>
+                </template>
+                <div v-else class="no-cards-message">
+                  <v-icon size="48" :color="'#41a7b7'">mdi-chart-line</v-icon>
+                  <div class="no-cards-title">No hay fondos disponibles</div>
+                  <div class="no-cards-subtitle">Por favor intenta más tarde</div>
+                </div>
+              </div>
+            </v-card>
+          </v-dialog>
         </template>
         <template v-else>
-            <v-alert type="warning" prominent border="start">
-                Por favor inicie sesión para ver sus inversiones
-            </v-alert>
+          <v-alert
+            type="warning"
+            prominent
+            border="start"
+          >
+            Por favor inicie sesión para ver sus inversiones
+          </v-alert>
         </template>
-    </v-container>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
-import { useAuthStore } from "@/store/auth";
-import {
-    type Stock,
-    type PortfolioItem,
-    getStocks,
-    getPortfolio,
-    updatePortfolio,
-    performInvestmentTransaction,
-} from "@/services/investments";
-import {
-    getAccountBalance as fetchAccountBalance,
-    updateAccountBalance,
-} from "@/services/account";
-import InvestmentCard from "@/components/investments/InvestmentCard.vue";
-import IconFilledButton from "@/components/ui/IconFilledButton.vue";
-import InvestmentBuyDialog from "@/components/investments/InvestmentBuyDialog.vue";
-import InvestmentSellDialog from "@/components/investments/InvestmentSellDialog.vue";
-import SuccessDialog from "@/components/ui/SuccessDialog.vue";
-import { investmentTypeColors, investmentTypeLabels } from "@/types/types";
+import { ref, computed, onMounted, watch } from 'vue'
+import { useAuthStore } from '@/store/auth'
+import { 
+  type Stock,   
+  type PortfolioItem, 
+  getStocks,
+  getPortfolio,
+  updatePortfolio,
+  performInvestmentTransaction
+} from '@/services/investments'
+import { getAccountBalance as fetchAccountBalance, updateAccountBalance } from '@/services/account'
+import InvestmentCard from '@/components/InvestmentCard.vue'
+import IconFilledButton from '@/components/ui/IconFilledButton.vue'
+import CustomTextField from '@/components/ui/CustomTextField.vue'
+import FilledButton from '@/components/ui/FilledButton.vue'
 
 const authStore = useAuthStore();
 
@@ -239,17 +447,38 @@ const totalGain = computed(() => {
 });
 
 const percentageChange = computed(() => {
-    return totalInitialBalance.value > 0
-        ? (totalGain.value / totalInitialBalance.value) * 100
-        : 0;
-});
+  return totalInitialBalance.value > 0
+    ? (totalGain.value / totalInitialBalance.value) * 100
+    : 0
+})
 
+const showFundDialog = ref(false)
+
+// Add fund logos mapping
+const fundLogos: Record<string, string> = {
+  'FND-A': 'https://cdn-icons-png.flaticon.com/512/217/217853.png',
+  'FND-B': 'https://cdn-icons-png.flaticon.com/512/217/217853.png',
+  'FND-C': 'https://cdn-icons-png.flaticon.com/512/217/217853.png',
+  'FND-D': 'https://cdn-icons-png.flaticon.com/512/217/217853.png',
+  'FND-E': 'https://cdn-icons-png.flaticon.com/512/217/217853.png',
+}
+
+// Update fundOptions computed to include logo
 const fundOptions = computed(() => {
-    return stocks.value.map((stock) => ({
-        id: stock.id,
-        name: stock.name,
-    }));
-});
+  return stocks.value.map(stock => ({
+    id: stock.id,
+    name: stock.name,
+    current_price: stock.current_price,
+    logo: fundLogos[stock.symbol] || 'https://cdn-icons-png.flaticon.com/512/217/217853.png'
+  }))
+})
+
+function selectFund(fund: any) {
+  selectedFund.value = fund
+  showFundDialog.value = false
+  investmentAmount.value = 0
+  investmentShares.value = 0
+}
 
 // Methods
 const getVariationClass = (variation: number) => {
@@ -551,6 +780,195 @@ function formatDate(timestamp: string | undefined): string {
 </script>
 
 <style scoped>
+.transactions-main {
+  background: var(--background);
+  min-height: 100vh;
+  padding: 0;
+}
+
+.transactions-row {
+  margin: 0;
+}
+
+.transactions-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  margin-top: 0.5rem;
+  margin-left: 0;
+  font-family: var(--font-sans), sans-serif;
+}
+
+.stats-card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  height: 100%;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.stats-balance-row {
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
+.stats-balance-row .stats-item {
+  width: 100%;
+}
+
+.stats-balance-row .stats-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.stats-item {
+  flex: 1;
+}
+
+.stats-label {
+  font-size: 1rem;
+  color: var(--muted-text);
+  margin-bottom: 0.5rem;
+}
+
+.stats-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stats-percentage {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+.chart-card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.06);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+
+.chart-container {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1.2rem;
+  margin-top: 1rem;
+}
+
+.chart-svg {
+  width: 100%;
+  height: 200px;
+}
+
+.chart-tooltip {
+  position: absolute;
+  background: white;
+  border-radius: 8px;
+  padding: 0.8rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  pointer-events: none;
+  z-index: 10;
+  min-width: 120px;
+}
+
+.tooltip-label {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+}
+
+.tooltip-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tooltip-percent {
+  font-size: 0.9rem;
+  color: var(--muted-text);
+  margin-top: 0.2rem;
+}
+
+.chart-legend {
+  font-size: 0.95rem;
+  color: var(--muted-text);
+}
+
+.chart-legend > div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  min-height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.invest-add-btn {
+  margin-bottom: 2.2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 0.5rem 2.5rem;
+  min-width: 200px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.investments-table {
+  background: transparent;
+}
+
+.investments-table :deep(th) {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  white-space: nowrap;
+  background-color: var(--card);
+  border-bottom: none;
+  font-family: var(--font-sans), sans-serif;
+}
+
+.text-success {
+  color: var(--success) !important;
+}
+
+.text-error {
+  color: var(--error) !important;
+}
+
 .investment-summary {
     background-color: var(--primary) !important;
 }
@@ -642,13 +1060,6 @@ function formatDate(timestamp: string | undefined): string {
 .dashboard-invest-legend {
     font-size: 0.95rem;
     color: var(--muted-text);
-}
-.legend-dot {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 6px;
 }
 .dashboard-invest-tooltip {
     position: absolute;
@@ -925,5 +1336,202 @@ function formatDate(timestamp: string | undefined): string {
     background: var(--secondary) !important;
     color: var(--secondary-foreground) !important;
     border: none;
+}
+
+/* Dialog styles */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+}
+
+.dialog-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dialog-close-btn {
+  margin-right: -0.5rem;
+}
+
+.dialog-actions {
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.action-button {
+  min-width: 200px;
+}
+
+/* Add these styles from DepositarView */
+.deposit-method-box {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #BDBDBD;
+  border-radius: 12px;
+  background: transparent;
+  height: 48px;
+  padding: 0 1.1rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.18s;
+  font-size: 1.06rem;
+  font-family: var(--font-sans, sans-serif);
+  cursor: pointer;
+  outline: none;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.deposit-method-box:hover,
+.deposit-method-box:focus {
+  border-color: #489FB5;
+}
+
+.deposit-card-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  display: flex;
+  align-items: center;
+}
+
+.deposit-method-text {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+  font-family: var(--font-sans), sans-serif;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.deposit-select-icon {
+  color: var(--muted-text);
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.select-card-dialog {
+  border-radius: 1.5rem;
+  overflow: visible;
+  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.10);
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 3rem;
+}
+
+.select-card-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 1rem 0;
+}
+
+.select-card-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-family: var(--font-sans), sans-serif;
+}
+
+.select-card-list-custom {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 1.5rem 0;
+  width: 100%;
+  padding-right: 0.5rem;
+}
+
+.select-card-custom {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 2px solid #e0e0e0;
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+  position: relative;
+}
+
+.select-card-custom.selected {
+  border-color: var(--primary, #41a7b7);
+  background: #e3f6f3;
+}
+
+.select-card-custom:hover {
+  border-color: var(--primary, #41a7b7);
+  background: #f0f4f8;
+}
+
+.select-card-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  margin-right: 1.5rem;
+}
+
+.select-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.select-card-brand {
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #232526;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.select-card-expiry {
+  font-size: 1rem;
+  color: #888;
+  margin-top: 0.2rem;
+}
+
+.select-card-check {
+  font-size: 1.8rem;
+  margin-left: 1.5rem;
+}
+
+.no-cards-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 2px dashed #e0e0e0;
+  width: 100%;
+  gap: 1rem;
+}
+
+.no-cards-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-sans), sans-serif;
+}
+
+.no-cards-subtitle {
+  font-size: 1.05rem;
+  color: var(--muted-text);
+  font-family: var(--font-sans), sans-serif;
 }
 </style>
