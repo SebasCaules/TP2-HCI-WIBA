@@ -1,7 +1,5 @@
 <template>
-  <v-container fluid class="transactions-main">
-    <v-row class="transactions-row" no-gutters>
-      <v-col cols="12" class="px-md-8">
+    <v-container>
         <template v-if="authStore.isAuthenticated">
             <v-row>
                 <v-col cols="12" class="px-md-8">
@@ -242,197 +240,35 @@
                 </v-col>
             </v-row>
 
-              <template #no-data>
-                <div class="pa-4 text-center">
-                  <v-icon size="large" color="grey" class="mb-2">mdi-chart-line</v-icon>
-                  <div class="text-h6 text-grey">Aún no tenés inversiones</div>
-                  <div class="text-body-2 text-grey mt-2">
-                    Comenzá a invertir haciendo clic en el botón "Invertir"
-                  </div>
-                </div>
-              </template>
-            </v-data-table>
-          </div>
+            <!-- Investment Dialog -->
+            <InvestmentBuyDialog
+                v-model="investDialog"
+                :fund-options="fundOptions"
+                :available-balance="availableBalance"
+                :stocks="stocks"
+                @invest="handleInvestment"
+            />
 
-          <!-- Investment Dialog -->
-          <v-dialog v-model="investDialog" max-width="500">
-            <v-card>
-              <div class="dialog-header">
-                <span class="dialog-title" style="font-family: var(--font-sans);">Realizar Inversión</span>
-                <v-btn icon class="dialog-close-btn" @click="closeInvestDialog">
-                  <v-icon>mdi-close</v-icon>
-                </v-btn>
-              </div>
-              <v-card-text>
-                <v-form v-model="isFormValid">
-                  <button type="button" class="deposit-method-box" @click="showFundDialog = true">
-                    <img :src="selectedFund?.logo" :alt="selectedFund?.name" class="deposit-card-logo" v-if="selectedFund" />
-                    <span class="deposit-method-text" v-if="selectedFund">
-                      <b>{{ selectedFund.name }}</b>
-                    </span>
-                    <span class="deposit-method-text" v-else style="font-weight: 400;">
-                      Seleccionar fondo
-                    </span>
-                    <v-icon class="deposit-select-icon">mdi-chevron-right</v-icon>
-                  </button>
+            <!-- Withdraw Dialog -->
+            <InvestmentSellDialog
+                v-model="withdrawDialog"
+                :selected-investment="selectedInvestment"
+                @withdraw="handleWithdraw"
+            />
 
-                  <CustomTextField
-                    v-model="investmentAmount"
-                    label="Monto a invertir"
-                    type="number"
-                    placeholder="0.00"
-                    :error="investmentAmount > availableBalance"
-                    :errorMessage="investmentAmount > availableBalance ? 'Saldo insuficiente' : ''"
-                    @input="syncSharesFromAmount"
-                  >
-                    <template #left>
-                      <span style="color: var(--muted-text);">$</span>
-                    </template>
-                  </CustomTextField>
-
-                  <CustomTextField
-                    v-model="investmentShares"
-                    label="Cantidad de cuotapartes"
-                    type="number"
-                    placeholder="0.00"
-                    :error="investmentShares <= 0"
-                    :errorMessage="investmentShares <= 0 ? 'La cantidad debe ser mayor a 0' : ''"
-                    @input="syncAmountFromShares"
-                  />
-
-                  <div class="mt-2" style="font-family: var(--font-sans);">
-                    <span>Saldo disponible: {{ formatMoney(availableBalance) }}</span>
-                  </div>
-                </v-form>
-              </v-card-text>
-              <v-card-actions class="dialog-actions">
-                <FilledButton
-                  :loading="isLoading"
-                  :disabled="!isFormValid || isLoading"
-                  @click="handleInvestment"
-                  class="action-button"
-                >
-                  Confirmar
-                </FilledButton>
-              </v-card-actions>
-            </v-card>
-          </v-dialog>
-
-          <!-- Withdraw Dialog -->
-          <v-dialog v-model="withdrawDialog" max-width="500">
-            <v-card>
-              <v-card-title>Retirar Inversión</v-card-title>
-              <v-card-text>
-                <v-form v-model="isWithdrawFormValid">
-                  <div class="mb-2">
-                    <strong>Fondo:</strong> {{ selectedInvestment?.stock?.name }}
-                  </div>
-                  <div class="mb-2">
-                    <strong>Cuotapartes disponibles:</strong> {{ formatShares(selectedInvestment?.quantity ?? 0) }}
-                  </div>
-                  <v-text-field
-                    v-model.number="withdrawAmount"
-                    label="Monto a retirar"
-                    prefix="$"
-                    type="number"
-                    :rules="[
-                      v => v > 0 || 'El monto debe ser mayor a 0',
-                      v => v <= (selectedInvestment?.total_value ?? 0) || 'No puede retirar más de lo que posee'
-                    ]"
-                    required
-                    @input="syncWithdrawSharesFromAmount"
-                  ></v-text-field>
-
-                  <v-text-field
-                    v-model.number="withdrawShares"
-                    label="Cantidad a retirar (cuotapartes)"
-                    type="number"
-                    :rules="[
-                      v => v > 0 || 'La cantidad debe ser mayor a 0',
-                      v => v <= (selectedInvestment?.quantity ?? 0) || 'No puede retirar más de lo que posee'
-                    ]"
-                    required
-                    @input="syncWithdrawAmountFromShares"
-                  ></v-text-field>
-                </v-form>
-              </v-card-text>
-              <v-card-actions>
-                <v-spacer></v-spacer>
-                <v-btn color="grey" variant="text" @click="closeWithdrawDialog">Cancelar</v-btn>
-                <v-btn
-                  color="primary"
-                  class="rounded"
-                  :loading="isLoading"
-                  :disabled="!isWithdrawFormValid || isLoading"
-                  @click="handleWithdraw"
-                >
-                  Confirmar
-                </v-btn>
-              </v-card-actions>
-            </v-card>
-          </v-dialog>
-
-          <!-- Snackbar for notifications -->
-          <v-snackbar
-            v-model="snackbar.show"
-            :color="snackbar.color"
-            timeout="3000"
-          >
-            {{ snackbar.text }}
-          </v-snackbar>
-
-          <!-- Fund Selection Dialog -->
-          <v-dialog 
-            v-model="showFundDialog" 
-            max-width="960px" 
-            :retain-focus="false"
-            :scrim="true"
-          >
-            <v-card class="select-card-dialog">
-              <div class="select-card-dialog-header">
-                <span class="select-card-title">Seleccionar fondo</span>
-                <v-btn icon class="dialog-close-btn" @click="showFundDialog = false">
-                  <v-icon>mdi-close</v-icon>
-                </v-btn>
-              </div>
-              <div class="select-card-list-custom">
-                <template v-if="fundOptions.length > 0">
-                  <div
-                    v-for="fund in fundOptions"
-                    :key="fund.id"
-                    class="select-card-custom"
-                    :class="{ selected: selectedFund && selectedFund.id === fund.id }"
-                    @click="selectFund(fund)"
-                  >
-                    <img :src="fund.logo" :alt="fund.name" class="select-card-logo" />
-                    <div class="select-card-info">
-                      <div class="select-card-brand">{{ fund.name }}</div>
-                      <div class="select-card-expiry">Precio actual: {{ formatMoney(fund.current_price) }}</div>
-                    </div>
-                    <v-icon v-if="selectedFund && selectedFund.id === fund.id" color="primary" class="select-card-check">mdi-check-circle</v-icon>
-                  </div>
-                </template>
-                <div v-else class="no-cards-message">
-                  <v-icon size="48" :color="'#41a7b7'">mdi-chart-line</v-icon>
-                  <div class="no-cards-title">No hay fondos disponibles</div>
-                  <div class="no-cards-subtitle">Por favor intenta más tarde</div>
-                </div>
-              </div>
-            </v-card>
-          </v-dialog>
+            <!-- Success Dialog -->
+            <SuccessDialog
+                v-model="showSuccessDialog"
+                :title="successDialog.title"
+                :message="successDialog.message"
+            />
         </template>
         <template v-else>
-          <v-alert
-            type="warning"
-            prominent
-            border="start"
-          >
-            Por favor inicie sesión para ver sus inversiones
-          </v-alert>
+            <v-alert type="warning" prominent border="start">
+                Por favor inicie sesión para ver sus inversiones
+            </v-alert>
         </template>
-      </v-col>
-    </v-row>
-  </v-container>
+    </v-container>
 </template>
 
 <script setup lang="ts">
@@ -550,38 +386,17 @@ const totalGain = computed(() => {
 });
 
 const percentageChange = computed(() => {
-  return totalInitialBalance.value > 0
-    ? (totalGain.value / totalInitialBalance.value) * 100
-    : 0
-})
+    return totalInitialBalance.value > 0
+        ? (totalGain.value / totalInitialBalance.value) * 100
+        : 0;
+});
 
-const showFundDialog = ref(false)
-
-// Add fund logos mapping
-const fundLogos: Record<string, string> = {
-  'FND-A': 'https://cdn-icons-png.flaticon.com/512/217/217853.png',
-  'FND-B': 'https://cdn-icons-png.flaticon.com/512/217/217853.png',
-  'FND-C': 'https://cdn-icons-png.flaticon.com/512/217/217853.png',
-  'FND-D': 'https://cdn-icons-png.flaticon.com/512/217/217853.png',
-  'FND-E': 'https://cdn-icons-png.flaticon.com/512/217/217853.png',
-}
-
-// Update fundOptions computed to include logo
 const fundOptions = computed(() => {
-  return stocks.value.map(stock => ({
-    id: stock.id,
-    name: stock.name,
-    current_price: stock.current_price,
-    logo: fundLogos[stock.symbol] || 'https://cdn-icons-png.flaticon.com/512/217/217853.png'
-  }))
-})
-
-function selectFund(fund: any) {
-  selectedFund.value = fund
-  showFundDialog.value = false
-  investmentAmount.value = 0
-  investmentShares.value = 0
-}
+    return stocks.value.map((stock) => ({
+        id: stock.id,
+        name: stock.name,
+    }));
+});
 
 // Methods
 const getVariationClass = (variation: number) => {
@@ -923,195 +738,6 @@ function hideTooltip() {
 </script>
 
 <style scoped>
-.transactions-main {
-  background: var(--background);
-  min-height: 100vh;
-  padding: 0;
-}
-
-.transactions-row {
-  margin: 0;
-}
-
-.transactions-title {
-  font-size: 2.2rem;
-  font-weight: 800;
-  margin-bottom: 1.5rem;
-  margin-top: 0.5rem;
-  margin-left: 0;
-  font-family: var(--font-sans), sans-serif;
-}
-
-.stats-card {
-  background: var(--card);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 1.2rem;
-  height: 100%;
-}
-
-.stats-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 2rem;
-}
-
-.stats-balance-row {
-  padding-top: 0.8rem;
-  border-top: 1px solid var(--border);
-}
-
-.stats-balance-row .stats-item {
-  width: 100%;
-}
-
-.stats-balance-row .stats-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.stats-item {
-  flex: 1;
-}
-
-.stats-label {
-  font-size: 1rem;
-  color: var(--muted-text);
-  margin-bottom: 0.5rem;
-}
-
-.stats-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.stats-percentage {
-  font-size: 1rem;
-  font-weight: 500;
-  margin-left: 0.5rem;
-}
-
-.chart-card {
-  background: var(--card);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.06);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.chart-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 1rem;
-}
-
-.chart-container {
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 1.2rem;
-  margin-top: 1rem;
-}
-
-.chart-svg {
-  width: 100%;
-  height: 200px;
-}
-
-.chart-tooltip {
-  position: absolute;
-  background: white;
-  border-radius: 8px;
-  padding: 0.8rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  pointer-events: none;
-  z-index: 10;
-  min-width: 120px;
-}
-
-.tooltip-label {
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 0.3rem;
-}
-
-.tooltip-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.tooltip-percent {
-  font-size: 0.9rem;
-  color: var(--muted-text);
-  margin-top: 0.2rem;
-}
-
-.chart-legend {
-  font-size: 0.95rem;
-  color: var(--muted-text);
-}
-
-.chart-legend > div {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.legend-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  min-width: 8px;
-  min-height: 8px;
-  border-radius: 50%;
-  margin-right: 8px;
-  flex-shrink: 0;
-}
-
-.invest-add-btn {
-  margin-bottom: 2.2rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  padding: 0.5rem 2.5rem;
-  min-width: 200px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.investments-table {
-  background: transparent;
-}
-
-.investments-table :deep(th) {
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--text);
-  white-space: nowrap;
-  background-color: var(--card);
-  border-bottom: none;
-  font-family: var(--font-sans), sans-serif;
-}
-
-.text-success {
-  color: var(--success) !important;
-}
-
-.text-error {
-  color: var(--error) !important;
-}
-
 .investment-summary {
     background-color: var(--primary) !important;
 }
@@ -1203,6 +829,13 @@ function hideTooltip() {
 .dashboard-invest-legend {
     font-size: 0.95rem;
     color: var(--muted-text);
+}
+.legend-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 6px;
 }
 .dashboard-invest-tooltip {
     position: absolute;
