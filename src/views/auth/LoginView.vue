@@ -1,6 +1,6 @@
 <template>
-  <v-container class="login-bg fill-height" fluid>
-    <v-row justify="center" align="center" class="fill-height">
+  <v-container class="login-bg" fluid>
+    <v-row justify="center" align="center" class="ma-0">
       <v-col cols="12" sm="8" md="5" lg="4">
         <BackButton to="/" class="d-flex justify-center" />
         <v-card class="pa-8 login-bg-card" elevation="0">
@@ -206,6 +206,10 @@ const handleResetPassword = async () => {
 <style scoped>
 .login-bg {
   background: var(--background);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .login-bg-card {

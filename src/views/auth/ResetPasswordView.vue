@@ -1,6 +1,6 @@
 <template>
-    <v-container fluid class="reset-password-container">
-        <div class="reset-password-content">
+    <v-container fluid class="reset-password-container d-flex align-center justify-center">
+        <div class="reset-password-content mx-auto">
             <h1 class="reset-password-title">Restablecer Contraseña</h1>
 
             <div v-if="error" class="reset-password-error">
