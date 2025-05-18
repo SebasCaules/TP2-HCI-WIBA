@@ -1,216 +1,202 @@
 <template>
-    <v-container fluid class="pagos-main">
-        <v-row class="pagos-row" no-gutters>
-            <v-col cols="12" class="px-md-8">
-                <h1 class="pagos-title">Pago de Servicios</h1>
-                <div class="card">
-                    <v-data-table
-                        :items="bills"
-                        :headers="headers"
-                        class="pagos-table"
-                        :items-per-page="10"
-                        :loading="loading"
-                    >
-                        <template #no-data>
-                            <div class="text-center pa-4">
-                                {{
-                                    loading
-                                        ? "Cargando facturas..."
-                                        : "No hay facturas disponibles"
-                                }}
-                            </div>
-                        </template>
-                        <template v-slot:item="{ item }">
-                            <tr>
-                                <td class="pago-title">{{ item.title }}</td>
-                                <td class="pago-provider">
-                                    {{ item.provider }}
-                                </td>
-                                <td class="pago-amount">
-                                    ${{
-                                        item.amount.toLocaleString("es-AR", {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                        })
-                                    }}
-                                </td>
-                                <td class="pago-date">
-                                    {{ formatDate(item.due_date) }}
-                                </td>
-                                <td class="pago-status">
-                                    <v-chip
-                                        :color="getStatusColor(item.status)"
-                                        size="small"
-                                        class="status-chip"
-                                    >
-                                        {{ getStatusText(item.status) }}
-                                    </v-chip>
-                                </td>
-                                <td class="pago-actions">
-                                    <v-btn
-                                        v-if="item.status !== 'paid'"
-                                        color="primary"
-                                        size="small"
-                                        @click="payBill(item.id)"
-                                        :loading="payingBillId === item.id"
-                                    >
-                                        Pagar
-                                    </v-btn>
-                                </td>
-                            </tr>
-                        </template>
-                    </v-data-table>
-                </div>
-            </v-col>
-        </v-row>
+    <v-container class="pagos-container" fluid>
+      <h1 class="pagos-title">Pagos</h1>
+  
+      <div class="pagos-options">
+        <button class="pagos-btn" @click="toggleCreateOrder">Crear Orden de Pago</button>
+        <button class="pagos-btn" @click="togglePayService">Pagar Servicio</button>
+      </div>
+  
+      <!-- Crear Orden de Pago -->
+      <div v-if="showCreateOrder" class="pagos-section">
+        <h2>Crear Orden de Pago</h2>
+        <div class="pagos-form-group">
+          <input v-model="newOrder.amount" type="number" placeholder="Monto" class="pagos-input" />
+        </div>
+        <div class="pagos-form-group">
+          <input v-model="newOrder.description" type="text" placeholder="Descripción" class="pagos-input" />
+        </div>
+        <button class="pagos-submit-btn" @click="createOrder">Generar Orden</button>
+        <div v-if="newOrder.id" class="order-created">
+          Orden generada: ID {{ newOrder.id }}
+        </div>
+      </div>
+  
+      <!-- Pagar Servicio -->
+      <div v-if="showPayService" class="pagos-section">
+        <h2>Pagar Servicio</h2>
+        <div class="pagos-form-group">
+          <input v-model="paymentId" type="text" placeholder="Número de Identificador" class="pagos-input" />
+        </div>
+        <button class="pagos-submit-btn" @click="fetchOrder">Consultar Orden</button>
+  
+        <div v-if="orderData" class="order-details">
+          <p>Monto: ${{ orderData.amount }}</p>
+          <p>Descripción: {{ orderData.description }}</p>
+          <button class="pagos-submit-btn" @click="payOrder">Realizar Pago</button>
+        </div>
+      </div>
     </v-container>
-</template>
-
-<script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
-import { useAuthStore } from "@/store/auth";
-import { getBills, updateBillStatus } from "@/services/bills";
-import type { Bill } from "@/types/types";
-
-const authStore = useAuthStore();
-const userId = computed(() => authStore.user?.id);
-
-const bills = ref<Bill[]>([]);
-const loading = ref(true);
-const payingBillId = ref<string | null>(null);
-
-const headers = [
-    { title: "Título", key: "title", align: "start" as const },
-    { title: "Proveedor", key: "provider", align: "start" as const },
-    { title: "Monto", key: "amount", align: "end" as const },
-    { title: "Vencimiento", key: "due_date", align: "end" as const },
-    { title: "Estado", key: "status", align: "center" as const },
-    { title: "Acciones", key: "actions", align: "end" as const },
-];
-
-async function fetchBills() {
-    if (!userId.value) return;
-    loading.value = true;
-    try {
-        bills.value = await getBills(userId.value);
-    } catch (error) {
-        console.error("Error fetching bills:", error);
-    } finally {
-        loading.value = false;
+  </template>
+  
+  <script setup lang="ts">
+  import { ref } from 'vue';
+  
+  // Estado de las secciones
+  const showCreateOrder = ref(false);
+  const showPayService = ref(false);
+  
+  // Estado para la creación de orden
+  const newOrder = ref({
+    id: '',
+    amount: '',
+    description: ''
+  });
+  
+  // Estado para el pago de servicio
+  const paymentId = ref('');
+  const orderData = ref(null);
+  
+  // Lista de órdenes
+  const orders = ref<{ id: string; amount: string; description: string }[]>([]);
+  
+  function toggleCreateOrder() {
+    showCreateOrder.value = !showCreateOrder.value;
+    showPayService.value = false;
+  }
+  
+  function togglePayService() {
+    showPayService.value = !showPayService.value;
+    showCreateOrder.value = false;
+  }
+  
+  // Generar identificador corto
+  function generateShortId(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+  
+  // Crear orden de pago
+  function createOrder() {
+    if (!newOrder.value.amount || !newOrder.value.description) {
+      alert('Debe completar todos los campos.');
+      return;
     }
-}
-
-async function payBill(billId: string) {
-    if (!userId.value) return;
-    payingBillId.value = billId;
-    try {
-        const { success } = await updateBillStatus(billId, "paid");
-        if (success) {
-            await fetchBills();
-        }
-    } catch (error) {
-        console.error("Error paying bill:", error);
-    } finally {
-        payingBillId.value = null;
+  
+    const orderId = generateShortId();
+    orders.value.push({
+      id: orderId,
+      amount: newOrder.value.amount,
+      description: newOrder.value.description
+    });
+  
+    newOrder.value.id = orderId;
+    newOrder.value.amount = '';
+    newOrder.value.description = '';
+  }
+  
+  // Consultar orden por ID
+  function fetchOrder() {
+    const foundOrder = orders.value.find(order => order.id === paymentId.value);
+    if (foundOrder) {
+      orderData.value = foundOrder;
+    } else {
+      alert('No se encontró una orden con ese identificador.');
+      orderData.value = null;
     }
-}
-
-function formatDate(date: string): string {
-    if (!date) return "Fecha no disponible";
-    const parsedDate = new Date(date);
-    return isNaN(parsedDate.getTime())
-        ? "Fecha inválida"
-        : parsedDate.toLocaleDateString("es-AR");
-}
-
-function getStatusColor(status: string): string {
-    switch (status) {
-        case "paid":
-            return "success";
-        case "pending":
-            return "warning";
-        case "overdue":
-            return "error";
-        default:
-            return "grey";
-    }
-}
-
-function getStatusText(status: string): string {
-    switch (status) {
-        case "paid":
-            return "Pagado";
-        case "pending":
-            return "Pendiente";
-        case "overdue":
-            return "Vencido";
-        default:
-            return status;
-    }
-}
-
-onMounted(fetchBills);
-</script>
-
-<style scoped>
-.pagos-main {
-    background: var(--background);
-    min-height: 100vh;
-}
-
-.pagos-title {
-    font-size: 2.2rem;
-    font-weight: 800;
-    margin-bottom: 1.5rem;
-    margin-top: 0.5rem;
-    font-family: var(--font-sans), sans-serif;
-}
-
-.pagos-table {
-    background: transparent;
-}
-
-.pagos-table :deep(th),
-.pagos-table :deep(td) {
-    padding: 12px 16px !important;
-}
-
-.pagos-table :deep(th) {
-    font-weight: 600;
+  }
+  
+  // Realizar pago
+  function payOrder() {
+    alert(`Pago realizado por $${orderData.value.amount}`);
+    orderData.value = null;
+    paymentId.value = '';
+  }
+  </script>
+  
+  <style scoped>
+  .pagos-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    background-color: var(--background);
+    height: 100vh;
+  }
+  
+  .pagos-title {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+  }
+  
+  .pagos-options {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .pagos-btn {
+    background-color: var(--primary);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
     font-size: 1rem;
-    color: var(--text);
-    white-space: nowrap;
+  }
+  
+  .pagos-btn:hover {
+    background-color: var(--primary-hover);
+  }
+  
+  .pagos-section {
     background-color: var(--card);
-    border-bottom: none;
-}
-
-.pago-title {
-    font-weight: 500;
-}
-
-.pago-provider {
-    color: var(--muted-text);
-}
-
-.pago-amount {
-    font-weight: 600;
-    text-align: right;
-}
-
-.pago-date {
-    color: var(--muted-text);
-    text-align: right;
-}
-
-.pago-status {
+    padding: 1.5rem;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
     text-align: center;
-}
-
-.status-chip {
-    font-weight: 500;
-}
-
-.pago-actions {
-    text-align: right;
-}
-</style>
+    margin-bottom: 2rem;
+  }
+  
+  .pagos-form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .pagos-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+  }
+  
+  .pagos-submit-btn {
+    background-color: var(--primary);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+  
+  .pagos-submit-btn:hover {
+    background-color: var(--primary-hover);
+  }
+  
+  .order-created {
+    margin-top: 1rem;
+    font-weight: bold;
+    color: var(--success);
+  }
+  
+  .order-details {
+    background-color: var(--card);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+    text-align: left;
+  }
+  </style>
