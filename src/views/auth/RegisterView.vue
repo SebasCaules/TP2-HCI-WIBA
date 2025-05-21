@@ -84,10 +84,10 @@ import { useRouter } from 'vue-router'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import BackButton from '@/components/ui/BackButton.vue'
-import { authService } from '@/services/auth'
+import { UserApi, type RegistrationData } from '@/api/user.ts'
 
 const router = useRouter()
-const form = ref()
+const form = ref<HTMLFormElement | null>(null)
 const nombre = ref('')
 const apellido = ref('')
 const username = ref('')
@@ -100,7 +100,7 @@ const emailError = ref('')
 const passwordError = ref('')
 const loading = ref(false)
 
-const validateForm = () => {
+const validateForm = (): boolean => {
   let valid = true
   nombreError.value = ''
   apellidoError.value = ''
@@ -154,27 +154,35 @@ const validateForm = () => {
   return valid
 }
 
-const handleRegister = async () => {
+const handleRegister = async (): Promise<void> => {
   if (!validateForm()) return
   loading.value = true
   try {
-    const response = await authService.register({
+    const registrationData = {
+      firstName: nombre.value,
+      lastName: apellido.value,
+      birthDate: "1979-01-01", // esto puede ser dinámico si luego agregás el campo
       email: email.value,
       password: password.value,
-      name: nombre.value,
-      lastName: apellido.value,
-      username: username.value
-    })
-    if (response.success) {
-      router.push('/login')
-    } else {
-      if (response.message?.includes('already registered')) {
-        emailError.value = 'Este email ya está registrado.'
-      } else if (response.message?.includes('username')) {
+      metadata: {}
+    }
+    
+    await UserApi.createUser(registrationData)
+    router.push('/login')
+  } catch (error: any) {
+    if (error.code === 400) {
+      // Manejar errores de validación específicos
+      if (error.description?.toLowerCase().includes('email')) {
+        emailError.value = 'Este email ya está registrado o no es válido.'
+      } else if (error.description?.toLowerCase().includes('username')) {
         usernameError.value = 'Este nombre de usuario ya está en uso.'
+      } else if (error.description?.toLowerCase().includes('password')) {
+        passwordError.value = 'La contraseña no cumple con los requisitos mínimos.'
       } else {
-        emailError.value = response.message || 'Error al registrar'
+        emailError.value = error.description || 'Error al registrar el usuario.'
       }
+    } else {
+      emailError.value = 'Error al registrar el usuario. Por favor, intenta nuevamente.'
     }
   } finally {
     loading.value = false
@@ -223,4 +231,4 @@ const handleRegister = async () => {
 .login-link:hover {
   text-decoration: underline;
 }
-</style> 
+</style>

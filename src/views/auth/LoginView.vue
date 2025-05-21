@@ -98,17 +98,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { authService } from '@/services/auth'
-import { useAuthStore } from '@/store/auth'
+import { useSecurityStore } from '@/store/securityStore.ts'
+import { UserApi, type Credentials } from '@/api/user.ts'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 
 const router = useRouter()
-const authStore = useAuthStore()
-const form = ref()
+const securityStore = useSecurityStore()
+const form = ref<HTMLFormElement | null>(null)
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
@@ -122,7 +122,7 @@ const resetError = ref('')
 const resetSuccess = ref('')
 const isResetting = ref(false)
 
-const validateForm = () => {
+const validateForm = (): boolean => {
   let valid = true
   emailError.value = ''
   passwordError.value = ''
@@ -147,29 +147,28 @@ const validateForm = () => {
   return valid
 }
 
-const handleSubmit = async () => {
+const handleSubmit = async (): Promise<void> => {
   if (!validateForm()) return
   loading.value = true
   try {
-    const response = await authService.login(email.value, password.value)
-    if (response.success && response.user) {
-      authStore.setUser(response.user)
-      router.push('/dashboard')
-    } else {
-      // Show error message
-      if (response.message?.includes('Invalid login credentials')) {
-        emailError.value = 'Email o contraseña incorrectos.'
-        passwordError.value = 'Email o contraseña incorrectos.'
-      } else {
-        emailError.value = response.message || 'Error al iniciar sesión'
-      }
+    const credentials: Credentials = {
+      email: email.value,
+      password: password.value
+    }
+    await securityStore.login(credentials, true)
+    await securityStore.getCurrentUser()
+    router.push('/dashboard')
+  } catch (error) {
+    if (error instanceof Error) {
+      emailError.value = 'Email o contraseña incorrectos.'
+      passwordError.value = 'Email o contraseña incorrectos.'
     }
   } finally {
     loading.value = false
   }
 }
 
-const handleResetPassword = async () => {
+const handleResetPassword = async (): Promise<void> => {
   resetError.value = ''
   resetSuccess.value = ''
   isResetting.value = true
@@ -185,18 +184,8 @@ const handleResetPassword = async () => {
       return
     }
 
-    const response = await authService.resetPassword(resetEmail.value)
-    if (response.success) {
-      resetSuccess.value = response.message
-      resetEmail.value = ''
-      // Close dialog after 3 seconds
-      setTimeout(() => {
-        showResetDialog.value = false
-        resetSuccess.value = ''
-      }, 3000)
-    } else {
-      resetError.value = response.message || 'Error al solicitar el restablecimiento de contraseña'
-    }
+    // TODO: Implement password reset functionality with the new API
+    resetError.value = 'Funcionalidad no disponible temporalmente'
   } finally {
     isResetting.value = false
   }

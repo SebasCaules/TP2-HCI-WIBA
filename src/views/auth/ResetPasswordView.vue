@@ -54,14 +54,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import { authService } from "@/services/auth";
-import { supabase } from "@/plugins/supabase";
+import { useRoute } from "vue-router";
 import CustomTextField from "@/components/ui/CustomTextField.vue";
 import FilledButton from "@/components/ui/FilledButton.vue";
 
+interface PasswordRules {
+    (v: string): boolean | string;
+}
+
 const route = useRoute();
-const router = useRouter();
 
 const password = ref("");
 const confirmPassword = ref("");
@@ -69,13 +70,13 @@ const loading = ref(false);
 const error = ref<string | null>(null);
 const resetSuccess = ref(false);
 
-const passwordRules = [
+const passwordRules: PasswordRules[] = [
     (v: string) => !!v || "La contraseña es requerida",
     (v: string) =>
         v.length >= 6 || "La contraseña debe tener al menos 6 caracteres",
 ];
 
-const confirmPasswordRules = [
+const confirmPasswordRules: PasswordRules[] = [
     (v: string) => !!v || "La confirmación de contraseña es requerida",
     (v: string) => v === password.value || "Las contraseñas no coinciden",
 ];
@@ -90,38 +91,31 @@ const isFormValid = computed(() => {
 });
 
 onMounted(async () => {
-    // Verificar si hay un token de recuperación en la sesión
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
+    // TODO: Implement token validation with the new API
+    const token = route.query.token as string;
+    if (!token) {
         error.value = "El enlace de recuperación ha expirado o no es válido. Por favor, solicita un nuevo enlace.";
         return;
     }
 });
 
-const handleSubmit = async () => {
+const handleSubmit = async (): Promise<void> => {
     if (!validateForm()) return;
 
     loading.value = true;
     try {
-        const { success, error: resetError } = await authService.resetPasswordWithToken(password.value);
-
-        if (success) {
-            resetSuccess.value = true;
-            setTimeout(() => {
-                router.push("/login");
-            }, 2000);
-        } else {
-            error.value = resetError || "Error al restablecer la contraseña";
-        }
+        // TODO: Implement password reset with the new API
+        error.value = "Funcionalidad no disponible temporalmente";
     } catch (err) {
-        error.value = "Error al restablecer la contraseña";
+        if (err instanceof Error) {
+            error.value = "Error al restablecer la contraseña";
+        }
     } finally {
         loading.value = false;
     }
 };
 
-const validateForm = () => {
+const validateForm = (): boolean => {
     if (!isFormValid.value) {
         error.value = "Por favor, completa todos los campos correctamente.";
         return false;
