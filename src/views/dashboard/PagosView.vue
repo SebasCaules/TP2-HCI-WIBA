@@ -3,113 +3,137 @@
       <h1 class="pagos-title">Pagos</h1>
   
       <div class="pagos-options">
-        <button class="pagos-btn" @click="toggleCreateOrder">Crear Orden de Pago</button>
-        <button class="pagos-btn" @click="togglePayService">Pagar Servicio</button>
+        <button class="pagos-btn" @click="showCreateDialog = true">Crear Orden de Pago</button>
+        <button class="pagos-btn" @click="showPayDialog = true">Pagar Servicio</button>
       </div>
   
-      <!-- Crear Orden de Pago -->
-      <div v-if="showCreateOrder" class="pagos-section">
-        <h2>Crear Orden de Pago</h2>
-        <div class="pagos-form-group">
-          <input v-model="newOrder.amount" type="number" placeholder="Monto" class="pagos-input" />
-        </div>
-        <div class="pagos-form-group">
-          <input v-model="newOrder.description" type="text" placeholder="Descripción" class="pagos-input" />
-        </div>
-        <button class="pagos-submit-btn" @click="createOrder">Generar Orden</button>
-        <div v-if="newOrder.id" class="order-created">
-          Orden generada: ID {{ newOrder.id }}
-        </div>
-      </div>
+      <!-- Crear Orden Dialog -->
+      <v-dialog v-model="showCreateDialog" max-width="500">
+        <v-card class="crear-dialog">
+          <div class="crear-dialog-header">
+            <span class="crear-dialog-title">Crear Orden de Pago</span>
+            <v-btn icon class="dialog-close-btn" @click="showCreateDialog = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
+          <div class="crear-dialog-content">
+            <input v-model="newOrder.amount" type="number" placeholder="Monto" class="pagos-input" />
+            <input v-model="newOrder.description" type="text" placeholder="Descripción" class="pagos-input" />
+            <div class="crear-dialog-actions">
+              <button class="pagos-submit-btn" @click="createOrder">Generar Orden</button>
+            </div>
+          </div>
+        </v-card>
+      </v-dialog>
   
-      <!-- Pagar Servicio -->
-      <div v-if="showPayService" class="pagos-section">
-        <h2>Pagar Servicio</h2>
-        <div class="pagos-form-group">
-          <input v-model="paymentId" type="text" placeholder="Número de Identificador" class="pagos-input" />
-        </div>
-        <button class="pagos-submit-btn" @click="fetchOrder">Consultar Orden</button>
+      <!-- Orden Generada Dialog -->
+      <v-dialog v-model="showOrderIdDialog" max-width="400">
+        <v-card class="id-dialog">
+          <div class="id-dialog-content">
+            <v-icon color="success" size="48">mdi-check-circle</v-icon>
+            <div class="id-dialog-title">Orden Generada</div>
+            <div class="id-dialog-id">ID: {{ lastOrderId }}</div>
+          </div>
+        </v-card>
+      </v-dialog>
   
-        <div v-if="orderData" class="order-details">
-          <p>Monto: ${{ orderData.amount }}</p>
-          <p>Descripción: {{ orderData.description }}</p>
-          <button class="pagos-submit-btn" @click="payOrder">Realizar Pago</button>
-        </div>
-      </div>
+      <!-- Pagar Servicio Dialog -->
+      <v-dialog v-model="showPayDialog" max-width="500">
+        <v-card class="crear-dialog">
+          <div class="crear-dialog-header">
+            <span class="crear-dialog-title">Pagar Servicio</span>
+            <v-btn icon class="dialog-close-btn" @click="showPayDialog = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
+          <div class="crear-dialog-content">
+            <input v-model="paymentId" type="text" placeholder="Número de Identificador" class="pagos-input" />
+            <div class="crear-dialog-actions">
+              <button class="pagos-submit-btn" @click="fetchOrder">Consultar Orden</button>
+            </div>
+          </div>
+        </v-card>
+      </v-dialog>
+  
+      <!-- Datos de Orden Dialog -->
+      <v-dialog v-model="showOrderDetailsDialog" max-width="500">
+        <v-card class="confirm-dialog">
+          <div class="confirm-dialog-header">
+            <span class="confirm-dialog-title">Confirmar Pago</span>
+            <v-btn icon class="dialog-close-btn" @click="showOrderDetailsDialog = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
+          <div class="confirm-dialog-content">
+            <p><strong>Monto:</strong> ${{ orderData?.amount }}</p>
+            <p><strong>Descripción:</strong> {{ orderData?.description }}</p>
+            <div class="confirm-dialog-actions">
+              <button class="pagos-submit-btn" @click="payOrder">Realizar Pago</button>
+            </div>
+          </div>
+        </v-card>
+      </v-dialog>
+  
+      <!-- Pago Exitoso Dialog -->
+      <v-dialog v-model="showSuccessDialog" max-width="400">
+        <v-card class="id-dialog">
+          <div class="id-dialog-content">
+            <v-icon color="success" size="48">mdi-check-circle</v-icon>
+            <div class="id-dialog-title">¡Pago Realizado!</div>
+            <div class="id-dialog-id">El pago fue completado correctamente.</div>
+          </div>
+        </v-card>
+      </v-dialog>
     </v-container>
   </template>
   
   <script setup lang="ts">
-  import { ref } from 'vue';
+  import { ref } from 'vue'
   
-  // Estado de las secciones
-  const showCreateOrder = ref(false);
-  const showPayService = ref(false);
+  const showCreateDialog = ref(false)
+  const showPayDialog = ref(false)
+  const showOrderIdDialog = ref(false)
+  const showOrderDetailsDialog = ref(false)
+  const showSuccessDialog = ref(false)
   
-  // Estado para la creación de orden
-  const newOrder = ref({
-    id: '',
-    amount: '',
-    description: ''
-  });
+  const newOrder = ref({ id: '', amount: '', description: '' })
+  const paymentId = ref('')
+  const orderData = ref<any>(null)
+  const lastOrderId = ref('')
+  const orders = ref<{ id: string; amount: string; description: string }[]>([])
   
-  // Estado para el pago de servicio
-  const paymentId = ref('');
-  const orderData = ref(null);
-  
-  // Lista de órdenes
-  const orders = ref<{ id: string; amount: string; description: string }[]>([]);
-  
-  function toggleCreateOrder() {
-    showCreateOrder.value = !showCreateOrder.value;
-    showPayService.value = false;
-  }
-  
-  function togglePayService() {
-    showPayService.value = !showPayService.value;
-    showCreateOrder.value = false;
-  }
-  
-  // Generar identificador corto
   function generateShortId(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return Math.floor(100000 + Math.random() * 900000).toString()
   }
   
-  // Crear orden de pago
   function createOrder() {
-    if (!newOrder.value.amount || !newOrder.value.description) {
-      alert('Debe completar todos los campos.');
-      return;
-    }
-  
-    const orderId = generateShortId();
-    orders.value.push({
-      id: orderId,
-      amount: newOrder.value.amount,
-      description: newOrder.value.description
-    });
-  
-    newOrder.value.id = orderId;
-    newOrder.value.amount = '';
-    newOrder.value.description = '';
+    if (!newOrder.value.amount || !newOrder.value.description) return
+    const orderId = generateShortId()
+    orders.value.push({ id: orderId, amount: newOrder.value.amount, description: newOrder.value.description })
+    lastOrderId.value = orderId
+    newOrder.value.amount = ''
+    newOrder.value.description = ''
+    showCreateDialog.value = false
+    showOrderIdDialog.value = true
   }
   
-  // Consultar orden por ID
   function fetchOrder() {
-    const foundOrder = orders.value.find(order => order.id === paymentId.value);
-    if (foundOrder) {
-      orderData.value = foundOrder;
+    const found = orders.value.find(o => o.id === paymentId.value)
+    if (found) {
+      orderData.value = found
+      showPayDialog.value = false
+      showOrderDetailsDialog.value = true
     } else {
-      alert('No se encontró una orden con ese identificador.');
-      orderData.value = null;
+      orderData.value = null
+      showPayDialog.value = false
     }
   }
   
-  // Realizar pago
   function payOrder() {
-    alert(`Pago realizado por $${orderData.value.amount}`);
-    orderData.value = null;
-    paymentId.value = '';
+    showOrderDetailsDialog.value = false
+    showSuccessDialog.value = true
+    paymentId.value = ''
+    orderData.value = null
   }
   </script>
   
@@ -138,30 +162,16 @@
   .pagos-btn {
     background-color: var(--primary);
     color: #fff;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 1.2rem;
     border: none;
     border-radius: 0.5rem;
     cursor: pointer;
     font-size: 1rem;
+    transition: opacity 0.2s ease;
   }
   
   .pagos-btn:hover {
-    background-color: var(--primary-hover);
-  }
-  
-  .pagos-section {
-    background-color: var(--card);
-    padding: 1.5rem;
-    border-radius: 1rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-    margin-bottom: 2rem;
-  }
-  
-  .pagos-form-group {
-    margin-bottom: 1rem;
+    opacity: 0.85;
   }
   
   .pagos-input {
@@ -170,33 +180,79 @@
     border: 1px solid #ccc;
     border-radius: 0.5rem;
     font-size: 1rem;
+    margin-bottom: 1rem;
   }
   
   .pagos-submit-btn {
     background-color: var(--primary);
     color: #fff;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 1.2rem;
     border: none;
     border-radius: 0.5rem;
     cursor: pointer;
     font-size: 1rem;
+    transition: opacity 0.2s ease;
   }
   
   .pagos-submit-btn:hover {
-    background-color: var(--primary-hover);
+    opacity: 0.9;
   }
   
-  .order-created {
-    margin-top: 1rem;
+  .crear-dialog, .confirm-dialog {
+    border-radius: 1.5rem;
+    padding: 2rem;
+    text-align: center;
+  }
+  
+  .crear-dialog-header, .confirm-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .crear-dialog-title, .confirm-dialog-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  
+  .dialog-close-btn {
+    color: var(--muted-text) !important;
+  }
+  
+  .crear-dialog-content, .confirm-dialog-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .crear-dialog-actions, .confirm-dialog-actions {
+    margin-top: 1.2rem;
+  }
+  
+  .id-dialog {
+    border-radius: 1.5rem;
+    padding: 2rem;
+    text-align: center;
+  }
+  
+  .id-dialog-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+  }
+  
+  .id-dialog-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  
+  .id-dialog-id {
+    font-size: 1.2rem;
     font-weight: bold;
     color: var(--success);
-  }
-  
-  .order-details {
-    background-color: var(--card);
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-top: 1rem;
-    text-align: left;
   }
   </style>
