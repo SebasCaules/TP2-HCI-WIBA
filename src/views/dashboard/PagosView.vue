@@ -3,137 +3,166 @@
       <h1 class="pagos-title">Pagos</h1>
   
       <div class="pagos-options">
-        <button class="pagos-btn" @click="showCreateDialog = true">Crear Orden de Pago</button>
-        <button class="pagos-btn" @click="showPayDialog = true">Pagar Servicio</button>
+        <button class="pagos-btn" @click="toggleCreateOrder">Crear Orden de Pago</button>
+        <button class="pagos-btn" @click="togglePayService">Pagar Servicio</button>
       </div>
   
-      <!-- Crear Orden Dialog -->
-      <v-dialog v-model="showCreateDialog" max-width="500">
-        <v-card class="crear-dialog">
-          <div class="crear-dialog-header">
-            <span class="crear-dialog-title">Crear Orden de Pago</span>
-            <v-btn icon class="dialog-close-btn" @click="showCreateDialog = false">
+      <!-- Crear Orden de Pago -->
+      <v-dialog v-model="showCreateOrder" max-width="500">
+        <v-card class="pagos-dialog">
+          <div class="pagos-dialog-header">
+            <span class="pagos-dialog-title">Crear Orden de Pago</span>
+            <v-btn icon class="dialog-close-btn" @click="showCreateOrder = false">
               <v-icon>mdi-close</v-icon>
             </v-btn>
           </div>
-          <div class="crear-dialog-content">
+          <div class="pagos-dialog-content">
             <input v-model="newOrder.amount" type="number" placeholder="Monto" class="pagos-input" />
             <input v-model="newOrder.description" type="text" placeholder="Descripción" class="pagos-input" />
-            <div class="crear-dialog-actions">
-              <button class="pagos-submit-btn" @click="createOrder">Generar Orden</button>
-            </div>
+          </div>
+          <div class="pagos-dialog-actions">
+            <button class="pagos-submit-btn" @click="createOrder">Generar Orden</button>
           </div>
         </v-card>
       </v-dialog>
   
-      <!-- Orden Generada Dialog -->
-      <v-dialog v-model="showOrderIdDialog" max-width="400">
-        <v-card class="id-dialog">
-          <div class="id-dialog-content">
-            <v-icon color="success" size="48">mdi-check-circle</v-icon>
-            <div class="id-dialog-title">Orden Generada</div>
-            <div class="id-dialog-id">ID: {{ lastOrderId }}</div>
+      <v-dialog v-model="showOrderCreated" max-width="400">
+        <v-card class="pagos-dialog">
+          <div class="pagos-dialog-header">
+            <span class="pagos-dialog-title">Orden Generada</span>
+          </div>
+          <div class="pagos-dialog-content">
+            <p class="order-id">ID de la orden: <span class="order-id-value">{{ newOrder.id }}</span></p>
+          </div>
+          <div class="pagos-dialog-actions">
+            <button class="pagos-submit-btn" @click="showOrderCreated = false">Cerrar</button>
           </div>
         </v-card>
       </v-dialog>
   
-      <!-- Pagar Servicio Dialog -->
-      <v-dialog v-model="showPayDialog" max-width="500">
-        <v-card class="crear-dialog">
-          <div class="crear-dialog-header">
-            <span class="crear-dialog-title">Pagar Servicio</span>
-            <v-btn icon class="dialog-close-btn" @click="showPayDialog = false">
+      <!-- Pagar Servicio -->
+      <v-dialog v-model="showPayService" max-width="500">
+        <v-card class="pagos-dialog">
+          <div class="pagos-dialog-header">
+            <span class="pagos-dialog-title">Pagar Servicio</span>
+            <v-btn icon class="dialog-close-btn" @click="showPayService = false">
               <v-icon>mdi-close</v-icon>
             </v-btn>
           </div>
-          <div class="crear-dialog-content">
+          <div class="pagos-dialog-content">
             <input v-model="paymentId" type="text" placeholder="Número de Identificador" class="pagos-input" />
-            <div class="crear-dialog-actions">
-              <button class="pagos-submit-btn" @click="fetchOrder">Consultar Orden</button>
-            </div>
+          </div>
+          <div class="pagos-dialog-actions">
+            <button class="pagos-submit-btn" @click="fetchOrder">Consultar Orden</button>
           </div>
         </v-card>
       </v-dialog>
   
-      <!-- Datos de Orden Dialog -->
-      <v-dialog v-model="showOrderDetailsDialog" max-width="500">
-        <v-card class="confirm-dialog">
-          <div class="confirm-dialog-header">
-            <span class="confirm-dialog-title">Confirmar Pago</span>
-            <v-btn icon class="dialog-close-btn" @click="showOrderDetailsDialog = false">
-              <v-icon>mdi-close</v-icon>
-            </v-btn>
+      <v-dialog v-model="showOrderDetails" max-width="500">
+        <v-card class="pagos-dialog">
+          <div class="pagos-dialog-header">
+            <span class="pagos-dialog-title">Detalles de la Orden</span>
           </div>
-          <div class="confirm-dialog-content">
-            <p><strong>Monto:</strong> ${{ orderData?.amount }}</p>
-            <p><strong>Descripción:</strong> {{ orderData?.description }}</p>
-            <div class="confirm-dialog-actions">
-              <button class="pagos-submit-btn" @click="payOrder">Realizar Pago</button>
-            </div>
+          <div class="pagos-dialog-content">
+            <p>Monto: ${{ orderData?.amount }}</p>
+            <p>Descripción: {{ orderData?.description }}</p>
+          </div>
+          <div class="pagos-dialog-actions">
+            <button class="pagos-submit-btn" @click="payOrder">Realizar Pago</button>
           </div>
         </v-card>
       </v-dialog>
   
-      <!-- Pago Exitoso Dialog -->
-      <v-dialog v-model="showSuccessDialog" max-width="400">
-        <v-card class="id-dialog">
-          <div class="id-dialog-content">
-            <v-icon color="success" size="48">mdi-check-circle</v-icon>
-            <div class="id-dialog-title">¡Pago Realizado!</div>
-            <div class="id-dialog-id">El pago fue completado correctamente.</div>
+      <v-dialog v-model="showPaymentSuccess" max-width="400">
+        <v-card class="pagos-dialog">
+          <div class="pagos-dialog-header">
+            <span class="pagos-dialog-title-confirmation">Pago Exitoso</span>
+          </div>
+          <div class="pagos-dialog-content">
+            <p class="confirmation-dialog">El pago fue realizado correctamente.</p>
+          </div>
+          <div class="pagos-dialog-actions">
+            <button class="pagos-submit-btn" @click="showPaymentSuccess = false">Aceptar</button>
           </div>
         </v-card>
       </v-dialog>
+  
+      <!-- Lista de Órdenes -->
+      <div class="pagos-section">
+        <h2>Órdenes Creadas</h2>
+        <ul>
+          <li v-for="order in orders" :key="order.id">
+            ID: {{ order.id }} - ${{ order.amount }} - {{ order.description }}
+          </li>
+        </ul>
+      </div>
     </v-container>
   </template>
   
   <script setup lang="ts">
-  import { ref } from 'vue'
+  import { ref } from 'vue';
   
-  const showCreateDialog = ref(false)
-  const showPayDialog = ref(false)
-  const showOrderIdDialog = ref(false)
-  const showOrderDetailsDialog = ref(false)
-  const showSuccessDialog = ref(false)
+  const showCreateOrder = ref(false);
+  const showOrderCreated = ref(false);
+  const showPayService = ref(false);
+  const showOrderDetails = ref(false);
+  const showPaymentSuccess = ref(false);
   
-  const newOrder = ref({ id: '', amount: '', description: '' })
-  const paymentId = ref('')
-  const orderData = ref<any>(null)
-  const lastOrderId = ref('')
-  const orders = ref<{ id: string; amount: string; description: string }[]>([])
+  const newOrder = ref({
+    id: '',
+    amount: '',
+    description: ''
+  });
+  
+  const paymentId = ref('');
+  const orderData = ref<any>(null);
+  const orders = ref<{ id: string; amount: string; description: string }[]>([]);
   
   function generateShortId(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString()
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+  
+  function toggleCreateOrder() {
+    showCreateOrder.value = true;
+  }
+  
+  function togglePayService() {
+    showPayService.value = true;
   }
   
   function createOrder() {
-    if (!newOrder.value.amount || !newOrder.value.description) return
-    const orderId = generateShortId()
-    orders.value.push({ id: orderId, amount: newOrder.value.amount, description: newOrder.value.description })
-    lastOrderId.value = orderId
-    newOrder.value.amount = ''
-    newOrder.value.description = ''
-    showCreateDialog.value = false
-    showOrderIdDialog.value = true
+    if (!newOrder.value.amount || !newOrder.value.description) return;
+  
+    const orderId = generateShortId();
+    orders.value.push({
+      id: orderId,
+      amount: newOrder.value.amount,
+      description: newOrder.value.description
+    });
+  
+    newOrder.value.id = orderId;
+    showCreateOrder.value = false;
+    showOrderCreated.value = true;
+    newOrder.value.amount = '';
+    newOrder.value.description = '';
   }
   
   function fetchOrder() {
-    const found = orders.value.find(o => o.id === paymentId.value)
-    if (found) {
-      orderData.value = found
-      showPayDialog.value = false
-      showOrderDetailsDialog.value = true
+    const foundOrder = orders.value.find(order => order.id === paymentId.value);
+    if (foundOrder) {
+      orderData.value = foundOrder;
+      showPayService.value = false;
+      showOrderDetails.value = true;
     } else {
-      orderData.value = null
-      showPayDialog.value = false
+      orderData.value = null;
     }
   }
   
   function payOrder() {
-    showOrderDetailsDialog.value = false
-    showSuccessDialog.value = true
-    paymentId.value = ''
-    orderData.value = null
+    orderData.value = null;
+    paymentId.value = '';
+    showOrderDetails.value = false;
+    showPaymentSuccess.value = true;
   }
   </script>
   
@@ -159,19 +188,59 @@
     margin-bottom: 2rem;
   }
   
-  .pagos-btn {
+  .pagos-btn,
+  .pagos-submit-btn {
     background-color: var(--primary);
     color: #fff;
-    padding: 0.5rem 1.2rem;
+    padding: 0.5rem 1.5rem;
     border: none;
     border-radius: 0.5rem;
     cursor: pointer;
     font-size: 1rem;
-    transition: opacity 0.2s ease;
+    transition: background-color 0.3s ease;
   }
   
-  .pagos-btn:hover {
-    opacity: 0.85;
+  .pagos-btn:hover,
+  .pagos-submit-btn:hover {
+    filter: brightness(1.05);
+  }
+  
+  .pagos-dialog {
+    border-radius: 1rem;
+    padding: 1.5rem;
+  }
+  
+  .pagos-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .pagos-dialog-title {
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+
+  .pagos-dialog-title-confirmation{
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+  
+  .confirmation-dialog{
+    color: var(--success);
+  }
+
+  .pagos-dialog-content {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .pagos-dialog-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
   }
   
   .pagos-input {
@@ -180,79 +249,21 @@
     border: 1px solid #ccc;
     border-radius: 0.5rem;
     font-size: 1rem;
-    margin-bottom: 1rem;
-  }
-  
-  .pagos-submit-btn {
-    background-color: var(--primary);
-    color: #fff;
-    padding: 0.5rem 1.2rem;
-    border: none;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: opacity 0.2s ease;
-  }
-  
-  .pagos-submit-btn:hover {
-    opacity: 0.9;
-  }
-  
-  .crear-dialog, .confirm-dialog {
-    border-radius: 1.5rem;
-    padding: 2rem;
-    text-align: center;
-  }
-  
-  .crear-dialog-header, .confirm-dialog-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-  }
-  
-  .crear-dialog-title, .confirm-dialog-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--text);
   }
   
   .dialog-close-btn {
-    color: var(--muted-text) !important;
+    color: var(--muted-text);
   }
   
-  .crear-dialog-content, .confirm-dialog-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .crear-dialog-actions, .confirm-dialog-actions {
-    margin-top: 1.2rem;
-  }
-  
-  .id-dialog {
-    border-radius: 1.5rem;
-    padding: 2rem;
+  .order-id {
+    font-size: 1rem;
     text-align: center;
+    color: var(--text);
   }
   
-  .id-dialog-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.2rem;
-  }
-  
-  .id-dialog-title {
-    font-size: 1.4rem;
+  .order-id-value {
     font-weight: 700;
-    color: var(--primary);
-  }
-  
-  .id-dialog-id {
-    font-size: 1.2rem;
-    font-weight: bold;
     color: var(--success);
   }
   </style>
+  
