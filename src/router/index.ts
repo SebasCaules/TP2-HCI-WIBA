@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/store/auth'
+import { useSecurityStore } from '@/store/securityStore'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -81,9 +81,9 @@ const router = createRouter({
 
 // Navigation guard for protected routes
 router.beforeEach((to, _from, next) => {
-    const authStore = useAuthStore()
+    const securityStore = useSecurityStore()
 
-    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    if (to.meta.requiresAuth && !securityStore.isLoggedIn) {
         next('/login')
     } else {
         next()

@@ -144,16 +144,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useAuthStore } from '@/store/auth'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useSecurityStore } from '@/store/securityStore.ts'
 import IconFilledButton from '@/components/ui/IconFilledButton.vue'
-import { fetchDashboardData } from '@/services/dashboard'
 import type { Contact } from '@/types/types'
 import type { DashboardData } from '@/services/dashboard'
 import InvestmentCard from '@/components/investments/InvestmentCard.vue'
 
-const authStore = useAuthStore()
-const userId = computed(() => authStore.user?.id)
+const securityStore = useSecurityStore()
+const userId = computed(() => securityStore.user?.id)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const dashboardData = ref<DashboardData | null>(null)
@@ -184,37 +183,64 @@ const dashboardTotal = 873.06
 const dashboardGain = 3.5
 const dashboardPercentage = 0.4
 
-async function loadContacts() {
-  if (!userId.value) return;
-  try {
-    const { contacts: fetchedContacts } = await fetchDashboardData(userId.value);
-    contacts.value = fetchedContacts;
-  } catch (e) {
-    console.error('Error loading contacts:', e);
-    contacts.value = [];
-  }
-}
-
 async function fetchData() {
+  console.log('Iniciando fetchData...');
+  console.log('Estado actual del usuario:', securityStore.user);
+  
   loading.value = true
   error.value = null
-  if (!userId.value) {
-    error.value = 'Usuario no autenticado'
-    loading.value = false
-    return
-  }
+  
   try {
-    dashboardData.value = await fetchDashboardData(userId.value)
-    await loadContacts()
+    // Asegurarnos de que tenemos el usuario actual
+    const user = await securityStore.getCurrentUser()
+    console.log('Usuario obtenido en fetchData:', user);
+    
+    if (!user) {
+      throw new Error('No se pudo obtener la información del usuario')
+    }
+    
+    dashboardData.value = {
+      user: {
+        id: user.id,
+        first_name: user.name,
+        last_name: user.lastName,
+        username: user.username
+      },
+      account: {
+        balance: 0, // TODO: Implementar obtención del balance real
+        account_number: "0000000000000000000000" // TODO: Implementar obtención del número de cuenta real
+      },
+      transactions: [], // TODO: Implementar obtención de transacciones reales
+      bills: [], // TODO: Implementar obtención de facturas reales
+      contacts: [], // TODO: Implementar obtención de contactos reales
+      cards: [] // TODO: Implementar obtención de tarjetas reales
+    }
+    contacts.value = []
+    console.log('Datos de dashboard cargados correctamente:', dashboardData.value);
   } catch (e) {
+    console.error('Error en fetchData:', e);
     error.value = e instanceof Error ? e.message : 'Error al cargar los datos'
-    console.error('Error fetching dashboard data:', e)
   } finally {
     loading.value = false
   }
 }
 
-onMounted(fetchData)
+// Watcher para el usuario
+watch(() => securityStore.user, async (newUser) => {
+  console.log('Usuario actualizado en el store:', newUser);
+  if (newUser) {
+    await fetchData()
+  }
+}, { immediate: true })
+
+// También mantenemos el onMounted como respaldo
+onMounted(async () => {
+  console.log('Dashboard montado, estado inicial del usuario:', securityStore.user);
+  if (!securityStore.user) {
+    console.log('Usuario no presente al montar, intentando obtener...');
+    await fetchData()
+  }
+})
 
 const balance = computed(() => dashboardData.value?.account.balance ?? null)
 const transactions = computed(() => dashboardData.value?.transactions ?? [])

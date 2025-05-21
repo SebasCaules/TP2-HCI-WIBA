@@ -41,7 +41,6 @@
               type="submit"
               class="login-btn mb-4"
               :disabled="loading"
-              @click="handleSubmit"
               :fullWidth="true"
             >
               {{ loading ? 'Iniciando sesión...' : 'Iniciar sesión' }}
@@ -151,17 +150,34 @@ const handleSubmit = async (): Promise<void> => {
   if (!validateForm()) return
   loading.value = true
   try {
+    console.log('Iniciando proceso de login...');
     const credentials: Credentials = {
       email: email.value,
       password: password.value
     }
+    
+    console.log('Llamando a securityStore.login...');
     await securityStore.login(credentials, true)
-    await securityStore.getCurrentUser()
-    router.push('/dashboard')
+    console.log('Login exitoso, obteniendo usuario actual...');
+    
+    const user = await securityStore.getCurrentUser()
+    if (!user) {
+      throw new Error('No se pudo obtener la información del usuario')
+    }
+    console.log('Usuario obtenido exitosamente:', user);
+    
+    console.log('Redirigiendo a /dashboard...');
+    await router.push('/dashboard')
+    console.log('Redirección completada');
   } catch (error) {
+    console.error('Error durante el login:', error);
     if (error instanceof Error) {
-      emailError.value = 'Email o contraseña incorrectos.'
-      passwordError.value = 'Email o contraseña incorrectos.'
+      if (error.message.includes('No se pudo obtener la información del usuario')) {
+        emailError.value = 'Error al obtener la información del usuario. Por favor, intenta nuevamente.'
+      } else {
+        emailError.value = 'Email o contraseña incorrectos.'
+        passwordError.value = 'Email o contraseña incorrectos.'
+      }
     }
   } finally {
     loading.value = false
