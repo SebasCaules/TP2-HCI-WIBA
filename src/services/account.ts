@@ -84,4 +84,4 @@ export const depositToAccount = async (
       message: error.message || 'Error al procesar el depósito'
     }
   }
-} 
+}   
