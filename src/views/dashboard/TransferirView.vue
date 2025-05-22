@@ -224,6 +224,10 @@ import { v4 as uuidv4 } from "uuid";
 import type { Contact } from "@/types/types";
 import { fetchContacts as fetchContactsBackend, removeContact as removeContactBackend } from '@/services/contacts';
 
+import { useTransactionStore } from "@/stores/transactionStore";
+import { useSecurityStore } from "@/stores/securityStore";
+
+
 interface ContactData {
     contact_id: string;
     contacts: {
@@ -291,101 +295,66 @@ function formatNumber(value: string) {
     return value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+
 async function handleTransfer() {
-    errorMessage.value = "";
-    recipientFirstName.value = "";
-    recipientLastName.value = "";
-    const n = parseFloat(amount.value);
-    const recipientValue = recipient.value.trim();
-    if (isNaN(n) || n <= 0) {
-        errorMessage.value = "El monto debe ser mayor a cero.";
-        return;
-    }
-    if (!recipientValue) {
-        errorMessage.value = "Debes ingresar un usuario o número de cuenta.";
-        return;
-    }
-    // Get sender user id
-    const senderId = userId.value;
-    if (!senderId) {
-        errorMessage.value = "Usuario no autenticado.";
-        return;
-    }
-    // Find recipient user id
-    let recipientUserId = null;
-    let recipientUsername = null;
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-    const accountRegex = /^\d{12}$/;
-    if (accountRegex.test(recipientValue)) {
-        // Lookup by account number, then join to users for names
-        const { data, error } = await supabase
-            .from("accounts")
-            .select("user_id, users(first_name, last_name)")
-            .eq("account_number", recipientValue)
-            .single();
-        if (error || !data) {
-            errorMessage.value = "No se encontró una cuenta con ese número.";
-            return;
-        }
-        recipientUserId = data.user_id;
-        let userObj: any = data.users;
-        // Si es array, tomar el primer elemento; si no, dejar como está
-        if (Array.isArray(userObj)) {
-          userObj = userObj[0];
-        }
-        if (
-            userObj &&
-            typeof userObj === "object" &&
-            "first_name" in userObj &&
-            "last_name" in userObj
-        ) {
-            recipientFirstName.value = userObj.first_name || "";
-            recipientLastName.value = userObj.last_name || "";
-        } else {
-            recipientFirstName.value = "";
-            recipientLastName.value = "";
-        }
-    } else if (usernameRegex.test(recipientValue)) {
-        // Lookup by username
-        const { data, error } = await supabase
-            .from("users")
-            .select("id, username, first_name, last_name")
-            .eq("username", recipientValue)
-            .single();
-        if (error || !data) {
-            errorMessage.value = "No se encontró un usuario con ese nombre.";
-            return;
-        }
-        recipientUserId = data.id;
-        recipientUsername = data.username;
-        recipientFirstName.value = data.first_name || "";
-        recipientLastName.value = data.last_name || "";
+  errorMessage.value = "";
+  recipientFirstName.value = "";
+  recipientLastName.value = "";
+
+  const n = parseFloat(amount.value);
+  const recipientValue = recipient.value.trim();
+  const transactionStore = useTransactionStore();
+  const securityStore = useSecurityStore();
+  const cardIdValue = selectedCardId.value; // Asegurate de tener esto vinculado
+
+  if (isNaN(n) || n <= 0) {
+    errorMessage.value = "El monto debe ser mayor a cero.";
+    return;
+  }
+
+  if (!recipientValue) {
+    errorMessage.value = "Debes ingresar el email del destinatario.";
+    return;
+  }
+
+  if (!securityStore.user?.id) {
+    errorMessage.value = "Usuario no autenticado.";
+    return;
+  }
+
+  if (!cardIdValue) {
+    errorMessage.value = "Debes seleccionar una tarjeta para realizar la transferencia.";
+    return;
+  }
+
+  try {
+    const transaction = await transactionStore.transferByIdentifier(
+      recipientValue,
+      cardIdValue,
+      n,
+      description.value || "Transferencia"
+    );
+
+    if (transaction) {
+      // Mostrar info del receptor si viene en la respuesta
+      recipientFirstName.value = transaction.receiver.firstName;
+      recipientLastName.value = transaction.receiver.lastName;
+
+      // Mostrar diálogo de éxito o confirmación
+      showConfirmDialog.value = true;
+
+      // Resetear campos si querés
+      amount.value = "";
+      recipient.value = "";
     } else {
-        errorMessage.value = "Usuario o número de cuenta inválido.";
-        return;
+      errorMessage.value = transactionStore.error || "No se pudo realizar la transferencia.";
     }
-    // Not self
-    if (recipientUserId === senderId) {
-        errorMessage.value = "No puedes transferirte a ti mismo.";
-        return;
-    }
-    // Check sender balance
-    const { data: senderAccount, error: senderError } = await supabase
-        .from("accounts")
-        .select("balance")
-        .eq("user_id", senderId)
-        .single();
-    if (senderError || !senderAccount) {
-        errorMessage.value = "No se pudo obtener tu cuenta.";
-        return;
-    }
-    if (senderAccount.balance < n) {
-        errorMessage.value = "Saldo insuficiente.";
-        return;
-    }
-    // All checks passed
-    showConfirmDialog.value = true;
+  } catch (err) {
+    console.error(err);
+    errorMessage.value = "Error inesperado al realizar la transferencia.";
+  }
 }
+
 
 async function confirmTransfer() {
     if (!amount.value || !recipient.value || !userId.value) return;
