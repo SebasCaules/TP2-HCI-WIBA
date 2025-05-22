@@ -40,8 +40,11 @@
               <IconFilledButton icon="mdi-arrow-right" class="dashboard-action-btn" @click="$router.push('/dashboard/transferir')">
                 Transferir
               </IconFilledButton>
-              <IconFilledButton icon="mdi-wallet" class="dashboard-action-btn">
+              <IconFilledButton icon="mdi-wallet" class="dashboard-action-btn" @click="$router.push('/dashboard/cobrar')">
                 Cobrar
+              </IconFilledButton>
+              <IconFilledButton icon="mdi-cash" class="dashboard-action-btn" @click="$router.push('/dashboard/pagos')">
+                Pagos
               </IconFilledButton>
             </div>
           </div>
@@ -52,7 +55,7 @@
             <a href="/dashboard/transacciones" class="dashboard-link">Ver todo <v-icon size="16">mdi-chevron-right</v-icon></a>
           </div>
           <v-list class="dashboard-list">
-            <v-list-item v-for="(tx, i) in transactions.slice(0, 7)" :key="i" class="dashboard-list-item">
+            <v-list-item v-for="(tx, i) in transactions" :key="i" class="dashboard-list-item">
               <template #prepend>
                 <v-icon :color="tx.amount < 0 ? 'error' : 'success'" size="20">
                   {{ tx.amount > 0 ? 'mdi-arrow-bottom-right' : 'mdi-arrow-top-right' }}
@@ -71,19 +74,32 @@
       </v-col>
       <!-- Columna lateral -->
       <v-col cols="12" md="4" class="dashboard-sidebar">
-          <div class="dashboard-invest-body">
-            <InvestmentCard
-              v-if="userId"
-              title="Inversiones"
-              :total="dashboardTotal"
-              :gain="dashboardGain"
-              :percentage="dashboardPercentage"
-              :slices="dashboardChartSlices"
-              :showBalance="false"
-              :size="90"
-              :userId="userId"
-            />
+        <div class="dashboard-invest-card">
+          <div class="dashboard-invest-header">
+            <div class="dashboard-invest-row">
+              <span class="dashboard-invest-title">Inversiones</span>
+              <a href="/dashboard/inversiones" class="dashboard-link-header">Ver más <v-icon size="16">mdi-chevron-right</v-icon></a>
+            </div>
+            <div class="dashboard-invest-row">
+              <div class="dashboard-invest-value">${{ 873.06.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</div>
+              <div class="dashboard-invest-gain">${{ 3.50.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} (0,40%)</div>
+            </div>
           </div>
+          <div class="dashboard-invest-body">
+            <div class="dashboard-invest-chart">
+              <!-- Gráfico circular simple -->
+              <svg width="90" height="90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="16" fill="none" stroke="#e5e7eb" stroke-width="3" />
+                <circle cx="18" cy="18" r="16" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="39.5 60.5" stroke-dashoffset="25" />
+                <circle cx="18" cy="18" r="16" fill="none" stroke="#22c55e" stroke-width="3" stroke-dasharray="60.5 39.5" stroke-dashoffset="64.5" />
+              </svg>
+              <div class="dashboard-invest-legend">
+                <div><span class="legend-dot" style="background:#fbbf24"></span> 39.50% - Bonos</div>
+                <div><span class="legend-dot" style="background:#22c55e"></span> 60.50% - Acciones</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="dashboard-section mt-8">
           <div class="dashboard-section-header" style="margin-bottom: 0.5rem;">
             <span class="dashboard-section-title">Contactos</span>
@@ -144,15 +160,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
-import { useSecurityStore } from '@/store/securityStore.ts'
+import { ref, onMounted, computed } from 'vue'
+import { useAuthStore } from '@/store/auth'
 import IconFilledButton from '@/components/ui/IconFilledButton.vue'
+import { fetchDashboardData } from '@/services/dashboard'
 import type { Contact } from '@/types/types'
 import type { DashboardData } from '@/services/dashboard'
-import InvestmentCard from '@/components/investments/InvestmentCard.vue'
 
-const securityStore = useSecurityStore()
-const userId = computed(() => securityStore.user?.id)
+const authStore = useAuthStore()
+const userId = computed(() => authStore.user?.id)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const dashboardData = ref<DashboardData | null>(null)
@@ -160,87 +176,37 @@ const dashboardData = ref<DashboardData | null>(null)
 const contacts = ref<Contact[]>([])
 const isBalanceVisible = ref(true)
 
-// Simulación de datos para el gráfico de inversiones del dashboard
-const dashboardChartSlices = [
-  {
-    type: 'FND-B',
-    color: 'var(--chart-2)',
-    label: 'Bonos',
-    value: 345,
-    percent: 39.5,
-    offset: 25
-  },
-  {
-    type: 'FND-A',
-    color: 'var(--chart-1)',
-    label: 'Acciones',
-    value: 528,
-    percent: 60.5,
-    offset: 64.5
+async function loadContacts() {
+  if (!userId.value) return;
+  try {
+    const { contacts: fetchedContacts } = await fetchDashboardData(userId.value);
+    contacts.value = fetchedContacts;
+  } catch (e) {
+    console.error('Error loading contacts:', e);
+    contacts.value = [];
   }
-]
-const dashboardTotal = 873.06
-const dashboardGain = 3.5
-const dashboardPercentage = 0.4
+}
 
 async function fetchData() {
-  console.log('Iniciando fetchData...');
-  console.log('Estado actual del usuario:', securityStore.user);
-  
   loading.value = true
   error.value = null
-  
+  if (!userId.value) {
+    error.value = 'Usuario no autenticado'
+    loading.value = false
+    return
+  }
   try {
-    // Asegurarnos de que tenemos el usuario actual
-    const user = await securityStore.getCurrentUser()
-    console.log('Usuario obtenido en fetchData:', user);
-    
-    if (!user) {
-      throw new Error('No se pudo obtener la información del usuario')
-    }
-    
-    dashboardData.value = {
-      user: {
-        id: user.id,
-        first_name: user.name,
-        last_name: user.lastName,
-        username: user.username
-      },
-      account: {
-        balance: 0, // TODO: Implementar obtención del balance real
-        account_number: "0000000000000000000000" // TODO: Implementar obtención del número de cuenta real
-      },
-      transactions: [], // TODO: Implementar obtención de transacciones reales
-      bills: [], // TODO: Implementar obtención de facturas reales
-      contacts: [], // TODO: Implementar obtención de contactos reales
-      cards: [] // TODO: Implementar obtención de tarjetas reales
-    }
-    contacts.value = []
-    console.log('Datos de dashboard cargados correctamente:', dashboardData.value);
+    dashboardData.value = await fetchDashboardData(userId.value)
+    await loadContacts()
   } catch (e) {
-    console.error('Error en fetchData:', e);
     error.value = e instanceof Error ? e.message : 'Error al cargar los datos'
+    console.error('Error fetching dashboard data:', e)
   } finally {
     loading.value = false
   }
 }
 
-// Watcher para el usuario
-watch(() => securityStore.user, async (newUser) => {
-  console.log('Usuario actualizado en el store:', newUser);
-  if (newUser) {
-    await fetchData()
-  }
-}, { immediate: true })
-
-// También mantenemos el onMounted como respaldo
-onMounted(async () => {
-  console.log('Dashboard montado, estado inicial del usuario:', securityStore.user);
-  if (!securityStore.user) {
-    console.log('Usuario no presente al montar, intentando obtener...');
-    await fetchData()
-  }
-})
+onMounted(fetchData)
 
 const balance = computed(() => dashboardData.value?.account.balance ?? null)
 const transactions = computed(() => dashboardData.value?.transactions ?? [])
@@ -273,7 +239,7 @@ function toggleBalanceVisibility() {
 .dashboard-balance-card {
   background: var(--card);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.06);
   padding: 2rem;
   margin-bottom: 1.5rem;
   width: 100%;
@@ -393,7 +359,7 @@ function toggleBalanceVisibility() {
 .dashboard-invest-card {
   background: var(--card);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 2px 16px 0 rgba(60,60,60,0.06);
   margin-bottom: 1.5rem;
   padding: 0;
 }
@@ -460,12 +426,12 @@ function toggleBalanceVisibility() {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: var(--border);
+  background-color: #e0e0e0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  color: var(--text);
+  color: #444;
   font-size: 1.1rem;
   margin-right: 16px;
 }
@@ -492,7 +458,7 @@ function toggleBalanceVisibility() {
   margin-right: 16px;
   background: var(--card);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card-medium);
+  box-shadow: 0 2px 8px 0 rgba(60,60,60,0.08);
   padding: 0;
   display: flex;
   flex-direction: column;
