@@ -14,8 +14,19 @@ export const useAccountStore = defineStore('account', () => {
     }
 
     async function recharge(amount: number) {
-        await AccountApi.recharge(amount)
-        await fetchAccount()
+        console.log('[AccountStore] Starting recharge with amount:', amount)
+        try {
+            console.log('[AccountStore] Calling AccountApi.recharge')
+            await AccountApi.recharge(amount)
+            console.log('[AccountStore] Recharge API call successful')
+            
+            console.log('[AccountStore] Refreshing account data')
+            await fetchAccount()
+            console.log('[AccountStore] Account data refreshed successfully')
+        } catch (err) {
+            console.error('[AccountStore] Error during recharge:', err)
+            throw err
+        }
     }
 
     async function updateAlias(newAlias: string) {

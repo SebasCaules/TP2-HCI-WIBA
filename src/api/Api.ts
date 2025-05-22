@@ -82,6 +82,25 @@ class Api {
     }
 
     static async post(url: string, secure: boolean, data: unknown, controller?: AbortController): Promise<ApiResponse> {
+        console.log('[Api] POST request details:', {
+            url,
+            secure,
+            data,
+            dataType: typeof data,
+            stringifiedData: JSON.stringify(data),
+            headers: {
+                "Content-Type": "application/json; charset=utf-8"
+            },
+            fullRequest: {
+                method: "POST",
+                url,
+                headers: {
+                    "Content-Type": "application/json; charset=utf-8"
+                },
+                body: JSON.stringify(data)
+            }
+        });
+        
         return await Api.fetch(url, secure, {
             method: "POST",
             headers: new Headers({

@@ -185,14 +185,17 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useAuthStore } from '@/stores/auth'
+import { useSecurityStore } from '@/stores/securityStore'
 import { useCardsStore } from '@/stores/cardsStore'
+import { useAccountStore } from '@/stores/accountStore'
+import { Api } from '@/api/Api'
+import type { Payment } from '@/api/payment'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import AddCardDialog from '@/components/AddCardDialog.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import { depositToAccount } from '@/services/account'
-import type { Card as ApiCard } from '@/api/cards'
+import { usePaymentStore } from '@/stores/paymentStore'
 
 interface DisplayCard {
   id: string
@@ -214,9 +217,10 @@ const showSnackbar = ref(false)
 const snackbarText = ref('')
 const snackbarColor = ref('success')
 
-const authStore = useAuthStore()
+const securityStore = useSecurityStore()
 const cardsStore = useCardsStore()
-const userId = computed(() => authStore.user?.id)
+const accountStore = useAccountStore()
+const userId = computed(() => securityStore.user?.id)
 const paymentStore = usePaymentStore()
 
 const cards = computed<DisplayCard[]>(() => {
@@ -256,10 +260,25 @@ function getBrandLogo(brand: string) {
 }
 
 function formatAmount() {
-  // Remove any non-digit characters
-  let value = amount.value.replace(/\D/g, '')
-  // Limit to 10 digits
-  value = value.slice(0, 10)
+  // Remove any non-digit characters except decimal point
+  let value = amount.value.replace(/[^\d.]/g, '')
+  
+  // Ensure only one decimal point
+  const parts = value.split('.')
+  if (parts.length > 2) {
+    value = parts[0] + '.' + parts.slice(1).join('')
+  }
+  
+  // Limit to 2 decimal places
+  if (parts.length === 2 && parts[1].length > 2) {
+    value = parts[0] + '.' + parts[1].slice(0, 2)
+  }
+  
+  // Limit to 10 digits before decimal
+  if (parts[0].length > 10) {
+    value = parts[0].slice(0, 10) + (parts[1] ? '.' + parts[1] : '')
+  }
+  
   amount.value = value
 }
 
@@ -288,21 +307,90 @@ function handleDeposit() {
   showConfirmDialog.value = true
 }
 
+const payments = computed<Payment[]>(() => {
+  if (!paymentStore.payments) return []
+  // If payments is an object with a results array, return the results array
+  if (typeof paymentStore.payments === 'object' && 'results' in paymentStore.payments) {
+    return (paymentStore.payments as { results: Payment[] }).results
+  }
+  // If payments is already an array, return it
+  if (Array.isArray(paymentStore.payments)) {
+    return paymentStore.payments as Payment[]
+  }
+  // Fallback to empty array
+  return []
+})
+
 async function confirmDeposit() {
-  if (!amount.value || !userId.value) return
-  const result = await depositToAccount(
-    userId.value, 
-    Number(amount.value),
-    selectedCard.value?.number_last4,
-    selectedCard.value?.brand.toLocaleLowerCase()
-  )
-  if (result.success) {
+  console.log('[DepositarView] confirmDeposit started', {
+    rawAmount: amount.value,
+    rawAmountType: typeof amount.value,
+    parsedAmount: Number(amount.value),
+    parsedAmountType: typeof Number(amount.value),
+    hasDecimal: amount.value.includes('.'),
+    decimalPlaces: amount.value.split('.')[1]?.length || 0,
+    isFinite: Number.isFinite(Number(amount.value)),
+    isNaN: isNaN(Number(amount.value)),
+    stringifiedAmount: JSON.stringify(amount.value),
+    stringifiedParsedAmount: JSON.stringify(Number(amount.value))
+  })
+
+  if (!securityStore.user) {
+    console.log('[DepositarView] No user in security store')
+    showSnackbar.value = true
+    snackbarText.value = 'Error: No hay usuario autenticado'
+    snackbarColor.value = 'error'
+    return
+  }
+  
+  if (!amount.value || amount.value.trim() === '') {
+    console.log('[DepositarView] No amount provided')
+    showSnackbar.value = true
+    snackbarText.value = 'Por favor ingrese un monto'
+    snackbarColor.value = 'error'
+    return
+  }
+
+  const parsedAmount = Number(amount.value)
+  if (!Number.isFinite(parsedAmount) || isNaN(parsedAmount) || parsedAmount <= 0) {
+    console.log('[DepositarView] Invalid amount:', {
+      amount: amount.value,
+      parsedAmount,
+      isFinite: Number.isFinite(parsedAmount),
+      isNaN: isNaN(parsedAmount),
+      isPositive: parsedAmount > 0
+    })
+    showSnackbar.value = true
+    snackbarText.value = 'El monto ingresado no es válido'
+    snackbarColor.value = 'error'
+    return
+  }
+
+  try {
+    console.log('[DepositarView] Attempting to recharge account with amount:', {
+      amount: parsedAmount,
+      amountType: typeof parsedAmount,
+      stringified: JSON.stringify(parsedAmount)
+    })
+    loading.value = true
+    await accountStore.recharge(parsedAmount)
+    console.log('[DepositarView] Recharge successful')
+    
     showConfirmDialog.value = false
     amount.value = ''
     selectedCard.value = null
     showSuccessDialog.value = true
-  } else {
-    alert(result.message || 'Error al depositar')
+    
+    console.log('[DepositarView] Refreshing payments list')
+    await paymentStore.fetchPayments()
+    console.log('[DepositarView] Payments list refreshed')
+  } catch (error) {
+    console.error('[DepositarView] Error during recharge:', error)
+    showSnackbar.value = true
+    snackbarText.value = error instanceof Error ? error.message : 'Error al realizar el depósito'
+    snackbarColor.value = 'error'
+  } finally {
+    loading.value = false
   }
 }
 
@@ -313,8 +401,6 @@ const headers = [
   { title: 'Fecha', key: 'created_at' },
   { title: 'Acciones', key: 'actions', sortable: false }
 ]
-
-const payments = computed(() => paymentStore.payments)
 
 function getStatusColor(status: string) {
   switch (status) {
