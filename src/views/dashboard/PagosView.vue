@@ -1,218 +1,268 @@
 <template>
-    <v-container fluid class="pagos-main">
-        <v-row class="pagos-row" no-gutters>
-            <v-col cols="12" class="px-md-8">
-                <h1 class="pagos-title">Pago de Servicios</h1>
-                <div class="card">
-                    <BaseDataTable
-                        :items="bills"
-                        :headers="headers"
-                        :items-per-page="10"
-                        :loading="loading"
-                        empty-icon="mdi-receipt"
-                        no-data-message="No hay facturas disponibles"
-                    >
-                        <template #item.title="{ item }">
-                            <div class="pago-title">{{ item.title }}</div>
-                        </template>
+  <v-container class="pagos-container" fluid>
+    <h1 class="pagos-title">Pagos</h1>
 
-                        <template #item.provider="{ item }">
-                            <div class="pago-provider">{{ item.provider }}</div>
-                        </template>
+    <div class="pagos-options">
+      <button class="pagos-btn" @click="toggleCreateOrder">Crear Orden de Pago</button>
+      <button class="pagos-btn" @click="togglePayService">Pagar Servicio</button>
+    </div>
 
-                        <template #item.amount="{ item }">
-                            <div class="pago-amount">
-                                ${{
-                                    item.amount.toLocaleString("es-AR", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                    })
-                                }}
-                            </div>
-                        </template>
+    <!-- Crear Orden de Pago -->
+    <v-dialog v-model="showCreateOrder" max-width="500">
+      <v-card class="pagos-dialog">
+        <div class="pagos-dialog-header">
+          <span class="pagos-dialog-title">Crear Orden de Pago</span>
+          <v-btn icon class="dialog-close-btn" @click="showCreateOrder = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
+        <div class="pagos-dialog-content">
+          <input v-model="newOrder.amount" type="number" placeholder="Monto" class="pagos-input" />
+          <input v-model="newOrder.description" type="text" placeholder="Descripción" class="pagos-input" />
+        </div>
+        <div class="pagos-dialog-actions">
+          <button class="pagos-submit-btn" @click="createOrder">Generar Orden</button>
+        </div>
+      </v-card>
+    </v-dialog>
 
-                        <template #item.due_date="{ item }">
-                            <div class="pago-date">{{ formatDate(item.due_date) }}</div>
-                        </template>
+    <v-dialog v-model="showOrderCreated" max-width="400">
+      <v-card class="pagos-dialog">
+        <div class="pagos-dialog-header">
+          <span class="pagos-dialog-title">Orden Generada</span>
+        </div>
+        <div class="pagos-dialog-content">
+          <p class="order-id">ID de la orden: <span class="order-id-value">{{ newOrder.id }}</span></p>
+        </div>
+        <div class="pagos-dialog-actions">
+          <button class="pagos-submit-btn" @click="showOrderCreated = false">Cerrar</button>
+        </div>
+      </v-card>
+    </v-dialog>
 
-                        <template #item.status="{ item }">
-                            <div class="pago-status">
-                                <v-chip
-                                    :color="getStatusColor(item.status)"
-                                    size="small"
-                                    class="status-chip"
-                                >
-                                    {{ getStatusText(item.status) }}
-                                </v-chip>
-                            </div>
-                        </template>
+    <!-- Pagar Servicio -->
+    <v-dialog v-model="showPayService" max-width="500">
+      <v-card class="pagos-dialog">
+        <div class="pagos-dialog-header">
+          <span class="pagos-dialog-title">Pagar Servicio</span>
+          <v-btn icon class="dialog-close-btn" @click="showPayService = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
+        <div class="pagos-dialog-content">
+          <input v-model="paymentId" type="text" placeholder="Número de Identificador" class="pagos-input" />
+        </div>
+        <div class="pagos-dialog-actions">
+          <button class="pagos-submit-btn" @click="fetchOrder">Consultar Orden</button>
+        </div>
+      </v-card>
+    </v-dialog>
 
-                        <template #item.actions="{ item }">
-                            <div class="pago-actions">
-                                <v-btn
-                                    v-if="item.status !== 'paid'"
-                                    color="primary"
-                                    size="small"
-                                    @click="payBill(item.id)"
-                                    :loading="payingBillId === item.id"
-                                >
-                                    Pagar
-                                </v-btn>
-                            </div>
-                        </template>
-                    </BaseDataTable>
-                </div>
-            </v-col>
-        </v-row>
-    </v-container>
+    <v-dialog v-model="showOrderDetails" max-width="500">
+      <v-card class="pagos-dialog">
+        <div class="pagos-dialog-header">
+          <span class="pagos-dialog-title">Detalles de la Orden</span>
+        </div>
+        <div class="pagos-dialog-content">
+          <p>Monto: ${{ orderData?.amount }}</p>
+          <p>Descripción: {{ orderData?.description }}</p>
+        </div>
+        <div class="pagos-dialog-actions">
+          <button class="pagos-submit-btn" @click="payOrder">Realizar Pago</button>
+        </div>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="showPaymentSuccess" max-width="400">
+      <v-card class="pagos-dialog">
+        <div class="pagos-dialog-header">
+          <span class="pagos-dialog-title-confirmation">Pago Exitoso</span>
+        </div>
+        <div class="pagos-dialog-content">
+          <p class="confirmation-dialog">El pago fue realizado correctamente.</p>
+        </div>
+        <div class="pagos-dialog-actions">
+          <button class="pagos-submit-btn" @click="showPaymentSuccess = false">Aceptar</button>
+        </div>
+      </v-card>
+    </v-dialog>
+
+    <!-- Lista de Órdenes -->
+    <div class="pagos-section">
+      <h2>Órdenes Creadas</h2>
+      <ul>
+        <li v-for="order in orders" :key="order.id">
+          ID: {{ order.id }} - ${{ order.amount }} - {{ order.description }}
+        </li>
+      </ul>
+    </div>
+  </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
-import { useAuthStore } from "@/store/auth";
-import BaseDataTable from "@/components/ui/BaseDataTable.vue";
-import { getBills, updateBillStatus } from "@/services/bills";
-import type { Bill } from "@/types/types";
+import { ref } from 'vue';
 
-const authStore = useAuthStore();
-const userId = computed(() => authStore.user?.id);
+const showCreateOrder = ref(false);
+const showOrderCreated = ref(false);
+const showPayService = ref(false);
+const showOrderDetails = ref(false);
+const showPaymentSuccess = ref(false);
 
-const bills = ref<Bill[]>([]);
-const loading = ref(true);
-const payingBillId = ref<string | null>(null);
+const newOrder = ref({
+  id: '',
+  amount: '',
+  description: ''
+});
 
-const headers = [
-    { title: "Título", key: "title", align: "start" as const },
-    { title: "Proveedor", key: "provider", align: "start" as const },
-    { title: "Monto", key: "amount", align: "end" as const },
-    { title: "Vencimiento", key: "due_date", align: "end" as const },
-    { title: "Estado", key: "status", align: "center" as const },
-    { title: "Acciones", key: "actions", align: "end" as const },
-];
+const paymentId = ref('');
+const orderData = ref<any>(null);
+const orders = ref<{ id: string; amount: string; description: string }[]>([]);
 
-async function fetchBills() {
-    if (!userId.value) return;
-    loading.value = true;
-    try {
-        bills.value = await getBills(userId.value);
-    } catch (error) {
-        console.error("Error fetching bills:", error);
-    } finally {
-        loading.value = false;
-    }
+function generateShortId(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function payBill(billId: string) {
-    if (!userId.value) return;
-    payingBillId.value = billId;
-    try {
-        const { success } = await updateBillStatus(billId, "paid");
-        if (success) {
-            await fetchBills();
-        }
-    } catch (error) {
-        console.error("Error paying bill:", error);
-    } finally {
-        payingBillId.value = null;
-    }
+function toggleCreateOrder() {
+  showCreateOrder.value = true;
 }
 
-function formatDate(date: string): string {
-    if (!date) return "Fecha no disponible";
-    const parsedDate = new Date(date);
-    return isNaN(parsedDate.getTime())
-        ? "Fecha inválida"
-        : parsedDate.toLocaleDateString("es-AR");
+function togglePayService() {
+  showPayService.value = true;
 }
 
-function getStatusColor(status: string): string {
-    switch (status) {
-        case "paid":
-            return "success";
-        case "pending":
-            return "warning";
-        case "overdue":
-            return "error";
-        default:
-            return "grey";
-    }
+function createOrder() {
+  if (!newOrder.value.amount || !newOrder.value.description) return;
+
+  const orderId = generateShortId();
+  orders.value.push({
+    id: orderId,
+    amount: newOrder.value.amount,
+    description: newOrder.value.description
+  });
+
+  newOrder.value.id = orderId;
+  showCreateOrder.value = false;
+  showOrderCreated.value = true;
+  newOrder.value.amount = '';
+  newOrder.value.description = '';
 }
 
-function getStatusText(status: string): string {
-    switch (status) {
-        case "paid":
-            return "Pagado";
-        case "pending":
-            return "Pendiente";
-        case "overdue":
-            return "Vencido";
-        default:
-            return status;
-    }
+function fetchOrder() {
+  const foundOrder = orders.value.find(order => order.id === paymentId.value);
+  if (foundOrder) {
+    orderData.value = foundOrder;
+    showPayService.value = false;
+    showOrderDetails.value = true;
+  } else {
+    orderData.value = null;
+  }
 }
 
-onMounted(fetchBills);
+function payOrder() {
+  orderData.value = null;
+  paymentId.value = '';
+  showOrderDetails.value = false;
+  showPaymentSuccess.value = true;
+}
 </script>
 
 <style scoped>
-.pagos-main {
-    background: var(--background);
-    min-height: 100vh;
+.pagos-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  background-color: var(--background);
+  height: 100vh;
 }
 
 .pagos-title {
-    font-size: 2.2rem;
-    font-weight: 800;
-    margin-bottom: 1.5rem;
-    margin-top: 0.5rem;
-    font-family: var(--font-sans), sans-serif;
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
 }
 
-.pagos-table {
-    background: transparent;
+.pagos-options {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
 }
 
-.pagos-table :deep(th),
-.pagos-table :deep(td) {
-    padding: 12px 16px !important;
+.pagos-btn,
+.pagos-submit-btn {
+  background-color: var(--primary);
+  color: #fff;
+  padding: 0.5rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
 }
 
-.pagos-table :deep(th) {
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--text);
-    white-space: nowrap;
-    background-color: var(--card);
-    border-bottom: none;
+.pagos-btn:hover,
+.pagos-submit-btn:hover {
+  filter: brightness(1.05);
 }
 
-.pago-title {
-    font-weight: 500;
+.pagos-dialog {
+  border-radius: 1rem;
+  padding: 1.5rem;
 }
 
-.pago-provider {
-    color: var(--muted-text);
+.pagos-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.pago-amount {
-    font-weight: 600;
-    text-align: right;
+.pagos-dialog-title {
+  font-weight: 700;
+  font-size: 1.2rem;
 }
 
-.pago-date {
-    color: var(--muted-text);
-    text-align: right;
+.pagos-dialog-title-confirmation{
+  font-weight: 700;
+  font-size: 1.2rem;
 }
 
-.pago-status {
-    text-align: center;
+.confirmation-dialog{
+  color: var(--success);
 }
 
-.status-chip {
-    font-weight: 500;
+.pagos-dialog-content {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.pago-actions {
-    text-align: right;
+.pagos-dialog-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.pagos-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+}
+
+.dialog-close-btn {
+  color: var(--muted-text);
+}
+
+.order-id {
+  font-size: 1rem;
+  text-align: center;
+  color: var(--text);
+}
+
+.order-id-value {
+  font-weight: 700;
+  color: var(--success);
 }
 </style>
