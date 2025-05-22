@@ -30,7 +30,7 @@
 
                         <template #item.name="{ item }">
                             <div class="nombre-align">
-                                <span class="tarjeta-name">{{ item.brand }} *{{ item.number_last4 }}</span>
+                                <span class="tarjeta-name">{{ item.name }}</span>
                             </div>
                         </template>
 
@@ -61,21 +61,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { supabase } from "@/plugins/supabase";
-import { useAuthStore } from "@/store/auth";
+import { useCardsStore } from "@/store/cardsStore";
 import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 import AddCardDialog from "@/components/AddCardDialog.vue";
-import type { Card } from "@/types/types";
 
 const showDialog = ref(false);
-const submitted = ref(false);
-const loading = ref(false);
-const cards = ref<Card[]>([]);
-const noCards = ref(false);
-
-const authStore = useAuthStore();
-const userId = computed(() => authStore.user?.id);
+const cardsStore = useCardsStore();
 
 const headers = [
     { title: "", key: "logo", width: 60, align: "center" as const, class: "priority-high" },
@@ -90,35 +82,41 @@ const headers = [
     { title: "Acciones", key: "actions", align: "end" as const, class: "priority-high" },
 ];
 
+const cards = computed(() => {
+    if (!cardsStore.cards) return [];
+    return cardsStore.cards.map(card => {
+        const cardType = card.type === 'CREDIT' ? 'Crédito' : 'Débito';
+        const last4 = card.number.match(/\d{4}$/)?.[0] || '';
+        return {
+            ...card,
+            brand: card.metadata?.brand || getCardBrand(card.number),
+            name: `${cardType} *${last4}`,
+            expiry: card.expirationDate,
+            logo: getBrandLogo(card.metadata?.brand || getCardBrand(card.number)),
+        };
+    });
+});
+
+const loading = computed(() => cardsStore.isLoading);
+
 async function fetchCards() {
-    if (!userId.value) return;
-    loading.value = true;
-    const { data, error } = await supabase
-        .from("cards")
-        .select("*")
-        .eq("user_id", userId.value)
-        .order("created_at", { ascending: false });
-    loading.value = false;
-    if (error) {
-        cards.value = [];
-        noCards.value = true;
-        return;
+    try {
+        await cardsStore.fetchCards();
+    } catch (error) {
+        console.error('Error fetching cards:', error);
     }
-    cards.value = (data || []).map((card) => ({
-        ...card,
-        brand: card.brand,
-        name: `${card.brand} *${card.number_last4}`,
-        expiry: card.expiry,
-        logo: getBrandLogo(card.brand),
-    }));
-    noCards.value = cards.value.length === 0;
 }
 
-onMounted(fetchCards);
-
-async function deleteCard(id: string) {
-    await supabase.from("cards").delete().eq("id", id);
+onMounted(async () => {
     await fetchCards();
+});
+
+async function deleteCard(id: number) {
+    try {
+        await cardsStore.removeCard(id);
+    } catch (error) {
+        console.error('Error deleting card:', error);
+    }
 }
 
 function getCardBrand(number: string) {
@@ -192,29 +190,24 @@ const transparentPixel =
 }
 
 .transaction-icon-cell {
-    width: auto;
-    min-width: 0;
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding-left: 8px !important;
-    padding-right: 0 !important;
+    width: 64px !important;
+    min-width: 64px !important;
+    height: var(--v-table-row-height) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
 }
 
 .transaction-card-logo {
-    min-width: 40px;
-    min-height: 24px;
-    width: auto;
-    height: auto;
-    max-width: 64px;
-    max-height: 40px;
-    object-fit: contain;
-    display: block;
-    margin: 0 auto;
-    background: white;
-    padding: 4px;
-    border-radius: 4px;
+    width: 40px !important;
+    height: 28px !important;
+    object-fit: contain !important;
+    background: white !important;
+    padding: 4px !important;
+    border-radius: 4px !important;
+    display: block !important;
+    margin: 0 !important;
 }
 
 .transaction-description {
@@ -421,11 +414,18 @@ const transparentPixel =
     min-height: 1.5rem;
 }
 .nombre-align {
-    padding-left: 32px;
+    padding-left: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
 }
 .expiry-align {
-    text-align: right;
-    padding-right: 24px;
+    text-align: right !important;
+    padding-right: 24px !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
 }
 
 .tarjetas-table :deep(th) {
@@ -458,5 +458,19 @@ const transparentPixel =
 
 .delete-action:hover {
     text-decoration: underline;
+}
+
+:deep(.v-data-table) {
+    --v-table-row-height: 56px;
+}
+
+:deep(.v-data-table__tr) {
+    height: var(--v-table-row-height) !important;
+}
+
+:deep(.v-data-table__td) {
+    height: var(--v-table-row-height) !important;
+    padding: 0 16px !important;
+    vertical-align: middle !important;
 }
 </style>
