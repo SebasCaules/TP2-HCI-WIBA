@@ -89,7 +89,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
-import { useCardsStore } from '@/store/cardsStore'
+import { useCardsStore } from '@/stores/cardsStore'
 import type { CreateCardRequest } from '@/api/cards'
 
 const props = defineProps({

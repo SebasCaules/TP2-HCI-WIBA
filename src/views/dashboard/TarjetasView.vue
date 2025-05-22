@@ -36,13 +36,19 @@
 
                         <template #item.expiry="{ item }">
                             <div class="expiry-align">
-                                <span class="tarjeta-expiry">{{ item.expiry }}</span>
+                                <span class="tarjeta-expiry">{{
+                                    item.expiry
+                                }}</span>
                             </div>
                         </template>
 
                         <template #item.actions="{ item }">
                             <div class="text-right">
-                                <span class="delete-action" @click="deleteCard(item.id)">Eliminar</span>
+                                <span
+                                    class="delete-action"
+                                    @click="deleteCard(item.id)"
+                                    >Eliminar</span
+                                >
                             </div>
                         </template>
                     </BaseDataTable>
@@ -54,14 +60,14 @@
         <AddCardDialog
             :model-value="showDialog"
             @update:model-value="showDialog = $event"
-            @card-added="fetchCards"
+            @card-added="handleCardAdded"
         />
     </v-container>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useCardsStore } from "@/store/cardsStore";
+import { useCardsStore } from "@/stores/cardsStore";
 import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 import AddCardDialog from "@/components/AddCardDialog.vue";
@@ -70,16 +76,32 @@ const showDialog = ref(false);
 const cardsStore = useCardsStore();
 
 const headers = [
-    { title: "", key: "logo", width: 60, align: "center" as const, class: "priority-high" },
-    { title: "Nombre", key: "name", align: "start" as const, class: "priority-high" },
+    {
+        title: "",
+        key: "logo",
+        width: 60,
+        align: "center" as const,
+        class: "priority-high",
+    },
+    {
+        title: "Nombre",
+        key: "name",
+        align: "start" as const,
+        class: "priority-high",
+    },
     {
         title: "Vencimiento",
         key: "expiry",
         align: "end" as const,
         width: 120,
-        class: "priority-medium"
+        class: "priority-medium",
     },
-    { title: "Acciones", key: "actions", align: "end" as const, class: "priority-high" },
+    {
+        title: "Acciones",
+        key: "actions",
+        align: "end" as const,
+        class: "priority-high",
+    },
 ];
 
 const cards = computed(() => {
@@ -139,6 +161,10 @@ function getBrandLogo(brand: string) {
 
 const transparentPixel =
     "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
+function handleCardAdded(card: any) {
+    console.log("Tarjeta agregada:", JSON.stringify(card, null, 2));
+    fetchCards();
+}
 </script>
 
 <style scoped>

@@ -39,7 +39,7 @@ import { ref, watch } from 'vue';
 import { supabase } from '@/plugins/supabase';
 import FilledButton from '@/components/ui/FilledButton.vue';
 import CustomTextField from '@/components/ui/CustomTextField.vue';
-import { useAuthStore } from '@/store/auth';
+import { useAuthStore } from '@/stores/auth';
 import type { Contact } from '@/types/types';
 
 const props = defineProps<{

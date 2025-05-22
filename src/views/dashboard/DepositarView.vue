@@ -135,13 +135,58 @@
         </div>
       </v-card>
     </v-dialog>
+
+    <!-- Lista de depósitos -->
+    <v-card>
+      <v-card-title>Depósitos recientes</v-card-title>
+      <v-card-text>
+        <v-data-table
+          :headers="headers"
+          :items="payments"
+          :loading="loading"
+          class="elevation-1"
+        >
+          <template v-slot:item.amount="{ item }">
+            ${{ item.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}
+          </template>
+          <template v-slot:item.status="{ item }">
+            <v-chip
+              :color="getStatusColor(item.status)"
+              size="small"
+            >
+              {{ getStatusText(item.status) }}
+            </v-chip>
+          </template>
+          <template v-slot:item.actions="{ item }">
+            <v-btn
+              v-if="item.status === 'pending'"
+              color="primary"
+              size="small"
+              :loading="loading"
+              @click="handlePushDeposit(item.id)"
+            >
+              Completar
+            </v-btn>
+          </template>
+        </v-data-table>
+      </v-card-text>
+    </v-card>
+
+    <!-- Snackbar para mensajes -->
+    <v-snackbar
+      v-model="showSnackbar"
+      :color="snackbarColor"
+      timeout="3000"
+    >
+      {{ snackbarText }}
+    </v-snackbar>
   </v-container>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useAuthStore } from '@/store/auth'
-import { useCardsStore } from '@/store/cardsStore'
+import { useAuthStore } from '@/stores/auth'
+import { useCardsStore } from '@/stores/cardsStore'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import AddCardDialog from '@/components/AddCardDialog.vue'
@@ -164,10 +209,15 @@ const showAddCardDialog = ref(false)
 const selectedCard = ref<DisplayCard | null>(null)
 const showConfirmDialog = ref(false)
 const showSuccessDialog = ref(false)
+const loading = ref(false)
+const showSnackbar = ref(false)
+const snackbarText = ref('')
+const snackbarColor = ref('success')
 
 const authStore = useAuthStore()
 const cardsStore = useCardsStore()
 const userId = computed(() => authStore.user?.id)
+const paymentStore = usePaymentStore()
 
 const cards = computed<DisplayCard[]>(() => {
   if (!cardsStore.cards) return []
@@ -256,7 +306,62 @@ async function confirmDeposit() {
   }
 }
 
-onMounted(fetchCards)
+const headers = [
+  { title: 'ID', key: 'id' },
+  { title: 'Monto', key: 'amount' },
+  { title: 'Estado', key: 'status' },
+  { title: 'Fecha', key: 'created_at' },
+  { title: 'Acciones', key: 'actions', sortable: false }
+]
+
+const payments = computed(() => paymentStore.payments)
+
+function getStatusColor(status: string) {
+  switch (status) {
+    case 'completed':
+      return 'success'
+    case 'pending':
+      return 'warning'
+    case 'failed':
+      return 'error'
+    default:
+      return 'grey'
+  }
+}
+
+function getStatusText(status: string) {
+  switch (status) {
+    case 'completed':
+      return 'Completado'
+    case 'pending':
+      return 'Pendiente'
+    case 'failed':
+      return 'Fallido'
+    default:
+      return status
+  }
+}
+
+async function handlePushDeposit(paymentId: number) {
+  loading.value = true
+  try {
+    await paymentStore.pushDeposit(paymentId)
+    showSnackbar.value = true
+    snackbarText.value = 'Depósito completado correctamente'
+    snackbarColor.value = 'success'
+  } catch (error) {
+    showSnackbar.value = true
+    snackbarText.value = error instanceof Error ? error.message : 'Error al completar el depósito'
+    snackbarColor.value = 'error'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchCards()
+  paymentStore.fetchPayments()
+})
 </script>
 
 <style scoped>

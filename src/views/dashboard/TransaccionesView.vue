@@ -60,7 +60,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { supabase } from '@/plugins/supabase';
-import { useAuthStore } from '@/store/auth';
+import { useAuthStore } from '@/stores/auth';
 import BaseDataTable from '@/components/ui/BaseDataTable.vue';
 import type { Transaction } from '@/types/types';
 

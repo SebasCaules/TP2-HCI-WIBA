@@ -26,12 +26,14 @@
               autocomplete="family-name"
             />
             <CustomTextField
-              v-model="username"
-              label="Nombre de usuario"
-              placeholder="Tu nombre de usuario"
-              :error="!!usernameError"
-              :errorMessage="usernameError"
-              autocomplete="username"
+              v-model="birthDate"
+              label="Fecha de nacimiento"
+              placeholder="dd/mm/aaaa"
+              :error="!!birthDateError"
+              :errorMessage="birthDateError"
+              autocomplete="bdate"
+              @input="formatBirthDate"
+              @blur="validateBirthDateOnBlur"
             />
             <CustomTextField
               v-model="email"
@@ -84,29 +86,31 @@ import { useRouter } from 'vue-router'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import BackButton from '@/components/ui/BackButton.vue'
-import { UserApi, type RegistrationData } from '@/api/user.ts'
+import { UserApi } from '@/api/user.ts'
 
 const router = useRouter()
 const form = ref<HTMLFormElement | null>(null)
 const nombre = ref('')
 const apellido = ref('')
-const username = ref('')
 const email = ref('')
 const password = ref('')
 const nombreError = ref('')
 const apellidoError = ref('')
-const usernameError = ref('')
 const emailError = ref('')
 const passwordError = ref('')
+const birthDate = ref('')
+const birthDateError = ref('')
 const loading = ref(false)
+
+const menuOpen = ref(false)
 
 const validateForm = (): boolean => {
   let valid = true
   nombreError.value = ''
   apellidoError.value = ''
-  usernameError.value = ''
   emailError.value = ''
   passwordError.value = ''
+  birthDateError.value = ''
 
   if (!nombre.value.trim()) {
     nombreError.value = 'El nombre es obligatorio.'
@@ -117,15 +121,11 @@ const validateForm = (): boolean => {
     valid = false
   }
 
-  if (!username.value.trim()) {
-    usernameError.value = 'El nombre de usuario es obligatorio.'
+  if (!birthDate.value) {
+    birthDateError.value = 'La fecha de nacimiento es obligatoria.'
     valid = false
-  } else {
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/
-    if (!usernameRegex.test(username.value)) {
-      usernameError.value = 'El nombre de usuario debe tener entre 3 y 20 caracteres y solo puede contener letras, números y guiones bajos.'
-      valid = false
-    }
+  } else if (birthDateError.value) {
+    valid = false
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -158,24 +158,32 @@ const handleRegister = async (): Promise<void> => {
   if (!validateForm()) return
   loading.value = true
   try {
+    const isoBirthDate = formatBirthDateToISO(birthDate.value)
+    if (!isoBirthDate) {
+      birthDateError.value = 'Formato de fecha inválido. Usá dd/mm/aaaa.'
+      loading.value = false
+      return
+    }
+
     const registrationData = {
+      name: nombre.value,
       firstName: nombre.value,
       lastName: apellido.value,
-      birthDate: "1979-01-01", // esto puede ser dinámico si luego agregás el campo
+      birthDate: isoBirthDate,
       email: email.value,
       password: password.value,
       metadata: {}
     }
     
     await UserApi.createUser(registrationData)
-    router.push('/login')
+    router.push('/confirmacion')
   } catch (error: any) {
     if (error.code === 400) {
       // Manejar errores de validación específicos
       if (error.description?.toLowerCase().includes('email')) {
         emailError.value = 'Este email ya está registrado o no es válido.'
       } else if (error.description?.toLowerCase().includes('username')) {
-        usernameError.value = 'Este nombre de usuario ya está en uso.'
+        // No username field anymore, so no error set here
       } else if (error.description?.toLowerCase().includes('password')) {
         passwordError.value = 'La contraseña no cumple con los requisitos mínimos.'
       } else {
@@ -186,6 +194,67 @@ const handleRegister = async (): Promise<void> => {
     }
   } finally {
     loading.value = false
+  }
+}
+
+function formatBirthDateToISO(dateStr: string): string | null {
+  const parts = dateStr.split('/')
+  if (parts.length !== 3) return null
+
+  const [day, month, year] = parts.map(p => p.padStart(2, '0'))
+  if (!/^\d{2}$/.test(day) || !/^\d{2}$/.test(month) || !/^\d{4}$/.test(year)) return null
+
+  return `${year}-${month}-${day}`
+}
+
+function formatBirthDate(e: Event) {
+  const input = (e.target as HTMLInputElement)
+  let value = input.value.replace(/\D/g, '')
+  if (value.length >= 3 && value.length <= 4)
+    value = value.replace(/^(\d{2})(\d{1,2})/, '$1/$2')
+  else if (value.length > 4)
+    value = value.replace(/^(\d{2})(\d{2})(\d{1,4})/, '$1/$2/$3')
+  input.value = value
+  birthDate.value = value
+
+  if (value.length === 10) {
+    validateBirthDateOnBlur()
+  }
+}
+
+function validateBirthDateOnBlur() {
+  birthDateError.value = ''
+  if (!birthDate.value) return
+
+  const parts = birthDate.value.split('/')
+  if (parts.length !== 3) {
+    birthDateError.value = 'Formato de fecha inválido. Usá dd/mm/aaaa.'
+    return
+  }
+
+  const [day, month, year] = parts.map(Number)
+
+  if (month < 1 || month > 12) {
+    birthDateError.value = 'El mes es inválido.'
+    return
+  }
+
+  // Chequeo días válidos por mes
+  const daysInMonth = new Date(year, month, 0).getDate()
+  if (day < 1 || day > daysInMonth) {
+    birthDateError.value = 'La fecha es inválida.'
+    return
+  }
+
+  const birth = new Date(year, month - 1, day)
+  const today = new Date()
+  const age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  const dayCheck = today.getDate() - birth.getDate()
+  const is18 = age > 18 || (age === 18 && (m > 0 || (m === 0 && dayCheck >= 0)))
+
+  if (!is18) {
+    birthDateError.value = 'Debés tener al menos 18 años para registrarte.'
   }
 }
 </script>

@@ -13,18 +13,13 @@
 </template>
 
 <script setup lang="ts">
-import { useAuthStore } from "../store/auth";
+import { useAuthStore } from "../stores/auth";
 import { useRouter } from "vue-router";
-import Sidebar from '@/components/shared/Sidebar.vue'
-import Topbar from '@/components/shared/Topbar.vue'
+import Sidebar from "@/components/shared/Sidebar.vue";
+import Topbar from "@/components/shared/Topbar.vue";
 
-        const authStore = useAuthStore();
-        const router = useRouter();
-
-        const logout = () => {
-    authStore.clearUser();
-    router.push("/login");
-        };
+const authStore = useAuthStore();
+const router = useRouter();
 </script>
 
 <style scoped>

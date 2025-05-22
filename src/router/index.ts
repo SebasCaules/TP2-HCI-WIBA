@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useSecurityStore } from '@/store/securityStore'
+import { useSecurityStore } from '@/stores/securityStore'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -23,6 +23,11 @@ const router = createRouter({
             path: '/reset-password',
             name: 'reset-password',
             component: () => import('@/views/auth/ResetPasswordView.vue')
+        },
+        {
+            path: '/confirmacion',
+            name: 'confirmacion',
+            component: () => import('@/views/auth/ConfirmationView.vue')
         },
         {
             path: '/dashboard',
@@ -90,4 +95,4 @@ router.beforeEach((to, _from, next) => {
     }
 })
 
-export default router 
+export default router

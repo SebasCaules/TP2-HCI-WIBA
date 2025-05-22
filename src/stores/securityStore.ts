@@ -1,7 +1,7 @@
 import { ref, computed } from "vue"
 import { defineStore } from "pinia";
 import { UserApi, type User, type Credentials } from "@/api/user";
-import { Api } from "@/api/api";
+import { Api } from "@/api/Api";
 
 const SECURITY_TOKEN_KEY = "security-token";
 
@@ -76,5 +76,5 @@ export const useSecurityStore = defineStore("security", () => {
         return result;
     }
 
-    return { user, isLoggedIn, initialize, login, logout, getCurrentUser };
+    return { user, isLoggedIn, initialize, login, logout, getCurrentUser, setUser };
 }); 
