@@ -1,98 +1,58 @@
 <template>
   <v-container class="pagos-container" fluid>
-    <h1 class="pagos-title">Pagos</h1>
+    <h1 class="pagos-title">Gestión de Pagos</h1>
 
     <div class="pagos-options">
-      <button class="pagos-btn" @click="toggleCreateOrder">Crear Orden de Pago</button>
-      <button class="pagos-btn" @click="togglePayService">Pagar Servicio</button>
+      <button class="pagos-btn" @click="openPullDialog">Crear Orden (pull)</button>
+      <button class="pagos-btn" @click="openTransferDialog">Transferir por Email</button>
+      <button class="pagos-btn" @click="loadPayments">Ver Pagos</button>
     </div>
 
-    <!-- Crear Orden de Pago -->
-    <v-dialog v-model="showCreateOrder" max-width="500">
+    <!-- Pull Payment Dialog -->
+    <v-dialog v-model="showPullDialog" max-width="500">
       <v-card class="pagos-dialog">
         <div class="pagos-dialog-header">
-          <span class="pagos-dialog-title">Crear Orden de Pago</span>
-          <v-btn icon class="dialog-close-btn" @click="showCreateOrder = false">
+          <span class="pagos-dialog-title">Nueva Orden de Pago</span>
+          <v-btn icon class="dialog-close-btn" @click="showPullDialog = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </div>
         <div class="pagos-dialog-content">
-          <input v-model="newOrder.amount" type="number" placeholder="Monto" class="pagos-input" />
-          <input v-model="newOrder.description" type="text" placeholder="Descripción" class="pagos-input" />
+          <input v-model="pullDescription" type="text" placeholder="Descripción" class="pagos-input" />
+          <input v-model.number="pullAmount" type="number" placeholder="Monto" class="pagos-input" />
         </div>
         <div class="pagos-dialog-actions">
-          <button class="pagos-submit-btn" @click="createOrder">Generar Orden</button>
+          <button class="pagos-submit-btn" @click="createPullPayment">Confirmar</button>
         </div>
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showOrderCreated" max-width="400">
+    <!-- Transfer Email Dialog -->
+    <v-dialog v-model="showTransferDialog" max-width="500">
       <v-card class="pagos-dialog">
         <div class="pagos-dialog-header">
-          <span class="pagos-dialog-title">Orden Generada</span>
-        </div>
-        <div class="pagos-dialog-content">
-          <p class="order-id">ID de la orden: <span class="order-id-value">{{ newOrder.id }}</span></p>
-        </div>
-        <div class="pagos-dialog-actions">
-          <button class="pagos-submit-btn" @click="showOrderCreated = false">Cerrar</button>
-        </div>
-      </v-card>
-    </v-dialog>
-
-    <!-- Pagar Servicio -->
-    <v-dialog v-model="showPayService" max-width="500">
-      <v-card class="pagos-dialog">
-        <div class="pagos-dialog-header">
-          <span class="pagos-dialog-title">Pagar Servicio</span>
-          <v-btn icon class="dialog-close-btn" @click="showPayService = false">
+          <span class="pagos-dialog-title">Transferencia por Email</span>
+          <v-btn icon class="dialog-close-btn" @click="showTransferDialog = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </div>
         <div class="pagos-dialog-content">
-          <input v-model="paymentId" type="text" placeholder="Número de Identificador" class="pagos-input" />
+          <input v-model="email" type="email" placeholder="Email del destinatario" class="pagos-input" />
+          <input v-model="transferDescription" type="text" placeholder="Descripción" class="pagos-input" />
+          <input v-model.number="transferAmount" type="number" placeholder="Monto" class="pagos-input" />
         </div>
         <div class="pagos-dialog-actions">
-          <button class="pagos-submit-btn" @click="fetchOrder">Consultar Orden</button>
+          <button class="pagos-submit-btn" @click="transferByEmail">Transferir</button>
         </div>
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showOrderDetails" max-width="500">
-      <v-card class="pagos-dialog">
-        <div class="pagos-dialog-header">
-          <span class="pagos-dialog-title">Detalles de la Orden</span>
-        </div>
-        <div class="pagos-dialog-content">
-          <p>Monto: ${{ orderData?.amount }}</p>
-          <p>Descripción: {{ orderData?.description }}</p>
-        </div>
-        <div class="pagos-dialog-actions">
-          <button class="pagos-submit-btn" @click="payOrder">Realizar Pago</button>
-        </div>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog v-model="showPaymentSuccess" max-width="400">
-      <v-card class="pagos-dialog">
-        <div class="pagos-dialog-header">
-          <span class="pagos-dialog-title-confirmation">Pago Exitoso</span>
-        </div>
-        <div class="pagos-dialog-content">
-          <p class="confirmation-dialog">El pago fue realizado correctamente.</p>
-        </div>
-        <div class="pagos-dialog-actions">
-          <button class="pagos-submit-btn" @click="showPaymentSuccess = false">Aceptar</button>
-        </div>
-      </v-card>
-    </v-dialog>
-
-    <!-- Lista de Órdenes -->
-    <div class="pagos-section">
-      <h2>Órdenes Creadas</h2>
+    <!-- Payments List -->
+    <div class="pagos-section" v-if="payments.length">
+      <h2>Pagos Realizados</h2>
       <ul>
-        <li v-for="order in orders" :key="order.id">
-          ID: {{ order.id }} - ${{ order.amount }} - {{ order.description }}
+        <li v-for="p in payments" :key="p.uuid">
+          <strong>ID:</strong> {{ p.uuid }} - ${{ p.amount }} - {{ p.description }} ({{ p.method || 'PULL' }})
         </li>
       </ul>
     </div>
@@ -100,70 +60,80 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onErrorCaptured } from 'vue';
+import { PaymentApi } from '@/services/payment';
 
-const showCreateOrder = ref(false);
-const showOrderCreated = ref(false);
-const showPayService = ref(false);
-const showOrderDetails = ref(false);
-const showPaymentSuccess = ref(false);
+const showPullDialog = ref(false);
+const showTransferDialog = ref(false);
+const payments = ref<any[]>([]);
 
-const newOrder = ref({
-  id: '',
-  amount: '',
-  description: ''
-});
+const pullDescription = ref('');
+const pullAmount = ref(0);
 
-const paymentId = ref('');
-const orderData = ref<any>(null);
-const orders = ref<{ id: string; amount: string; description: string }[]>([]);
+const transferDescription = ref('');
+const transferAmount = ref(0);
+const email = ref('');
 
-function generateShortId(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+function openPullDialog() {
+  showPullDialog.value = true;
 }
 
-function toggleCreateOrder() {
-  showCreateOrder.value = true;
+function openTransferDialog() {
+  showTransferDialog.value = true;
 }
 
-function togglePayService() {
-  showPayService.value = true;
-}
-
-function createOrder() {
-  if (!newOrder.value.amount || !newOrder.value.description) return;
-
-  const orderId = generateShortId();
-  orders.value.push({
-    id: orderId,
-    amount: newOrder.value.amount,
-    description: newOrder.value.description
-  });
-
-  newOrder.value.id = orderId;
-  showCreateOrder.value = false;
-  showOrderCreated.value = true;
-  newOrder.value.amount = '';
-  newOrder.value.description = '';
-}
-
-function fetchOrder() {
-  const foundOrder = orders.value.find(order => order.id === paymentId.value);
-  if (foundOrder) {
-    orderData.value = foundOrder;
-    showPayService.value = false;
-    showOrderDetails.value = true;
-  } else {
-    orderData.value = null;
+async function createPullPayment() {
+  try {
+    const payload = {
+      description: pullDescription.value,
+      amount: pullAmount.value,
+      metadata: {}
+    };
+    const res = await PaymentApi.pull(payload);
+    if (res && res.uuid) {
+      payments.value.push(res);
+    }
+    pullDescription.value = '';
+    pullAmount.value = 0;
+    showPullDialog.value = false;
+  } catch (err) {
+    console.error('Error al crear orden:', err);
   }
 }
 
-function payOrder() {
-  orderData.value = null;
-  paymentId.value = '';
-  showOrderDetails.value = false;
-  showPaymentSuccess.value = true;
+async function transferByEmail() {
+  try {
+    const payload = {
+      description: transferDescription.value,
+      amount: transferAmount.value,
+      metadata: {}
+    };
+    const res = await PaymentApi.transferByEmail(email.value, payload);
+    if (res && res.uuid) {
+      payments.value.push(res);
+    }
+    email.value = '';
+    transferDescription.value = '';
+    transferAmount.value = 0;
+    showTransferDialog.value = false;
+  } catch (err) {
+    console.error('Error en la transferencia:', err);
+  }
 }
+
+async function loadPayments() {
+  try {
+    const res = await PaymentApi.getAll();
+    payments.value = res?.results || [];
+  } catch (err) {
+    console.error('Error al obtener pagos:', err);
+  }
+}
+
+onErrorCaptured((err) => {
+  console.error('🔥 Error capturado en render:', err);
+  return false;
+});
 </script>
 
 <style scoped>
@@ -221,15 +191,6 @@ function payOrder() {
   font-size: 1.2rem;
 }
 
-.pagos-dialog-title-confirmation{
-  font-weight: 700;
-  font-size: 1.2rem;
-}
-
-.confirmation-dialog{
-  color: var(--success);
-}
-
 .pagos-dialog-content {
   margin-top: 1rem;
   display: flex;
@@ -255,14 +216,17 @@ function payOrder() {
   color: var(--muted-text);
 }
 
-.order-id {
-  font-size: 1rem;
-  text-align: center;
-  color: var(--text);
+.pagos-section ul {
+  list-style: none;
+  padding: 0;
+  width: 100%;
+  max-width: 600px;
 }
 
-.order-id-value {
-  font-weight: 700;
-  color: var(--success);
+.pagos-section li {
+  margin-bottom: 0.5rem;
+  background: #f9f9f9;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
 }
 </style>
