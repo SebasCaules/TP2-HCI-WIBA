@@ -273,7 +273,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
-import { useAuthStore } from "@/store/auth";
+import { useAuthStore } from "@/stores/auth";
 import {
     type Stock,
     type PortfolioItem,

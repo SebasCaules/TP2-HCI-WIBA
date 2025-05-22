@@ -99,7 +99,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useSecurityStore } from '@/store/securityStore.ts'
+import { useSecurityStore } from '@/stores/securityStore'
 import { UserApi, type Credentials } from '@/api/user.ts'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'

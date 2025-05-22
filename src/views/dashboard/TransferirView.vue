@@ -215,7 +215,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { supabase } from "@/plugins/supabase";
-import { useAuthStore } from "@/store/auth";
+import { useAuthStore } from "@/stores/auth";
 import CustomTextField from "@/components/ui/CustomTextField.vue";
 import FilledButton from "@/components/ui/FilledButton.vue";
 import AddContactDialog from "@/components/AddContactDialog.vue";

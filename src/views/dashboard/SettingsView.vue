@@ -116,7 +116,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useAuthStore } from '@/store/auth'
+import { useAuthStore } from '@/stores/auth'
 import { supabase } from '@/plugins/supabase'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'

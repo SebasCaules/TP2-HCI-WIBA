@@ -23,7 +23,6 @@
                         required
                         density="comfortable"
                         variant="underlined"
-                        class="custom-select-wrapper"
                     ></v-select>
                     <div class="investment-form">
                         <CustomTextField

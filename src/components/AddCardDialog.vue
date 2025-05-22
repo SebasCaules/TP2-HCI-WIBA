@@ -75,7 +75,7 @@
 import { ref, computed } from 'vue'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import { supabase } from '@/plugins/supabase'
-import { useAuthStore } from '@/store/auth'
+import { useAuthStore } from '@/stores/auth'
 import { v4 as uuidv4 } from 'uuid'
 
 const props = defineProps({

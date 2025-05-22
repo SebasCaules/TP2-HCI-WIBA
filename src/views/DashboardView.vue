@@ -81,7 +81,7 @@
               :slices="dashboardChartSlices"
               :showBalance="false"
               :size="90"
-              :userId="userId"
+              :userId="userId.toString()"
             />
           </div>
         <div class="dashboard-section mt-8">
@@ -145,13 +145,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { useSecurityStore } from '@/store/securityStore.ts'
+import { useSecurityStore } from '@/stores/securityStore.ts'
+import { useAccountStore } from '@/stores/accountStore'
 import IconFilledButton from '@/components/ui/IconFilledButton.vue'
 import type { Contact } from '@/types/types'
 import type { DashboardData } from '@/services/dashboard'
 import InvestmentCard from '@/components/investments/InvestmentCard.vue'
 
 const securityStore = useSecurityStore()
+const accountStore = useAccountStore()
 const userId = computed(() => securityStore.user?.id)
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -194,6 +196,9 @@ async function fetchData() {
     // Asegurarnos de que tenemos el usuario actual
     const user = await securityStore.getCurrentUser()
     console.log('Usuario obtenido en fetchData:', user);
+
+    // Obtener datos de cuenta
+    await accountStore.fetchAccount()
     
     if (!user) {
       throw new Error('No se pudo obtener la información del usuario')
@@ -201,14 +206,14 @@ async function fetchData() {
     
     dashboardData.value = {
       user: {
-        id: user.id,
-        first_name: user.name,
+        id: user.id.toString(),
+        first_name: user.firstName,
         last_name: user.lastName,
         username: user.username
       },
       account: {
-        balance: 0, // TODO: Implementar obtención del balance real
-        account_number: "0000000000000000000000" // TODO: Implementar obtención del número de cuenta real
+        balance: accountStore.account?.balance ?? 0,
+        account_number: accountStore.account?.cvu ?? 'Sin CVU'
       },
       transactions: [], // TODO: Implementar obtención de transacciones reales
       bills: [], // TODO: Implementar obtención de facturas reales
@@ -259,6 +264,8 @@ function formatDate(timestamp: string): string {
 function toggleBalanceVisibility() {
   isBalanceVisible.value = !isBalanceVisible.value
 }
+console.log('Usuario actual (intervalo 5s):', securityStore.user);
+
 
 </script>
 

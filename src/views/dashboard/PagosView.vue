@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { useAuthStore } from "@/store/auth";
+import { useAuthStore } from "@/stores/auth";
 import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 import { getBills, updateBillStatus } from "@/services/bills";
 import type { Bill } from "@/types/types";

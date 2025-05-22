@@ -38,15 +38,48 @@
           <div class="user-menu-info">
             <div class="user-menu-label">Cuenta</div>
             <div class="user-menu-value-container">
-              <span class="user-menu-value">{{ accountNumber }}</span>
+              <span class="user-menu-value">{{ accountCvu }}</span>
               <v-icon
                 size="small"
                 class="copy-icon"
                 :color="copySuccess.account ? 'success' : 'var(--primary)'"
-                @click="copyToClipboard(accountNumber)"
+                @click="copyToClipboard(accountCvu)"
               >
                 {{ copySuccess.account ? 'mdi-check' : 'mdi-content-copy' }}
               </v-icon>
+            </div>
+          </div>
+          <div class="user-menu-info">
+            <div class="user-menu-label">Alias</div>
+            <div class="user-menu-value-container">
+              <template v-if="editingAlias">
+                <v-text-field
+                  v-model="editedAlias"
+                  density="compact"
+                  variant="plain"
+                  hide-details
+                  style="flex: 1"
+                />
+                <v-icon class="copy-icon" @click="confirmAliasUpdate">mdi-check</v-icon>
+              </template>
+              <template v-else>
+                <span class="user-menu-value">{{ accountAlias }}</span>
+                <v-icon
+                  size="small"
+                  class="copy-icon"
+                  :color="copySuccess.alias ? 'success' : 'var(--primary)'"
+                  @click="copyToClipboard(accountAlias)"
+                >
+                  {{ copySuccess.alias ? 'mdi-check' : 'mdi-content-copy' }}
+                </v-icon>
+                <v-icon
+                  size="small"
+                  class="copy-icon"
+                  @click="() => { editedAlias = accountAlias; editingAlias = true }"
+                >
+                  mdi-pencil
+                </v-icon>
+              </template>
             </div>
           </div>
         </div>
@@ -68,43 +101,43 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useAuthStore } from '@/store/auth'
+import { useSecurityStore } from '@/stores/securityStore'
+import { useAccountStore } from '@/stores/accountStore'
+import { UserApi } from '@/api/user'
 import { useRouter, useRoute } from 'vue-router'
-import { supabase } from '@/plugins/supabase'
 
-const authStore = useAuthStore()
+const securityStore = useSecurityStore()
+const accountStore = useAccountStore()
 const router = useRouter()
 const route = useRoute()
 const showMenu = ref(false)
-const accountNumber = ref('')
-const username = ref('')
 const copySuccess = ref({
   username: false,
-  account: false
+  account: false,
+  alias: false
 })
 
-const userName = computed(() => authStore.user?.name || 'Usuario')
+const editingAlias = ref(false)
+const editedAlias = ref('')
+
+const userName = computed(() => securityStore.user?.firstName || 'Usuario')
+const username = computed(() => securityStore.user?.username || 'Username' )
+const accountCvu = computed(() => accountStore.account?.cvu || '')
+const accountAlias = computed(() => accountStore.account?.alias || '')
 
 async function fetchUserData() {
-  if (!authStore.user?.id) return
-  const { data, error } = await supabase
-    .from('users')
-    .select('username, accounts(account_number)')
-    .eq('id', authStore.user.id)
-    .single()
-  
-  if (!error && data) {
-    username.value = data.username
-    if (data.accounts && Array.isArray(data.accounts) && data.accounts.length > 0) {
-      accountNumber.value = data.accounts[0].account_number
-    }
+  try {
+    const user = await UserApi.get()
+    securityStore.setUser(user)
+  } catch (err) {
+    console.error('Error al obtener datos del usuario:', err)
   }
 }
 
 async function copyToClipboard(text: string) {
   try {
     await navigator.clipboard.writeText(text)
-    const key = text === username.value ? 'username' : 'account'
+    const key = text === username.value ? 'username' : text === accountCvu.value ? 'account' : 'alias'
     copySuccess.value[key] = true
     setTimeout(() => {
       copySuccess.value[key] = false
@@ -114,8 +147,19 @@ async function copyToClipboard(text: string) {
   }
 }
 
+async function confirmAliasUpdate() {
+  try {
+    await accountStore.updateAlias(editedAlias.value)
+    console.log('Alias actualizado correctamente:', editedAlias.value)
+    editingAlias.value = false
+  } catch (err) {
+    console.error('Error actualizando alias:', err)
+    console.log('Alias que se intentó actualizar:', editedAlias.value)
+  }
+}
+
 function handleLogout() {
-  authStore.clearUser()
+  securityStore.logout()
   router.push('/login')
 }
 
@@ -124,7 +168,10 @@ watch(() => route.path, () => {
   showMenu.value = false
 })
 
-onMounted(fetchUserData)
+onMounted(() => {
+  fetchUserData()
+  accountStore.fetchAccount()
+})
 </script>
 
 <style scoped>
@@ -261,4 +308,4 @@ onMounted(fetchUserData)
 .user-menu-action:hover {
   background: var(--background);
 }
-</style> 
+</style>

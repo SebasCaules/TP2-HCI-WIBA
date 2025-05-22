@@ -62,7 +62,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { useAuthStore } from "@/store/auth";
+import { useAuthStore } from "@/stores/auth";
 import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 import AddContactDialog from "@/components/AddContactDialog.vue";
