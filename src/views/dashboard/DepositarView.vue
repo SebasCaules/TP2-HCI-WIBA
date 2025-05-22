@@ -140,25 +140,50 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { supabase } from '@/plugins/supabase'
 import { useAuthStore } from '@/store/auth'
+import { useCardsStore } from '@/store/cardsStore'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import AddCardDialog from '@/components/AddCardDialog.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import { depositToAccount } from '@/services/account'
-import type { Card } from '@/types/types'
+import type { Card as ApiCard } from '@/api/cards'
+
+interface DisplayCard {
+  id: string
+  brand: string
+  number_last4: string
+  expiry: string
+  holder: string
+  logo: string
+}
 
 const amount = ref('')
 const showCardDialog = ref(false)
 const showAddCardDialog = ref(false)
-const cards = ref<Card[]>([])
-const selectedCard = ref<Card | null>(null)
+const selectedCard = ref<DisplayCard | null>(null)
 const showConfirmDialog = ref(false)
 const showSuccessDialog = ref(false)
 
 const authStore = useAuthStore()
+const cardsStore = useCardsStore()
 const userId = computed(() => authStore.user?.id)
+
+const cards = computed<DisplayCard[]>(() => {
+  if (!cardsStore.cards) return []
+  return cardsStore.cards.map(card => {
+    const cardType = card.type === 'CREDIT' ? 'Crédito' : 'Débito'
+    const last4 = card.number.match(/\d{4}$/)?.[0] || ''
+    return {
+      id: String(card.id),
+      brand: card.metadata?.brand || getCardBrand(card.number),
+      number_last4: last4,
+      expiry: card.expirationDate,
+      holder: card.fullName,
+      logo: getBrandLogo(card.metadata?.brand || getCardBrand(card.number))
+    }
+  })
+})
 
 const isAmountValid = computed(() => {
   const n = parseFloat(amount.value)
@@ -172,6 +197,7 @@ function getCardBrand(number: string) {
   if (n.startsWith('3')) return 'Amex'
   return 'Desconocida'
 }
+
 function getBrandLogo(brand: string) {
   if (brand === 'Visa') return 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png'
   if (brand === 'Mastercard') return 'https://brandlogos.net/wp-content/uploads/2021/11/mastercard-logo.png'
@@ -192,26 +218,17 @@ function formatNumber(value: string) {
 }
 
 async function fetchCards() {
-  if (!userId.value) return
-  const { data, error } = await supabase
-    .from('cards')
-    .select('*')
-    .eq('user_id', userId.value)
-    .order('created_at', { ascending: false })
-  if (error) {
-    cards.value = []
-    return
-  }
-  cards.value = (data || []).map(card => ({
-    ...card,
-    logo: getBrandLogo(card.brand)
-  }))
-  if (!selectedCard.value && cards.value.length > 0) {
-    selectedCard.value = cards.value[0]
+  try {
+    await cardsStore.fetchCards()
+    if (!selectedCard.value && cards.value.length > 0) {
+      selectedCard.value = cards.value[0]
+    }
+  } catch (error) {
+    console.error('Error fetching cards:', error)
   }
 }
 
-function selectCard(card: Card) {
+function selectCard(card: DisplayCard) {
   selectedCard.value = card
   showCardDialog.value = false
 }

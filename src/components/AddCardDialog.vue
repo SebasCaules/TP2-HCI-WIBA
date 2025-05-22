@@ -29,6 +29,21 @@
             </div>
           </div>
           <v-form @submit.prevent="addCard" class="add-card-form">
+            <div class="custom-text-field-wrapper">
+              <div class="custom-text-field-label">Tipo de tarjeta</div>
+              <v-select
+                v-model="newCard.type"
+                :items="[
+                  { title: 'Crédito', value: 'CREDIT' },
+                  { title: 'Débito', value: 'DEBIT' }
+                ]"
+                item-title="title"
+                item-value="value"
+                density="comfortable"
+                variant="underlined"
+                class="custom-select-wrapper"
+              ></v-select>
+            </div>
             <CustomTextField
               v-model="newCard.number"
               placeholder="Numero de la tarjeta"
@@ -74,23 +89,22 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
-import { supabase } from '@/plugins/supabase'
-import { useAuthStore } from '@/store/auth'
-import { v4 as uuidv4 } from 'uuid'
+import { useCardsStore } from '@/store/cardsStore'
+import type { CreateCardRequest } from '@/api/cards'
 
 const props = defineProps({
   modelValue: Boolean,
 })
 const emit = defineEmits(['update:modelValue', 'card-added'])
 
-const authStore = useAuthStore()
-const userId = computed(() => authStore.user?.id)
+const cardsStore = useCardsStore()
 
 const newCard = ref({
   number: '',
   expiry: '',
   cvv: '',
   holder: '',
+  type: 'CREDIT' as const,
 })
 const submitted = ref(false)
 const transparentPixel =
@@ -103,12 +117,14 @@ function getCardBrand(number: string) {
   if (n.startsWith('3')) return 'Amex'
   return 'Desconocida'
 }
+
 function getBrandLogo(brand: string) {
   if (brand === 'Visa') return 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png'
   if (brand === 'Mastercard') return 'https://brandlogos.net/wp-content/uploads/2021/11/mastercard-logo.png'
   if (brand === 'Amex') return 'https://upload.wikimedia.org/wikipedia/commons/f/fa/American_Express_logo_%282018%29.svg'
   return transparentPixel
 }
+
 const brand = computed(() => getCardBrand(newCard.value.number))
 const brandLogo = computed(() => getBrandLogo(brand.value))
 const maskedCardNumber = computed(() => {
@@ -127,12 +143,14 @@ const maskedCardNumber = computed(() => {
     return arr.join('').replace(/(.{4})/g, '$1 ').trim()
   }
 })
+
 const formattedExpiry = computed(() => {
   let val = newCard.value.expiry.replace(/[^\d]/g, '')
   if (val.length === 0) return 'MM/YY'
   if (val.length <= 2) return val
   return val.slice(0, 2) + '/' + val.slice(2, 4)
 })
+
 function formatCardNumber() {
   let val = newCard.value.number.replace(/\D/g, '')
   const brand = getCardBrand(val)
@@ -150,6 +168,7 @@ function formatCardNumber() {
   }
   newCard.value.number = val
 }
+
 function formatExpiry() {
   let val = newCard.value.expiry.replace(/[^\d]/g, '')
   if (val.length > 4) val = val.slice(0, 4)
@@ -159,6 +178,7 @@ function formatExpiry() {
     newCard.value.expiry = val
   }
 }
+
 const cardNumberError = computed(() => {
   if (!newCard.value.number) return 'Campo requerido'
   const brand = getCardBrand(newCard.value.number)
@@ -169,6 +189,7 @@ const cardNumberError = computed(() => {
   }
   return ''
 })
+
 const expiryError = computed(() => {
   if (!newCard.value.expiry) return 'Campo requerido'
   if (!/^\d{2}\/\d{2}$/.test(newCard.value.expiry)) return 'Formato: MM/AA'
@@ -176,6 +197,7 @@ const expiryError = computed(() => {
   if (mm && (parseInt(mm) < 1 || parseInt(mm) > 12)) return 'Mes inválido'
   return ''
 })
+
 const cvvError = computed(() => {
   if (!newCard.value.cvv) return 'Campo requerido'
   const brand = getCardBrand(newCard.value.number)
@@ -186,11 +208,13 @@ const cvvError = computed(() => {
   }
   return ''
 })
+
 const holderError = computed(() => {
   if (!newCard.value.holder) return 'Campo requerido'
   if (newCard.value.holder.length <= 2) return 'Nombre muy corto'
   return ''
 })
+
 const addCardError = computed(() => {
   if (!newCard.value.number || !newCard.value.expiry || !newCard.value.cvv || !newCard.value.holder) {
     return 'Campos faltantes';
@@ -201,33 +225,35 @@ const addCardError = computed(() => {
   if (holderError.value) return 'Nombre inválido';
   return '';
 });
+
 async function addCard() {
   submitted.value = true
   if (addCardError.value) {
     return
   }
-  if (!userId.value) {
-    alert('No user ID. Please log in again.')
-    return
+
+  try {
+    const cardData: CreateCardRequest = {
+      type: newCard.value.type,
+      number: newCard.value.number.replace(/\s/g, ''),
+      expirationDate: newCard.value.expiry,
+      fullName: newCard.value.holder,
+      cvv: newCard.value.cvv,
+      metadata: {
+        brand: getCardBrand(newCard.value.number)
+      }
+    }
+
+    await cardsStore.addCard(cardData)
+    emit('update:modelValue', false)
+    emit('card-added')
+    newCard.value = { number: '', expiry: '', cvv: '', holder: '', type: 'CREDIT' }
+    submitted.value = false
+  } catch (error: any) {
+    console.error('Error adding card:', error)
+    const errorMessage = error?.description || error?.message || 'No se pudo agregar la tarjeta'
+    alert(errorMessage)
   }
-  const last4 = newCard.value.number.replace(/\D/g, '').slice(-4)
-  const brandVal = getCardBrand(newCard.value.number)
-  const cardToInsert = {
-    id: uuidv4(),
-    user_id: userId.value,
-    brand: brandVal,
-    number_last4: last4,
-    expiry: newCard.value.expiry,
-    holder: newCard.value.holder,
-  }
-  const { error } = await supabase.from('cards').insert([cardToInsert])
-  if (error) {
-    alert('No se pudo agregar la tarjeta: ' + error.message)
-  }
-  emit('update:modelValue', false)
-  emit('card-added')
-  newCard.value = { number: '', expiry: '', cvv: '', holder: '' }
-  submitted.value = false
 }
 </script>
 
@@ -440,5 +466,101 @@ async function addCard() {
   text-align: center;
   width: 100%;
   min-height: 1.5rem;
+}
+.custom-text-field-wrapper {
+  width: 100%;
+  margin-bottom: 0.2rem;
+}
+.custom-text-field-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--muted-text);
+  margin-bottom: 0.4rem;
+  font-family: var(--font-sans), sans-serif;
+}
+.custom-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+.custom-select-wrapper :deep(.v-select) {
+  width: 100%;
+}
+.custom-select-wrapper :deep(.v-field) {
+  border: 1.5px solid #bdbdbd !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  padding: 0 1.1rem !important;
+  height: 50px !important;
+  transition: border-color 0.18s !important;
+}
+.custom-select-wrapper :deep(.v-field:hover) {
+  border-color: #9a9a9a !important;
+}
+.custom-select-wrapper :deep(.v-field--focused) {
+  border-color: #489fb5 !important;
+}
+.custom-select-wrapper :deep(.v-field__input) {
+  display: flex !important;
+  align-items: center !important;
+  font-size: 1.06rem !important;
+  font-family: var(--font-sans, sans-serif) !important;
+  font-weight: 400 !important;
+  color: #424242 !important;
+  padding: 0.2rem 0 !important;
+  letter-spacing: 0.01em !important;
+}
+.custom-select-wrapper :deep(.v-select__selection) {
+  display: flex !important;
+  align-items: center !important;
+}
+.custom-select-wrapper :deep(.v-field__outline) {
+  display: none !important;
+}
+.custom-select-wrapper :deep(.v-label) {
+  font-size: 0.97rem !important;
+  color: #757575 !important;
+  font-weight: 400 !important;
+  font-family: var(--font-sans, sans-serif) !important;
+  letter-spacing: 0.01em !important;
+}
+.custom-select-wrapper :deep(.v-field--error) {
+  border-color: #e53935 !important;
+}
+.custom-select-wrapper :deep(.v-field--error .v-label) {
+  color: #e53935 !important;
+}
+.custom-select-wrapper :deep(.v-field--error .v-field__input) {
+  color: #e53935 !important;
+}
+.custom-select-wrapper :deep(.v-field--disabled) {
+  opacity: 0.7 !important;
+  cursor: not-allowed !important;
+}
+.custom-select-wrapper :deep(.v-select__selection-text) {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  line-height: normal !important;
+}
+.custom-select-wrapper :deep(.v-select__icon) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
+  position: absolute !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  right: 1rem !important;
+}
+.custom-select-wrapper :deep(.v-field__input) {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.custom-select-wrapper :deep(.v-field__append-inner) {
+  padding-top: 0 !important;
+  align-items: center !important;
 }
 </style> 

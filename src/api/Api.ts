@@ -24,13 +24,18 @@ class Api {
     }
 
     static async fetch(url: string, secure: boolean, init: FetchOptions = {}, controller?: AbortController): Promise<ApiResponse> {
+        console.log('API fetch called:', { url, secure, hasToken: !!Api.token });
+        
         if (secure && Api.token) {
+            console.log('Adding authorization header with token');
             if (!init.headers) {
                 init.headers = new Headers();
             } else if (typeof init.headers === 'object' && !(init.headers instanceof Headers)) {
                 init.headers = new Headers(init.headers);
             }
             (init.headers as Headers).set("Authorization", `bearer ${Api.token}`);
+        } else if (secure && !Api.token) {
+            console.error('Secure request made without token');
         }
 
         controller = controller || new AbortController();
@@ -38,20 +43,28 @@ class Api {
         const timer = setTimeout(() => controller.abort(), Api.timeout);
 
         try {
+            console.log('Making fetch request to:', url);
             const response = await fetch(url, init);
+            console.log('Response status:', response.status);
             const text = await response.text();
+            console.log('Response text:', text);
             const json = text ? JSON.parse(text) : {};
             
             if (!response.ok) {
+                console.error('API error:', { status: response.status, json });
                 throw { 
                     code: response.status, 
                     description: json.message || response.statusText || 'Error en la solicitud'
                 } as ApiError;
             }
             
-            if (json.message) throw { code: 97, description: json.message } as ApiError;
+            if (json.message) {
+                console.error('API message error:', json.message);
+                throw { code: 97, description: json.message } as ApiError;
+            }
             return json;
         } catch (error) {
+            console.error('API fetch error:', error);
             if (error instanceof Error) {
                 if (error.name === "AbortError")
                     throw { code: 98, description: error.message.toLowerCase() } as ApiError;

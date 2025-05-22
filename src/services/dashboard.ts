@@ -3,7 +3,7 @@ import { getUserProfile } from './users'
 import { getTransactions } from './transactions'
 import { getBills } from './bills'
 import { fetchContacts } from './contacts'
-import { getCards } from './cards'
+import { getCards } from '../api/cards'
 import type {
   User,
   Account,
