@@ -2,231 +2,199 @@
   <v-container class="pagos-container" fluid>
     <h1 class="pagos-title">Gestión de Pagos</h1>
 
-    <div class="pagos-options">
-      <button class="pagos-btn" @click="openPullDialog">Crear Orden (pull)</button>
-      <button class="pagos-btn" @click="openTransferDialog">Transferir por Email</button>
-      <button class="pagos-btn" @click="loadPayments">Ver Pagos</button>
-    </div>
+    <v-row class="mb-6" justify="center" align="center" no-gutters>
+      <v-col cols="12" sm="6" md="3">
+        <v-btn class="pagos-btn" block @click="openDialog('pull')">Crear Orden</v-btn>
+      </v-col>
+      <v-col cols="12" sm="6" md="3">
+        <v-btn class="pagos-btn" block @click="openDialog('email')">Transferir por Email</v-btn>
+      </v-col>
+      <v-col cols="12" sm="6" md="3">
+        <v-btn class="pagos-btn" block @click="openDialog('cvu')">Transferir por CVU</v-btn>
+      </v-col>
+      <v-col cols="12" sm="6" md="3">
+        <v-btn class="pagos-btn" block @click="openDialog('alias')">Transferir por Alias</v-btn>
+      </v-col>
+    </v-row>
 
-    <!-- Pull Payment Dialog -->
-    <v-dialog v-model="showPullDialog" max-width="500">
-      <v-card class="pagos-dialog">
-        <div class="pagos-dialog-header">
-          <span class="pagos-dialog-title">Nueva Orden de Pago</span>
-          <v-btn icon class="dialog-close-btn" @click="showPullDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </div>
-        <div class="pagos-dialog-content">
-          <input v-model="pullDescription" type="text" placeholder="Descripción" class="pagos-input" />
-          <input v-model.number="pullAmount" type="number" placeholder="Monto" class="pagos-input" />
-        </div>
-        <div class="pagos-dialog-actions">
-          <button class="pagos-submit-btn" @click="createPullPayment">Confirmar</button>
-        </div>
+    <v-alert v-if="errorMessage" type="error" class="mb-4" dismissible @input="errorMessage = ''">
+      {{ errorMessage }}
+    </v-alert>
+
+    <!-- Form Dialog -->
+    <v-dialog v-model="dialog.visible" max-width="500">
+      <v-card>
+        <v-card-title class="text-h6">{{ dialog.title }}</v-card-title>
+        <v-card-text>
+          <v-text-field v-if="dialog.type !== 'pull'" v-model="form.to" :label="dialog.toLabel" :type="dialog.inputType || 'text'" />
+          <v-text-field v-model="form.description" label="Descripción" />
+          <v-text-field v-model.number="form.amount" label="Monto" type="number" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="dialog.visible = false">Cancelar</v-btn>
+          <v-btn class="pagos-btn" @click="submitForm" :loading="loading">Aceptar</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- Transfer Email Dialog -->
-    <v-dialog v-model="showTransferDialog" max-width="500">
-      <v-card class="pagos-dialog">
-        <div class="pagos-dialog-header">
-          <span class="pagos-dialog-title">Transferencia por Email</span>
-          <v-btn icon class="dialog-close-btn" @click="showTransferDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </div>
-        <div class="pagos-dialog-content">
-          <input v-model="email" type="email" placeholder="Email del destinatario" class="pagos-input" />
-          <input v-model="transferDescription" type="text" placeholder="Descripción" class="pagos-input" />
-          <input v-model.number="transferAmount" type="number" placeholder="Monto" class="pagos-input" />
-        </div>
-        <div class="pagos-dialog-actions">
-          <button class="pagos-submit-btn" @click="transferByEmail">Transferir</button>
-        </div>
-      </v-card>
-    </v-dialog>
+    <v-divider class="my-6"></v-divider>
 
-    <!-- Payments List -->
-    <div class="pagos-section" v-if="payments.length">
-      <h2>Pagos Realizados</h2>
-      <ul>
-        <li v-for="p in payments" :key="p.uuid">
-          <strong>ID:</strong> {{ p.uuid }} - ${{ p.amount }} - {{ p.description }} ({{ p.method || 'PULL' }})
-        </li>
-      </ul>
-    </div>
+    <h2 class="text-h6 mb-4">Historial de Pagos</h2>
+    <v-btn class="pagos-btn mb-4" @click="loadPayments" :loading="loading">Actualizar</v-btn>
+
+    <v-list v-if="payments.length">
+      <v-list-item v-for="p in payments" :key="p.uuid">
+        <v-list-item-content>
+          <v-list-item-title>{{ p.description }} - ${{ p.amount }}</v-list-item-title>
+          <v-list-item-subtitle>ID: {{ p.uuid }} | Método: {{ p.method || 'PULL' }}</v-list-item-subtitle>
+        </v-list-item-content>
+        <v-list-item-action>
+          <v-btn icon @click="pushPayment(p.uuid)" :disabled="loading">
+            <v-icon>mdi-send</v-icon>
+          </v-btn>
+        </v-list-item-action>
+      </v-list-item>
+    </v-list>
+
+    <v-alert v-else type="info">No hay pagos disponibles.</v-alert>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, onErrorCaptured } from 'vue';
+import { ref } from 'vue';
 import { PaymentApi } from '@/services/payment';
 
-const showPullDialog = ref(false);
-const showTransferDialog = ref(false);
+const dialog = ref({
+  visible: false,
+  type: '',
+  title: '',
+  toLabel: '',
+  inputType: 'text',
+});
+
 const payments = ref<any[]>([]);
+const loading = ref(false);
+const errorMessage = ref('');
 
-const pullDescription = ref('');
-const pullAmount = ref(0);
+const form = ref({
+  to: '',
+  description: '',
+  amount: 0,
+});
 
-const transferDescription = ref('');
-const transferAmount = ref(0);
-const email = ref('');
+function openDialog(type: 'pull' | 'email' | 'cvu' | 'alias') {
+  dialog.value.visible = true;
+  dialog.value.type = type;
+  form.value = { to: '', description: '', amount: 0 };
 
-function openPullDialog() {
-  showPullDialog.value = true;
-}
-
-function openTransferDialog() {
-  showTransferDialog.value = true;
-}
-
-async function createPullPayment() {
-  try {
-    const payload = {
-      description: pullDescription.value,
-      amount: pullAmount.value,
-      metadata: {}
-    };
-    const res = await PaymentApi.pull(payload);
-    if (res && res.uuid) {
-      payments.value.push(res);
-    }
-    pullDescription.value = '';
-    pullAmount.value = 0;
-    showPullDialog.value = false;
-  } catch (err) {
-    console.error('Error al crear orden:', err);
+  switch (type) {
+    case 'pull':
+      dialog.value.title = 'Nueva Orden de Pago';
+      dialog.value.toLabel = '';
+      break;
+    case 'email':
+      dialog.value.title = 'Transferencia por Email';
+      dialog.value.toLabel = 'Email';
+      dialog.value.inputType = 'email';
+      break;
+    case 'cvu':
+      dialog.value.title = 'Transferencia por CVU';
+      dialog.value.toLabel = 'CVU';
+      break;
+    case 'alias':
+      dialog.value.title = 'Transferencia por Alias';
+      dialog.value.toLabel = 'Alias';
+      break;
   }
 }
 
-async function transferByEmail() {
+async function submitForm() {
+  if (!form.value.description || form.value.amount <= 0 || (dialog.value.toLabel && !form.value.to)) {
+    errorMessage.value = 'Complete todos los campos obligatorios.';
+    return;
+  }
+
+  loading.value = true;
   try {
     const payload = {
-      description: transferDescription.value,
-      amount: transferAmount.value,
-      metadata: {}
+      description: form.value.description,
+      amount: form.value.amount,
+      metadata: {},
     };
-    const res = await PaymentApi.transferByEmail(email.value, payload);
-    if (res && res.uuid) {
-      payments.value.push(res);
+
+    let res;
+    switch (dialog.value.type) {
+      case 'pull':
+        res = await PaymentApi.pull(payload);
+        break;
+      case 'email':
+        res = await PaymentApi.transferByEmail(form.value.to, payload);
+        break;
+      case 'cvu':
+        res = await PaymentApi.transferByCVU(form.value.to, payload);
+        break;
+      case 'alias':
+        res = await PaymentApi.transferByAlias(form.value.to, payload);
+        break;
     }
-    email.value = '';
-    transferDescription.value = '';
-    transferAmount.value = 0;
-    showTransferDialog.value = false;
+
+    if (res?.uuid) payments.value.push(res);
+    dialog.value.visible = false;
   } catch (err) {
-    console.error('Error en la transferencia:', err);
+    errorMessage.value = 'Ocurrió un error al procesar el pago';
+    console.error(err);
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function pushPayment(uuid: string) {
+  try {
+    await PaymentApi.push(uuid);
+    alert('Push realizado con éxito');
+  } catch (err) {
+    errorMessage.value = 'Error al realizar el push';
   }
 }
 
 async function loadPayments() {
+  loading.value = true;
   try {
     const res = await PaymentApi.getAll();
     payments.value = res?.results || [];
   } catch (err) {
-    console.error('Error al obtener pagos:', err);
+    errorMessage.value = 'No se pudieron obtener los pagos';
+  } finally {
+    loading.value = false;
   }
 }
-
-onErrorCaptured((err) => {
-  console.error('🔥 Error capturado en render:', err);
-  return false;
-});
 </script>
 
 <style scoped>
 .pagos-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   padding: 2rem;
   background-color: var(--background);
-  height: 100vh;
+  min-height: 100vh;
 }
 
 .pagos-title {
   font-size: 1.8rem;
   font-weight: bold;
-  margin-bottom: 1rem;
-}
-
-.pagos-options {
-  display: flex;
-  gap: 1rem;
   margin-bottom: 2rem;
+  text-align: center;
+  color: var(--primary-text);
 }
 
-.pagos-btn,
-.pagos-submit-btn {
+.pagos-btn {
   background-color: var(--primary);
-  color: #fff;
-  padding: 0.5rem 1.5rem;
-  border: none;
+  color: white;
+  font-weight: 500;
+  text-transform: none;
   border-radius: 0.5rem;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.3s ease;
 }
 
-.pagos-btn:hover,
-.pagos-submit-btn:hover {
-  filter: brightness(1.05);
-}
-
-.pagos-dialog {
-  border-radius: 1rem;
-  padding: 1.5rem;
-}
-
-.pagos-dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.pagos-dialog-title {
-  font-weight: 700;
-  font-size: 1.2rem;
-}
-
-.pagos-dialog-content {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.pagos-dialog-actions {
-  margin-top: 1rem;
-  display: flex;
-  justify-content: center;
-}
-
-.pagos-input {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-}
-
-.dialog-close-btn {
-  color: var(--muted-text);
-}
-
-.pagos-section ul {
-  list-style: none;
-  padding: 0;
-  width: 100%;
-  max-width: 600px;
-}
-
-.pagos-section li {
-  margin-bottom: 0.5rem;
-  background: #f9f9f9;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
+.pagos-btn:hover {
+  filter: brightness(1.1);
 }
 </style>
