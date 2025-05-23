@@ -7,13 +7,13 @@
         <v-btn class="pagos-btn" block @click="openDialog('pull')">Crear Orden</v-btn>
       </v-col>
       <v-col cols="12" sm="6" md="3">
-        <v-btn class="pagos-btn" block @click="openDialog('email')">Transferir por Email</v-btn>
+        <v-btn class="pagos-btn" block @click="openDialog('email')">Pagar por Email</v-btn>
       </v-col>
       <v-col cols="12" sm="6" md="3">
-        <v-btn class="pagos-btn" block @click="openDialog('cvu')">Transferir por CVU</v-btn>
+        <v-btn class="pagos-btn" block @click="openDialog('cvu')">Pagar por CVU</v-btn>
       </v-col>
       <v-col cols="12" sm="6" md="3">
-        <v-btn class="pagos-btn" block @click="openDialog('alias')">Transferir por Alias</v-btn>
+        <v-btn class="pagos-btn" block @click="openDialog('alias')">Pagar por Alias</v-btn>
       </v-col>
     </v-row>
 
@@ -92,26 +92,37 @@ function openDialog(type: 'pull' | 'email' | 'cvu' | 'alias') {
     case 'pull':
       dialog.value.title = 'Nueva Orden de Pago';
       dialog.value.toLabel = '';
+      dialog.value.inputType = 'text';
       break;
     case 'email':
-      dialog.value.title = 'Transferencia por Email';
+      dialog.value.title = 'Pagar por Email';
       dialog.value.toLabel = 'Email';
       dialog.value.inputType = 'email';
       break;
     case 'cvu':
-      dialog.value.title = 'Transferencia por CVU';
+      dialog.value.title = 'Pagar por CVU';
       dialog.value.toLabel = 'CVU';
+      dialog.value.inputType = 'text';
       break;
     case 'alias':
-      dialog.value.title = 'Transferencia por Alias';
+      dialog.value.title = 'Pagar por Alias';
       dialog.value.toLabel = 'Alias';
+      dialog.value.inputType = 'text';
       break;
   }
 }
 
 async function submitForm() {
-  if (!form.value.description || form.value.amount <= 0 || (dialog.value.toLabel && !form.value.to)) {
-    errorMessage.value = 'Complete todos los campos obligatorios.';
+  if (!form.value.description.trim()) {
+    errorMessage.value = 'La descripción es obligatoria.';
+    return;
+  }
+  if (form.value.amount <= 0) {
+    errorMessage.value = 'El monto debe ser mayor a 0.';
+    return;
+  }
+  if (dialog.value.toLabel && !form.value.to.trim()) {
+    errorMessage.value = `El campo ${dialog.value.toLabel} es obligatorio.`;
     return;
   }
 
