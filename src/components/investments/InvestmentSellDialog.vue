@@ -17,7 +17,12 @@
                     <div class="withdraw-form">
                         <div class="mb-4">
                             <strong>Saldo disponible:</strong>
-                            {{ formatMoney(totalBalance) }}
+                            <div class="available-balance">
+                                {{ formatMoney(totalBalance) }}
+                                <span class="balance-detail">
+                                    (Invertido + Ganancia)
+                                </span>
+                            </div>
                         </div>
 
                         <CustomTextField
@@ -203,5 +208,19 @@ watch(() => props.modelValue, (newValue: boolean) => {
     min-width: 160px;
     max-width: 220px;
     width: 100%;
+}
+
+.available-balance {
+    margin-top: 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.balance-detail {
+    font-size: 0.9rem;
+    font-weight: normal;
+    color: var(--muted-text);
+    margin-left: 0.5rem;
 }
 </style> 

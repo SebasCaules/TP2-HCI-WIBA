@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useSecurityStore } from '@/stores/securityStore'
-import InversionesNewView from '@/views/dashboard/InversionesNewView.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -54,11 +53,6 @@ const router = createRouter({
                     path: 'inversiones',
                     name: 'inversiones',
                     component: () => import('@/views/dashboard/InversionesView.vue')
-                },
-                {
-                    path: 'inversionesNew',
-                    name: 'inversionesNew',
-                    component: InversionesNewView,
                 },
                 {
                     path: 'depositar',

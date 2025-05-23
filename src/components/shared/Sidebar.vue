@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 const navItems = [
@@ -37,7 +37,6 @@ const navItems = [
   { label: 'Tarjetas', to: '/dashboard/tarjetas', icon: 'mdi-credit-card-multiple' },
   { label: 'Inversiones', to: '/dashboard/inversiones', icon: 'mdi-finance' },
   { label: 'Contactos', to: '/dashboard/contactos', icon: 'mdi-account-multiple' },
-  { label: 'InversionesNew', to: '/dashboard/inversionesNew', icon: 'mdi-finance' },
 ]
 
 const route = useRoute()

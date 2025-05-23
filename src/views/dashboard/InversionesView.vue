@@ -259,7 +259,7 @@
             <InvestmentSellDialog
                 v-model="withdrawDialog"
                 :selected-investment="selectedInvestment"
-                :total-balance="totalBalance"
+                :total-balance="totalBalance + totalGain"
                 @continue="handleWithdrawContinue"
             />
 
@@ -429,7 +429,7 @@ const handleInvestmentContinue = (data: { amount: number }) => {
 };
 
 const handleWithdrawContinue = (data: { amount: number }) => {
-    if (data.amount > totalBalance.value) {
+    if (data.amount > totalBalance.value + totalGain.value) {
         // Show error message
         return;
     }
