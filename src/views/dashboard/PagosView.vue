@@ -1,70 +1,64 @@
 <template>
-    <v-container fluid class="pagos-main">
-        <v-row class="pagos-row" no-gutters>
-            <v-col cols="12" class="px-md-8">
-                <h1 class="pagos-title">Pago de Servicios</h1>
-                <div class="card">
-                    <BaseDataTable
-                        :items="bills"
-                        :headers="headers"
-                        :items-per-page="10"
-                        :loading="loading"
-                        empty-icon="mdi-receipt"
-                        no-data-message="No hay facturas disponibles"
-                    >
-                        <template #item.title="{ item }">
-                            <div class="pago-title">{{ item.title }}</div>
-                        </template>
+  <v-container class="pagos-container" fluid>
+    <h1 class="pagos-title">Gestión de Pagos</h1>
 
-                        <template #item.provider="{ item }">
-                            <div class="pago-provider">{{ item.provider }}</div>
-                        </template>
+    <v-row class="mb-6" justify="center" align="center" no-gutters>
+      <v-col cols="12" sm="6" md="3">
+        <v-btn class="pagos-btn" block @click="openDialog('pull')">Crear Orden</v-btn>
+      </v-col>
+      <v-col cols="12" sm="6" md="3">
+        <v-btn class="pagos-btn" block @click="openDialog('email')">Pagar por Email</v-btn>
+      </v-col>
+      <v-col cols="12" sm="6" md="3">
+        <v-btn class="pagos-btn" block @click="openDialog('cvu')">Pagar por CVU</v-btn>
+      </v-col>
+      <v-col cols="12" sm="6" md="3">
+        <v-btn class="pagos-btn" block @click="openDialog('alias')">Pagar por Alias</v-btn>
+      </v-col>
+    </v-row>
 
-                        <template #item.amount="{ item }">
-                            <div class="pago-amount">
-                                ${{
-                                    item.amount.toLocaleString("es-AR", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                    })
-                                }}
-                            </div>
-                        </template>
+    <v-alert v-if="errorMessage" type="error" class="mb-4" dismissible @input="errorMessage = ''">
+      {{ errorMessage }}
+    </v-alert>
 
-                        <template #item.due_date="{ item }">
-                            <div class="pago-date">{{ formatDate(item.due_date) }}</div>
-                        </template>
+    <!-- Form Dialog -->
+    <v-dialog v-model="dialog.visible" max-width="500">
+      <v-card>
+        <v-card-title class="text-h6">{{ dialog.title }}</v-card-title>
+        <v-card-text>
+          <v-text-field v-if="dialog.type !== 'pull'" v-model="form.to" :label="dialog.toLabel" :type="dialog.inputType || 'text'" />
+          <v-text-field v-model="form.description" label="Descripción" />
+          <v-text-field v-model.number="form.amount" label="Monto" type="number" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="dialog.visible = false">Cancelar</v-btn>
+          <v-btn class="pagos-btn" @click="submitForm" :loading="loading">Aceptar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
-                        <template #item.status="{ item }">
-                            <div class="pago-status">
-                                <v-chip
-                                    :color="getStatusColor(item.status)"
-                                    size="small"
-                                    class="status-chip"
-                                >
-                                    {{ getStatusText(item.status) }}
-                                </v-chip>
-                            </div>
-                        </template>
+    <v-divider class="my-6"></v-divider>
 
-                        <template #item.actions="{ item }">
-                            <div class="pago-actions">
-                                <v-btn
-                                    v-if="item.status !== 'paid'"
-                                    color="primary"
-                                    size="small"
-                                    @click="payBill(item.id)"
-                                    :loading="payingBillId === item.id"
-                                >
-                                    Pagar
-                                </v-btn>
-                            </div>
-                        </template>
-                    </BaseDataTable>
-                </div>
-            </v-col>
-        </v-row>
-    </v-container>
+    <h2 class="text-h6 mb-4">Historial de Pagos</h2>
+    <v-btn class="pagos-btn mb-4" @click="loadPayments" :loading="loading">Actualizar</v-btn>
+
+    <v-list v-if="payments.length">
+      <v-list-item v-for="p in payments" :key="p.uuid">
+        <v-list-item-content>
+          <v-list-item-title>{{ p.description }} - ${{ p.amount }}</v-list-item-title>
+          <v-list-item-subtitle>ID: {{ p.uuid }}</v-list-item-subtitle>
+        </v-list-item-content>
+        <v-list-item-action>
+          <v-btn icon @click="pushPayment(p.uuid)" :disabled="loading">
+            <v-icon>mdi-send</v-icon>
+          </v-btn>
+        </v-list-item-action>
+      </v-list-item>
+    </v-list>
+
+    <v-alert v-else type="info">No hay pagos disponibles.</v-alert>
+  </v-container>
 </template>
 
 <script setup lang="ts">
@@ -73,146 +67,149 @@ import { useAuthStore } from "@/stores/auth";
 import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 import { getBills, updateBillStatus } from "@/services/bills";
 import type { Bill } from "@/types/types";
+import { PaymentApi } from '@/services/payment';
 
-const authStore = useAuthStore();
-const userId = computed(() => authStore.user?.id);
+const dialog = ref({
+  visible: false,
+  type: '',
+  title: '',
+  toLabel: '',
+  inputType: 'text',
+});
 
-const bills = ref<Bill[]>([]);
-const loading = ref(true);
-const payingBillId = ref<string | null>(null);
+const payments = ref<any[]>([]);
+const loading = ref(false);
+const errorMessage = ref('');
 
-const headers = [
-    { title: "Título", key: "title", align: "start" as const },
-    { title: "Proveedor", key: "provider", align: "start" as const },
-    { title: "Monto", key: "amount", align: "end" as const },
-    { title: "Vencimiento", key: "due_date", align: "end" as const },
-    { title: "Estado", key: "status", align: "center" as const },
-    { title: "Acciones", key: "actions", align: "end" as const },
-];
+const form = ref({
+  to: '',
+  description: '',
+  amount: 0,
+});
 
-async function fetchBills() {
-    if (!userId.value) return;
-    loading.value = true;
-    try {
-        bills.value = await getBills(userId.value);
-    } catch (error) {
-        console.error("Error fetching bills:", error);
-    } finally {
-        loading.value = false;
+function openDialog(type: 'pull' | 'email' | 'cvu' | 'alias') {
+  dialog.value.visible = true;
+  dialog.value.type = type;
+  form.value = { to: '', description: '', amount: 0 };
+
+  switch (type) {
+    case 'pull':
+      dialog.value.title = 'Nueva Orden de Pago';
+      dialog.value.toLabel = '';
+      dialog.value.inputType = 'text';
+      break;
+    case 'email':
+      dialog.value.title = 'Pagar por Email';
+      dialog.value.toLabel = 'Email';
+      dialog.value.inputType = 'email';
+      break;
+    case 'cvu':
+      dialog.value.title = 'Pagar por CVU';
+      dialog.value.toLabel = 'CVU';
+      dialog.value.inputType = 'text';
+      break;
+    case 'alias':
+      dialog.value.title = 'Pagar por Alias';
+      dialog.value.toLabel = 'Alias';
+      dialog.value.inputType = 'text';
+      break;
+  }
+}
+
+async function submitForm() {
+  if (!form.value.description.trim()) {
+    errorMessage.value = 'La descripción es obligatoria.';
+    return;
+  }
+  if (form.value.amount <= 0) {
+    errorMessage.value = 'El monto debe ser mayor a 0.';
+    return;
+  }
+  if (dialog.value.toLabel && !form.value.to.trim()) {
+    errorMessage.value = `El campo ${dialog.value.toLabel} es obligatorio.`;
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const payload = {
+      description: form.value.description,
+      amount: form.value.amount,
+      metadata: {},
+    };
+
+    let res;
+    switch (dialog.value.type) {
+      case 'pull':
+        res = await PaymentApi.pull(payload);
+        break;
+      case 'email':
+        res = await PaymentApi.transferByEmail(form.value.to, payload);
+        break;
+      case 'cvu':
+        res = await PaymentApi.transferByCVU(form.value.to, payload);
+        break;
+      case 'alias':
+        res = await PaymentApi.transferByAlias(form.value.to, payload);
+        break;
     }
+
+    if (res?.uuid) payments.value.push(res);
+    dialog.value.visible = false;
+  } catch (err) {
+    errorMessage.value = 'Ocurrió un error al procesar el pago';
+    console.error(err);
+  } finally {
+    loading.value = false;
+  }
 }
 
-async function payBill(billId: string) {
-    if (!userId.value) return;
-    payingBillId.value = billId;
-    try {
-        const { success } = await updateBillStatus(billId, "paid");
-        if (success) {
-            await fetchBills();
-        }
-    } catch (error) {
-        console.error("Error paying bill:", error);
-    } finally {
-        payingBillId.value = null;
-    }
+async function pushPayment(uuid: string) {
+  try {
+    await PaymentApi.push(uuid);
+    alert('Push realizado con éxito');
+  } catch (err) {
+    errorMessage.value = 'Error al realizar el push';
+  }
 }
 
-function formatDate(date: string): string {
-    if (!date) return "Fecha no disponible";
-    const parsedDate = new Date(date);
-    return isNaN(parsedDate.getTime())
-        ? "Fecha inválida"
-        : parsedDate.toLocaleDateString("es-AR");
+async function loadPayments() {
+  loading.value = true;
+  try {
+    const res = await PaymentApi.getAll();
+    payments.value = res?.results || [];
+  } catch (err) {
+    errorMessage.value = 'No se pudieron obtener los pagos';
+  } finally {
+    loading.value = false;
+  }
 }
-
-function getStatusColor(status: string): string {
-    switch (status) {
-        case "paid":
-            return "success";
-        case "pending":
-            return "warning";
-        case "overdue":
-            return "error";
-        default:
-            return "grey";
-    }
-}
-
-function getStatusText(status: string): string {
-    switch (status) {
-        case "paid":
-            return "Pagado";
-        case "pending":
-            return "Pendiente";
-        case "overdue":
-            return "Vencido";
-        default:
-            return status;
-    }
-}
-
-onMounted(fetchBills);
 </script>
 
 <style scoped>
-.pagos-main {
-    background: var(--background);
-    min-height: 100vh;
+.pagos-container {
+  padding: 2rem;
+  background-color: var(--background);
+  min-height: 100vh;
 }
 
 .pagos-title {
-    font-size: 2.2rem;
-    font-weight: 800;
-    margin-bottom: 1.5rem;
-    margin-top: 0.5rem;
-    font-family: var(--font-sans), sans-serif;
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  text-align: center;
+  color: var(--primary-text);
 }
 
-.pagos-table {
-    background: transparent;
+.pagos-btn {
+  background-color: var(--primary);
+  color: white;
+  font-weight: 500;
+  text-transform: none;
+  border-radius: 0.5rem;
 }
 
-.pagos-table :deep(th),
-.pagos-table :deep(td) {
-    padding: 12px 16px !important;
-}
-
-.pagos-table :deep(th) {
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--text);
-    white-space: nowrap;
-    background-color: var(--card);
-    border-bottom: none;
-}
-
-.pago-title {
-    font-weight: 500;
-}
-
-.pago-provider {
-    color: var(--muted-text);
-}
-
-.pago-amount {
-    font-weight: 600;
-    text-align: right;
-}
-
-.pago-date {
-    color: var(--muted-text);
-    text-align: right;
-}
-
-.pago-status {
-    text-align: center;
-}
-
-.status-chip {
-    font-weight: 500;
-}
-
-.pago-actions {
-    text-align: right;
+.pagos-btn:hover {
+  filter: brightness(1.1);
 }
 </style>
