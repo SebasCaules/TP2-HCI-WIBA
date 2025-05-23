@@ -67,7 +67,7 @@ import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 import AddContactDialog from "@/components/AddContactDialog.vue";
 import ConfirmContactDialog from "@/components/ConfirmContactDialog.vue";
-import { fetchContacts, removeContact, addContact, loading as contactsLoading } from "@/services/contacts";
+import { fetchContacts, removeContact, addContact, loading as contactsLoading } from "@/services/contactsDeprecated";
 import type { Contact } from "@/types/types";
 import { useRouter } from "vue-router";
 

@@ -1,0 +1,127 @@
+/* Button Base Styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-weight: var(--font-medium);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    border: none;
+    outline: none;
+    text-decoration: none;
+    gap: var(--spacing-sm);
+    font-family: var(--font-sans);
+    min-width: 200px;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Filled Button */
+.filled-btn {
+    width: 100%;
+    max-width: v-bind('fullWidth ? "100%" : "340px"');
+    min-width: 200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    border-radius: var(--radius-full);
+    height: 50px;
+    background: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+    box-shadow: none;
+    text-transform: none;
+    letter-spacing: normal;
+    border: none;
+    outline: none;
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    text-decoration: none;
+    padding: 0 1.5rem;
+}
+
+.filled-btn:not(.btn-secondary):hover:not(:disabled) {
+    background: var(--hover) !important;
+}
+
+.filled-btn.btn-secondary {
+    background: var(--muted) !important;
+    color: var(--muted-foreground) !important;
+    border: 1px solid var(--border) !important;
+}
+
+.filled-btn.btn-secondary:hover:not(:disabled) {
+    background: var(--muted-hover) !important;
+    color: var(--muted-foreground-hover) !important;
+    border-color: var(--border-hover) !important;
+}
+
+/* Icon Filled Button */
+.icon-filled-btn {
+    width: 100%;
+    max-width: v-bind('fullWidth ? "100%" : "340px"');
+    min-width: 200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    border-radius: var(--radius-full);
+    height: 50px;
+    background: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+    box-shadow: none;
+    text-transform: none;
+    letter-spacing: normal;
+    border: none;
+    outline: none;
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    text-decoration: none;
+    padding: 0 1.5rem;
+    gap: 0.5rem;
+}
+
+.icon-filled-btn:hover:not(:disabled) {
+    background: var(--hover) !important;
+}
+
+.icon-filled-btn__icon {
+    display: flex;
+    align-items: center;
+}
+
+.icon-filled-btn__text {
+    display: flex;
+    align-items: center;
+    font-weight: var(--font-semibold);
+}
+
+/* Responsive Button Grid */
+.dashboard-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+    width: 100%;
+}
+
+@media (max-width: 1400px) {
+    .dashboard-actions {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .dashboard-actions {
+        grid-template-columns: 1fr;
+    }
+} 

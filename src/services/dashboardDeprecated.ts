@@ -1,8 +1,8 @@
 import { supabase } from '@/plugins/supabase'
-import { getUserProfile } from './users'
+import { getUserProfile } from './userDeprecated'
 import { getTransactions } from './transactions'
 import { getBills } from './bills'
-import { fetchContacts } from './contacts'
+import { fetchContacts } from './contactsDeprecated'
 import { getCards } from '../api/cards'
 import type {
   User,

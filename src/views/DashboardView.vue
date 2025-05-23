@@ -45,28 +45,24 @@
                         <div class="dashboard-actions">
                             <IconFilledButton
                                 icon="mdi-arrow-down"
-                                class="dashboard-action-btn"
                                 @click="$router.push('/dashboard/depositar')"
                             >
                                 Depositar
                             </IconFilledButton>
                             <IconFilledButton
                                 icon="mdi-arrow-right"
-                                class="dashboard-action-btn"
                                 @click="$router.push('/dashboard/transferir')"
                             >
                                 Transferir
                             </IconFilledButton>
                             <IconFilledButton
                                 icon="mdi-wallet"
-                                class="dashboard-action-btn"
                                 @click="$router.push('/dashboard/cobrar')"
                             >
                                 Cobrar
                             </IconFilledButton>
                             <IconFilledButton
                                 icon="mdi-cash"
-                                class="dashboard-action-btn"
                                 @click="$router.push('/dashboard/pagos')"
                             >
                                 Pagos
@@ -262,7 +258,7 @@ import { useAccountStore } from "@/stores/accountStore";
 import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import InvestmentCard from "@/components/investments/InvestmentCard.vue";
 import type { Contact } from "@/types/types";
-import type { DashboardData } from "@/services/dashboard";
+import type { DashboardData } from "@/services/dashboardDeprecated";
 
 const securityStore = useSecurityStore();
 const accountStore = useAccountStore();
@@ -413,44 +409,26 @@ function toggleBalanceVisibility() {
     margin-bottom: 1.2rem;
 }
 .dashboard-actions {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 1rem;
     margin-top: 0.2rem;
     margin-bottom: 0;
-    align-items: center;
-    padding-left: 0;
+    width: 100%;
 }
-.dashboard-action-btn {
-    border-radius: 2rem;
-    min-width: 180px;
-    font-weight: 500;
-    /* El color y hover lo da .primary-btn */
-    background: none;
-    color: inherit;
-    border: none;
-    box-shadow: none;
-    padding: 0;
+
+@media (max-width: 1750px) {
+    .dashboard-actions {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
-.primary-btn {
-    background: var(--primary);
-    color: var(--primary-foreground);
-    font-weight: 500;
-    border-radius: var(--radius-md);
-    transition: background-color 0.3s;
-    cursor: pointer;
-    border: none;
-    outline: none;
-    padding: 0.5rem 2rem;
-    font-size: 1rem;
-    margin-right: 0.5rem;
+
+@media (max-width: 600px) {
+    .dashboard-actions {
+        grid-template-columns: 1fr;
+    }
 }
-.primary-btn:hover {
-    background: var(--hover);
-}
-.primary-btn:focus {
-    outline: 2px solid var(--primary);
-    outline-offset: 2px;
-}
+
 .dashboard-section {
     margin-bottom: 1.5rem;
     width: 100%;

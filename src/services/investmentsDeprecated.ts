@@ -1,5 +1,5 @@
 import { supabase } from '@/plugins/supabase'
-import { getAccountBalance, updateAccountBalance } from './account'
+import { getAccountBalance, updateAccountBalance } from './accountDeprecated'
 
 export interface Stock {
   id: number
