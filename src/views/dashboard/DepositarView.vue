@@ -135,43 +135,7 @@
         </div>
       </v-card>
     </v-dialog>
-
-    <!-- Lista de depósitos -->
-    <v-card>
-      <v-card-title>Depósitos recientes</v-card-title>
-      <v-card-text>
-        <v-data-table
-          :headers="headers"
-          :items="payments"
-          :loading="loading"
-          class="elevation-1"
-        >
-          <template v-slot:item.amount="{ item }">
-            ${{ item.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}
-          </template>
-          <template v-slot:item.status="{ item }">
-            <v-chip
-              :color="getStatusColor(item.status)"
-              size="small"
-            >
-              {{ getStatusText(item.status) }}
-            </v-chip>
-          </template>
-          <template v-slot:item.actions="{ item }">
-            <v-btn
-              v-if="item.status === 'pending'"
-              color="primary"
-              size="small"
-              :loading="loading"
-              @click="handlePushDeposit(item.id)"
-            >
-              Completar
-            </v-btn>
-          </template>
-        </v-data-table>
-      </v-card-text>
-    </v-card>
-
+    
     <!-- Snackbar para mensajes -->
     <v-snackbar
       v-model="showSnackbar"
