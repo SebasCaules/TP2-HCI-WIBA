@@ -1,6 +1,6 @@
 <template>
     <v-container>
-        <template v-if="authStore.isAuthenticated">
+        <template v-if="securityStore.isLoggedIn">
             <v-row>
                 <v-col cols="12" class="px-md-8">
                     <h1 class="transactions-title">Inversiones</h1>
@@ -35,8 +35,12 @@
                                             }}
                                             <span class="stats-percentage"
                                                 >({{
-                                                    (percentageChange >= 0 ? "+" : "") +
-                                                    formatPercent(percentageChange)
+                                                    (percentageChange >= 0
+                                                        ? "+"
+                                                        : "") +
+                                                    formatPercent(
+                                                        percentageChange
+                                                    )
                                                 }})</span
                                             >
                                         </div>
@@ -44,9 +48,24 @@
                                 </div>
                                 <div class="stats-balance-row">
                                     <div class="stats-item">
-                                        <div class="stats-label">Poder de compra</div>
+                                        <div class="stats-label">
+                                            Poder de compra
+                                        </div>
                                         <div class="stats-value">
                                             {{ formatMoney(availableBalance) }}
+                                        </div>
+                                    </div>
+                                    <div class="stats-item">
+                                        <div class="stats-label">
+                                            Retorno diario
+                                        </div>
+                                        <div class="stats-value">
+                                            {{
+                                                formatPercent(
+                                                    investmentStore.dailyRate *
+                                                        100
+                                                )
+                                            }}
                                         </div>
                                     </div>
                                 </div>
@@ -62,7 +81,10 @@
                                         :width="160"
                                         :height="160"
                                         :viewBox="`0 0 36 36`"
-                                        style="z-index: 1; margin-bottom: 1.5rem"
+                                        style="
+                                            z-index: 1;
+                                            margin-bottom: 1.5rem;
+                                        "
                                     >
                                         <circle
                                             cx="18"
@@ -88,8 +110,12 @@
                                                     ' ' +
                                                     (100 - slice.percent)
                                                 "
-                                                :stroke-dashoffset="slice.offset"
-                                                @mousemove="showTooltip($event, slice)"
+                                                :stroke-dashoffset="
+                                                    slice.offset
+                                                "
+                                                @mousemove="
+                                                    showTooltip($event, slice)
+                                                "
                                                 @mouseleave="hideTooltip"
                                                 style="cursor: pointer"
                                             />
@@ -105,7 +131,8 @@
                                     >
                                         <strong>{{ tooltip.label }}</strong
                                         ><br />
-                                        {{ formatPercent(tooltip.percent) }}<br />
+                                        {{ formatPercent(tooltip.percent)
+                                        }}<br />
                                         {{ formatMoney(tooltip.value) }}
                                     </div>
                                     <div class="chart-legend">
@@ -115,7 +142,9 @@
                                         >
                                             <span
                                                 class="legend-dot"
-                                                :style="{ background: slice.color }"
+                                                :style="{
+                                                    background: slice.color,
+                                                }"
                                             ></span>
                                             {{ formatPercent(slice.percent) }} -
                                             {{ slice.label }}
@@ -125,13 +154,22 @@
                             </div>
                         </v-col>
                     </v-row>
-                    <IconFilledButton
-                        icon="mdi-plus"
-                        class="investments-add-btn"
-                        @click="openInvestDialog"
-                    >
-                        Invertir
-                    </IconFilledButton>
+                    <div class="investments-actions">
+                        <IconFilledButton
+                            icon="mdi-plus"
+                            class="investments-add-btn"
+                            @click="openInvestDialog"
+                        >
+                            Invertir
+                        </IconFilledButton>
+                        <IconFilledButton
+                            icon="mdi-minus"
+                            class="investments-sell-btn"
+                            @click="openSellDialog"
+                        >
+                            Vender
+                        </IconFilledButton>
+                    </div>
                     <v-row>
                         <v-col cols="12">
                             <v-card class="elevation-1">
@@ -147,90 +185,60 @@
                                     :pagination="true"
                                     :loading="isLoading"
                                     empty-icon="mdi-chart-line"
-                                    no-data-message="Aún no tenés inversiones"
-                                    @row-click="
-                                        (item) => openWithdrawDialog(item)
-                                    "
+                                    no-data-message="No hay inversiones disponibles"
                                 >
-                                    <template #item.name="{ item }">
-                                        <div
-                                            class="d-flex align-center justify-center"
-                                        >
-                                            <v-icon
-                                                :color="
-                                                    item.variation >= 0
-                                                        ? 'success'
-                                                        : 'error'
-                                                "
-                                                size="20"
-                                                class="mr-2"
-                                            >
-                                                {{
-                                                    item.variation >= 0
-                                                        ? "mdi-arrow-up"
-                                                        : "mdi-arrow-down"
-                                                }}
-                                            </v-icon>
-                                            <div class="text-center">
-                                                <div class="font-weight-medium">
-                                                    {{ item.name }}
-                                                </div>
-                                                <div
-                                                    class="text-caption text-grey"
-                                                >
-                                                    {{
-                                                        formatDate(
-                                                            item.stock
-                                                                ?.updated_at
-                                                        )
-                                                    }}
-                                                </div>
-                                            </div>
+                                    <template #item.fund_name="{ item }">
+                                        <div class="text-center">
+                                            {{ item.fund_name }}
                                         </div>
                                     </template>
 
-                                    <template #item.quantity="{ item }">
+                                    <template #item.invested_amount="{ item }">
                                         <div class="text-center">
-                                            {{ formatShares(item.quantity) }}
-                                        </div>
-                                    </template>
-
-                                    <template #item.price="{ item }">
-                                        <div class="text-center">
-                                            {{ formatMoney(item.price) }}
+                                            {{
+                                                formatMoney(
+                                                    item.invested_amount
+                                                )
+                                            }}
                                         </div>
                                     </template>
 
                                     <template #item.variation="{ item }">
                                         <div
-                                            :class="[
-                                                'text-center',
-                                                getVariationClass(
-                                                    item.variation
-                                                ),
-                                            ]"
+                                            class="text-center investment-variation"
                                         >
-                                            {{
-                                                (item.variation >= 0
-                                                    ? "+"
-                                                    : "") +
-                                                formatPercent(item.variation)
-                                            }}
-                                        </div>
-                                    </template>
-
-                                    <template #item.total_value="{ item }">
-                                        <div
-                                            class="text-center font-weight-medium"
-                                        >
-                                            {{ formatMoney(item.total_value) }}
-                                        </div>
-                                    </template>
-
-                                    <template #no-data-content>
-                                        <div class="text-body-2 text-grey mt-2">
-                                            Comenzá a invertir haciendo clic en
-                                            el botón "Invertir"
+                                            <div
+                                                class="variation-monetary"
+                                                :class="
+                                                    getVariationClass(
+                                                        item.monetary_variation
+                                                    )
+                                                "
+                                            >
+                                                {{
+                                                    formatMoney(
+                                                        item.monetary_variation
+                                                    )
+                                                }}
+                                            </div>
+                                            <div
+                                                class="variation-percentage"
+                                                :class="
+                                                    getVariationClass(
+                                                        item.percentage_variation
+                                                    )
+                                                "
+                                            >
+                                                {{
+                                                    (item.percentage_variation >=
+                                                    0
+                                                        ? "+"
+                                                        : "") +
+                                                    formatPercent(
+                                                        item.percentage_variation
+                                                    )
+                                                }}
+                                            </div>
                                         </div>
                                     </template>
                                 </BaseDataTable>
@@ -243,17 +251,35 @@
             <!-- Investment Dialog -->
             <InvestmentBuyDialog
                 v-model="investDialog"
-                :fund-options="fundOptions"
                 :available-balance="availableBalance"
-                :stocks="stocks"
-                @invest="handleInvestment"
+                @continue="handleInvestmentContinue"
             />
 
             <!-- Withdraw Dialog -->
             <InvestmentSellDialog
                 v-model="withdrawDialog"
                 :selected-investment="selectedInvestment"
-                @withdraw="handleWithdraw"
+                :total-balance="totalBalance"
+                @continue="handleWithdrawContinue"
+            />
+
+            <!-- Investment Confirm Dialog -->
+            <InvestmentConfirm
+                v-model="confirmDialog"
+                :mode="confirmAction === 'invertir' ? 'buy' : 'sell'"
+                :stock="{
+                    name: 'Inversión Virtual',
+                    symbol: 'INV',
+                    current_price: 1,
+                }"
+                :quantity="confirmAmount"
+                :total-amount="confirmAmount"
+                :new-balance="
+                    confirmAction === 'invertir'
+                        ? availableBalance - confirmAmount
+                        : availableBalance + confirmAmount
+                "
+                @confirm="handleConfirm"
             />
 
             <!-- Success Dialog -->
@@ -272,41 +298,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
-import { useAuthStore } from "@/stores/auth";
-import {
-    type Stock,
-    type PortfolioItem,
-    getStocks,
-    getPortfolio,
-    updatePortfolio,
-    performInvestmentTransaction,
-} from "@/services/investments";
-import {
-    getAccountBalance as fetchAccountBalance,
-    updateAccountBalance,
-} from "@/services/account";
+import { ref, computed, onMounted } from "vue";
+import { useSecurityStore } from "@/stores/securityStore";
+import { useAccountStore } from "@/stores/accountStore";
+import { useInvestmentStore } from "@/stores/investmentStore";
 import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import InvestmentBuyDialog from "@/components/investments/InvestmentBuyDialog.vue";
 import InvestmentSellDialog from "@/components/investments/InvestmentSellDialog.vue";
+import InvestmentConfirm from "@/components/investments/InvestmentConfirmDialog.vue";
 import SuccessDialog from "@/components/ui/SuccessDialog.vue";
-import { investmentTypeColors, investmentTypeLabels } from "@/types/types";
 import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 
-const authStore = useAuthStore();
+const securityStore = useSecurityStore();
+const accountStore = useAccountStore();
+const investmentStore = useInvestmentStore();
 
 // Utility functions for formatting
 function formatMoney(value: number) {
     return value.toLocaleString("es-AR", {
         style: "currency",
         currency: "ARS",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
-}
-
-function formatShares(value: number) {
-    return value.toLocaleString("es-AR", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
@@ -324,79 +335,20 @@ function formatPercent(value: number) {
 const investDialog = ref(false);
 const withdrawDialog = ref(false);
 const isLoading = ref(false);
-const stocks = ref<Stock[]>([]);
-const portfolio = ref<PortfolioItem[]>([]);
-
-const selectedInvestment = ref<null | (PortfolioItem & { stock?: Stock })>(
-    null
-);
-
+const selectedInvestment = ref(null);
 const showSuccessDialog = ref(false);
 const successDialog = ref({
     title: "",
     message: "",
 });
 
-// Available balance from service
-const availableBalance = ref(0);
-
-// Transform portfolio data for display (flattened for headers)
-const investments = computed(() => {
-    return portfolio.value
-        .filter((item) => item.quantity > 0)
-        .map((item) => {
-            const stock = stocks.value.find((s) => s.id === item.stock_id);
-            const totalValue =
-                item.total_value != null
-                    ? item.total_value
-                    : item.quantity * (stock?.current_price ?? 0);
-            const variation =
-                stock && item.average_price
-                    ? ((stock.current_price - item.average_price) /
-                          item.average_price) *
-                      100
-                    : 0;
-
-            return {
-                id: item.id,
-                name: stock?.name || "",
-                quantity: item.quantity,
-                price: stock?.current_price || 0,
-                variation: variation,
-                total_value: totalValue,
-                stock,
-            };
-        });
-});
+// Available balance from account store
+const availableBalance = computed(() => accountStore.account?.balance ?? 0);
 
 // Computed properties
-const totalBalance = computed(() => {
-    return investments.value.reduce((sum, inv) => sum + inv.total_value, 0);
-});
-
-const totalInitialBalance = computed(() => {
-    return investments.value.reduce((sum, inv) => {
-        const initial = inv.total_value / (1 + inv.variation / 100);
-        return sum + initial;
-    }, 0);
-});
-
-const totalGain = computed(() => {
-    return totalBalance.value - totalInitialBalance.value;
-});
-
-const percentageChange = computed(() => {
-    return totalInitialBalance.value > 0
-        ? (totalGain.value / totalInitialBalance.value) * 100
-        : 0;
-});
-
-const fundOptions = computed(() => {
-    return stocks.value.map((stock) => ({
-        id: stock.id,
-        name: stock.name,
-    }));
-});
+const totalBalance = computed(() => accountStore.account?.invested || 0);
+const totalGain = computed(() => investmentStore.totalReturns);
+const percentageChange = computed(() => investmentStore.adjustedReturns);
 
 // Methods
 const getVariationClass = (variation: number) => {
@@ -404,315 +356,145 @@ const getVariationClass = (variation: number) => {
     return "text-success";
 };
 
+// New refs for confirmation dialog
+const confirmDialog = ref(false);
+const confirmAction = ref<"invertir" | "vender">("invertir");
+const confirmAmount = ref(0);
+
+// Computed properties for investments table
+const investments = computed(() => {
+    const total = totalBalance.value;
+    const perFund = total / 5;
+
+    return [
+        {
+            fund_name: "Growth",
+            invested_amount: perFund,
+            monetary_variation: perFund * 0.05,
+            percentage_variation: 5,
+        },
+        {
+            fund_name: "Tech",
+            invested_amount: perFund,
+            monetary_variation: perFund * 0.03,
+            percentage_variation: 3,
+        },
+        {
+            fund_name: "Value",
+            invested_amount: perFund,
+            monetary_variation: perFund * -0.02,
+            percentage_variation: -2,
+        },
+        {
+            fund_name: "Crypto",
+            invested_amount: perFund,
+            monetary_variation: perFund * 0.04,
+            percentage_variation: 4,
+        },
+        {
+            fund_name: "Real Estate",
+            invested_amount: perFund,
+            monetary_variation: perFund * -0.01,
+            percentage_variation: -1,
+        },
+    ];
+});
+
+const investmentHeaders = [
+    { title: "Fondo", key: "fund_name", align: "center" as const },
+    {
+        title: "Monto Invertido",
+        key: "invested_amount",
+        align: "center" as const,
+    },
+    { title: "Variación", key: "variation", align: "center" as const },
+];
+
+// Methods for handling investment actions
 const openInvestDialog = () => {
+    confirmAction.value = "invertir";
     investDialog.value = true;
 };
 
-const openWithdrawDialog = (item: any) => {
-    const tr = item.currentTarget as HTMLTableRowElement;
-
-    // Nueva lógica para extraer el nombre de la inversión desde .font-weight-medium
-    const nameElement = tr?.querySelector("td:first-child .font-weight-medium");
-    const name = nameElement?.textContent?.trim();
-
-    if (!name) {
-        console.warn(
-            "InversionesView - No se pudo obtener el nombre de la inversión"
-        );
-        return;
-    }
-
-    const investment = investments.value.find((inv) => inv.name === name);
-
-    if (!investment) {
-        console.warn(
-            "InversionesView - No se encontró ninguna inversión con ese nombre"
-        );
-        return;
-    }
-
+const openSellDialog = () => {
+    confirmAction.value = "vender";
     withdrawDialog.value = true;
-    selectedInvestment.value = {
-        id: investment.id,
-        user_id: authStore.user?.id || "",
-        stock_id: investment.stock?.id || 0,
-        quantity: investment.quantity,
-        average_price: investment.price,
-        total_value: investment.total_value,
-        stock: investment.stock,
-        variation_percentage: investment.variation,
-    };
 };
 
-const handleInvestment = async (data: {
-    amount: number;
-    shares: number;
-    stockId: number;
-}) => {
-    if (!authStore.user?.id) {
-        return;
-    }
-
-    if (data.amount > availableBalance.value) {
-        successDialog.value = {
-            title: "Error",
-            message: "Saldo insuficiente para realizar la inversión",
-        };
-        showSuccessDialog.value = true;
-        return;
-    }
-
-    const selectedStock = stocks.value.find(
-        (stock) => stock.id === data.stockId
-    );
-
-    if (!selectedStock) {
-        console.error("Selected stock not found:", data.stockId);
-        throw new Error("Fondo no encontrado");
-    }
-
-    isLoading.value = true;
-    try {
-        const amount = parseFloat(data.amount.toString());
-        const price = parseFloat(selectedStock.current_price.toString());
-
-        if (isNaN(amount) || isNaN(price) || price <= 0) {
-            throw new Error(
-                `Monto o precio inválido - Monto: ${amount}, Precio: ${price}`
-            );
-        }
-
-        // Create transaction
-        try {
-            const userId = authStore.user.id;
-            const stockId = selectedStock.id;
-            const quantity = parseFloat(data.shares.toFixed(6));
-            const priceVal = parseFloat(selectedStock.current_price.toString());
-
-            await performInvestmentTransaction(
-                userId,
-                stockId,
-                "buy",
-                quantity,
-                priceVal
-            );
-        } catch (error) {
-            console.error("Transaction error:", error);
-            throw new Error("Error al crear la transacción");
-        }
-
-        // Update portfolio
-        const existingPosition = portfolio.value.find(
-            (p) => p.stock_id === selectedStock.id
-        );
-        const newQuantity = (existingPosition?.quantity || 0) + data.shares;
-
-        await updatePortfolio(authStore.user.id, selectedStock.id, newQuantity);
-
-        // Update balance: decrease user balance
-        await updateAccountBalance(authStore.user.id, -amount);
-        availableBalance.value -= amount;
-
-        // Refresh portfolio data
-        await fetchPortfolio();
-
-        successDialog.value = {
-            title: "¡Inversión exitosa!",
-            message: "La inversión fue realizada con éxito",
-        };
-        showSuccessDialog.value = true;
-
-        investDialog.value = false;
-    } catch (error: any) {
-        successDialog.value = {
-            title: "Error",
-            message: error.message || "Error al realizar la inversión",
-        };
-        showSuccessDialog.value = true;
-    } finally {
-        isLoading.value = false;
-    }
+const handleInvestmentContinue = (data: { amount: number }) => {
+    confirmAmount.value = data.amount;
+    confirmAction.value = "invertir";
+    confirmDialog.value = true;
+    investDialog.value = false;
 };
 
-const handleWithdraw = async (data: {
-    amount: number;
-    shares: number;
-    stockId: number;
-}) => {
-    if (!selectedInvestment.value || !authStore.user?.id) {
+const handleWithdrawContinue = (data: { amount: number }) => {
+    if (data.amount > totalBalance.value) {
+        // Show error message
         return;
     }
-    if (
-        data.amount <= 0 ||
-        data.amount > selectedInvestment.value.total_value
-    ) {
-        successDialog.value = {
-            title: "Error",
-            message: "Cantidad inválida para retirar",
-        };
-        showSuccessDialog.value = true;
-        return;
-    }
-
-    const price = selectedInvestment.value.stock?.current_price;
-    if (typeof price !== "number") {
-        successDialog.value = {
-            title: "Error",
-            message: "No se pudo obtener el precio actual del fondo",
-        };
-        showSuccessDialog.value = true;
-        return;
-    }
-
-    isLoading.value = true;
-    try {
-        const userId = authStore.user.id;
-        const stockId = selectedInvestment.value.stock_id;
-        const quantity = parseFloat(data.shares.toFixed(6));
-
-        // Perform withdrawal transaction
-        await performInvestmentTransaction(
-            userId,
-            stockId,
-            "sell",
-            quantity,
-            price
-        );
-
-        // Update portfolio
-        const existingPosition = portfolio.value.find(
-            (p) => p.stock_id === stockId
-        );
-        const newQuantity = (existingPosition?.quantity || 0) - quantity;
-
-        await updatePortfolio(
-            authStore.user.id,
-            stockId,
-            newQuantity >= 0 ? newQuantity : 0
-        );
-
-        // Update balance: increase user balance
-        const amountReturned = quantity * price;
-        await updateAccountBalance(authStore.user.id, amountReturned);
-        availableBalance.value += amountReturned;
-
-        // Refresh portfolio data
-        await fetchPortfolio();
-
-        successDialog.value = {
-            title: "¡Retiro exitoso!",
-            message: "El retiro fue realizado con éxito",
-        };
-        showSuccessDialog.value = true;
-
-        withdrawDialog.value = false;
-    } catch (error: any) {
-        successDialog.value = {
-            title: "Error",
-            message: error.message || "Error al realizar el retiro",
-        };
-        showSuccessDialog.value = true;
-    } finally {
-        isLoading.value = false;
-    }
+    confirmAmount.value = data.amount;
+    confirmAction.value = "vender";
+    confirmDialog.value = true;
+    withdrawDialog.value = false;
 };
 
-const fetchPortfolio = async () => {
+const handleConfirm = async () => {
     try {
-        if (!authStore.user?.id) return;
-
-        const portfolioData = await getPortfolio(authStore.user.id);
-        portfolio.value = portfolioData;
-    } catch (error: any) {
-        successDialog.value = {
-            title: "Error",
-            message: "Error al cargar el portafolio: " + error.message,
-        };
-        showSuccessDialog.value = true;
-    }
-};
-
-// Initialize data
-onMounted(async () => {
-    if (!authStore.isAuthenticated || !authStore.user?.id) {
-        successDialog.value = {
-            title: "Error",
-            message: "Por favor inicie sesión para ver sus inversiones",
-        };
-        showSuccessDialog.value = true;
-        return;
-    }
-
-    try {
-        const stocksData = await getStocks();
-        stocks.value = stocksData;
-        await fetchPortfolio();
-        availableBalance.value = await fetchAccountBalance(authStore.user.id);
-    } catch (error: any) {
-        successDialog.value = {
-            title: "Error",
-            message: "Error al cargar los datos: " + error.message,
-        };
-        showSuccessDialog.value = true;
-    }
-});
-
-// Calcular distribución por tipo
-const chartSlices = computed(() => {
-    const total = totalBalance.value;
-    // Agrupar por tipo (symbol) solo para inversiones con cantidad > 0
-    const grouped: Record<string, number> = {};
-    investments.value
-        .filter((inv) => inv.quantity > 0)
-        .forEach((inv) => {
-            const type = inv.stock?.symbol ?? "FND-A";
-            grouped[type] = (grouped[type] || 0) + (inv.total_value ?? 0);
-        });
-    // Calcular porcentajes y offsets para SVG
-    let offset = 25; // para que arranque arriba
-    return Object.entries(investmentTypeColors)
-        .map(([type, color]) => {
-            const value = grouped[type] || 0;
-            const percent = total > 0 ? (value / total) * 100 : 0;
-            const slice = {
-                type,
-                color,
-                label: investmentTypeLabels[
-                    type as keyof typeof investmentTypeLabels
-                ],
-                value,
-                percent,
-                offset,
+        if (confirmAction.value === "invertir") {
+            await investmentStore.invest(confirmAmount.value);
+            successDialog.value = {
+                title: "Inversión exitosa",
+                message: `Has invertido ${formatMoney(
+                    confirmAmount.value
+                )} exitosamente.`,
             };
-            offset -= (percent / 100) * 100; // ajustar el offset para el siguiente arco
-            return slice;
-        })
-        .filter((slice) => slice.value > 0);
+        } else {
+            await investmentStore.divest(confirmAmount.value);
+            successDialog.value = {
+                title: "Venta exitosa",
+                message: `Has vendido ${formatMoney(
+                    confirmAmount.value
+                )} exitosamente.`,
+            };
+        }
+        showSuccessDialog.value = true;
+        confirmDialog.value = false;
+        await refreshData();
+    } catch (error: any) {
+        console.error("Error en la operación:", error);
+    }
+};
+
+const refreshData = async () => {
+    try {
+        await Promise.all([
+            investmentStore.fetchDailyRate(),
+            accountStore.fetchAccount(),
+        ]);
+    } catch (error: any) {
+        console.error("Error al refrescar los datos:", error);
+    }
+};
+
+onMounted(async () => {
+    await Promise.all([
+        investmentStore.fetchDailyRate(),
+        accountStore.fetchAccount(),
+    ]);
 });
 
-// Tabla de inversiones: columnas visibles (nuevo formato)
-const investmentHeaders = [
-    { title: "Fondo", key: "name", align: "center" as const },
-    { title: "Cuotapartes", key: "quantity", align: "center" as const },
-    { title: "Precio", key: "price", align: "center" as const },
-    { title: "Variación", key: "variation", align: "center" as const },
-    { title: "Valor Total", key: "total_value", align: "center" as const },
-];
-
-// Agregar estas variables al script setup
-const currentPage = ref(1);
-const itemsPerPage = ref(5);
-
-function formatDate(timestamp: string | undefined): string {
-    if (!timestamp) return "";
-    const date = new Date(timestamp);
-    return date.toLocaleDateString("es-AR", {
-        day: "2-digit",
-        month: "2-digit",
-    });
-}
 // Add tooltip-related declarations
-const tooltip = ref({
+interface TooltipState {
+    show: boolean;
+    x: number;
+    y: number;
+    label: string;
+    percent: number;
+    value: number;
+}
+
+const tooltip = ref<TooltipState>({
     show: false,
     x: 0,
     y: 0,
@@ -721,10 +503,13 @@ const tooltip = ref({
     value: 0,
 });
 
-function showTooltip(e: MouseEvent, slice: any) {
+function showTooltip(
+    e: MouseEvent,
+    slice: { label: string; percent: number; value: number }
+) {
     tooltip.value = {
         show: true,
-        x: e.offsetX + 10,
+        x: e.offsetX + 100,
         y: e.offsetY - 10,
         label: slice.label,
         percent: slice.percent,
@@ -733,8 +518,61 @@ function showTooltip(e: MouseEvent, slice: any) {
 }
 
 function hideTooltip() {
-    tooltip.value.show = false;
+    tooltip.value = {
+        ...tooltip.value,
+        show: false,
+    };
 }
+
+// Add chart slices computation
+const chartSlices = computed(() => {
+    const total = totalBalance.value;
+    if (total === 0) return [];
+
+    const sliceValue = total / 5; // Divide total investment among 5 funds
+    return [
+        {
+            type: "growth",
+            label: "Growth",
+            color: "#4CAF50",
+            percent: 20,
+            offset: 0,
+            value: sliceValue,
+        },
+        {
+            type: "tech",
+            label: "Tech",
+            color: "#2196F3",
+            percent: 20,
+            offset: 20,
+            value: sliceValue,
+        },
+        {
+            type: "value",
+            label: "Value",
+            color: "#FFC107",
+            percent: 20,
+            offset: 40,
+            value: sliceValue,
+        },
+        {
+            type: "crypto",
+            label: "Crypto",
+            color: "#9C27B0",
+            percent: 20,
+            offset: 60,
+            value: sliceValue,
+        },
+        {
+            type: "realestate",
+            label: "Real Estate",
+            color: "#F44336",
+            percent: 20,
+            offset: 80,
+            value: sliceValue,
+        },
+    ];
+});
 </script>
 
 <style scoped>
@@ -933,8 +771,14 @@ function hideTooltip() {
     background-color: var(--surface-alt) !important;
 }
 
-.invertir-btn {
+.investments-actions {
+    display: flex;
+    gap: 1rem;
     margin-bottom: 2.2rem;
+}
+
+.investments-add-btn,
+.investments-sell-btn {
     font-size: 1.1rem;
     font-weight: 600;
     padding: 0.5rem 2.5rem;
@@ -942,6 +786,11 @@ function hideTooltip() {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.variation-percentage {
+    font-size: 0.9rem;
+    margin-top: 0.2rem;
 }
 
 .investments-row {
@@ -953,17 +802,6 @@ function hideTooltip() {
     font-weight: 600;
     margin-bottom: 1.5rem;
     color: var(--text);
-}
-
-.investments-add-btn {
-    margin-bottom: 2.2rem;
-    font-size: 1.1rem;
-    font-weight: 600;
-    padding: 0.5rem 2.5rem;
-    min-width: 200px;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
 .investment-card {
@@ -1152,10 +990,13 @@ function hideTooltip() {
 .stats-balance-row {
     padding-top: 0.8rem;
     border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
 }
 
 .stats-balance-row .stats-item {
-    width: 100%;
+    flex: 1;
 }
 
 .stats-balance-row .stats-value {
@@ -1193,6 +1034,7 @@ function hideTooltip() {
     height: 100%;
     display: flex;
     flex-direction: column;
+    container-type: inline-size;
 }
 
 .chart-title {
@@ -1210,6 +1052,13 @@ function hideTooltip() {
     align-items: center;
     gap: 1.2rem;
     margin-top: 1rem;
+}
+
+@container (max-width: 350px) {
+    .chart-container {
+        flex-direction: column;
+        align-items: flex-center;
+    }
 }
 
 .chart-svg {
@@ -1300,5 +1149,28 @@ function hideTooltip() {
 
 .text-error {
     color: var(--error) !important;
+}
+/* --- Variación de inversión: ajustes para centrar y alinear montos --- */
+.investment-variation {
+    display: inline-flex;
+    align-items: baseline;
+    font-variant-numeric: tabular-nums;
+    justify-content: center;
+}
+
+.variation-monetary {
+    font-weight: 600;
+    white-space: nowrap;
+    display: inline-block;
+    text-align: left;
+    min-width: 90px;
+    font-feature-settings: "tnum";
+}
+
+.variation-percentage {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    text-align: right;
+    min-width: 60px;
 }
 </style>

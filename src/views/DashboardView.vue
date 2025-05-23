@@ -186,8 +186,8 @@ const dashboardGain = 3.5
 const dashboardPercentage = 0.4
 
 async function fetchData() {
-  console.log('Iniciando fetchData...');
-  console.log('Estado actual del usuario:', securityStore.user);
+
+
   
   loading.value = true
   error.value = null
@@ -195,7 +195,7 @@ async function fetchData() {
   try {
     // Asegurarnos de que tenemos el usuario actual
     const user = await securityStore.getCurrentUser()
-    console.log('Usuario obtenido en fetchData:', user);
+
 
     // Obtener datos de cuenta
     await accountStore.fetchAccount()
@@ -221,7 +221,7 @@ async function fetchData() {
       cards: [] // TODO: Implementar obtención de tarjetas reales
     }
     contacts.value = []
-    console.log('Datos de dashboard cargados correctamente:', dashboardData.value);
+
   } catch (e) {
     console.error('Error en fetchData:', e);
     error.value = e instanceof Error ? e.message : 'Error al cargar los datos'
@@ -232,7 +232,7 @@ async function fetchData() {
 
 // Watcher para el usuario
 watch(() => securityStore.user, async (newUser) => {
-  console.log('Usuario actualizado en el store:', newUser);
+
   if (newUser) {
     await fetchData()
   }
@@ -240,9 +240,9 @@ watch(() => securityStore.user, async (newUser) => {
 
 // También mantenemos el onMounted como respaldo
 onMounted(async () => {
-  console.log('Dashboard montado, estado inicial del usuario:', securityStore.user);
+
   if (!securityStore.user) {
-    console.log('Usuario no presente al montar, intentando obtener...');
+
     await fetchData()
   }
 })
@@ -264,7 +264,7 @@ function formatDate(timestamp: string): string {
 function toggleBalanceVisibility() {
   isBalanceVisible.value = !isBalanceVisible.value
 }
-console.log('Usuario actual (intervalo 5s):', securityStore.user);
+
 
 
 </script>

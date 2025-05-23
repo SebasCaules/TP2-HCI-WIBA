@@ -59,8 +59,23 @@
                   variant="plain"
                   hide-details
                   style="flex: 1"
+                  :error-messages="aliasError"
+                  @keyup.enter="saveAlias"
                 />
-                <v-icon class="copy-icon" @click="confirmAliasUpdate">mdi-check</v-icon>
+                <v-icon 
+                  class="copy-icon" 
+                  @click="saveAlias"
+                  :color="aliasError ? 'error' : 'success'"
+                >
+                  mdi-check
+                </v-icon>
+                <v-icon
+                  size="small"
+                  class="copy-icon"
+                  @click="() => { editingAlias = false; aliasError = '' }"
+                >
+                  mdi-close
+                </v-icon>
               </template>
               <template v-else>
                 <span class="user-menu-value">{{ accountAlias }}</span>
@@ -119,11 +134,27 @@ const copySuccess = ref({
 
 const editingAlias = ref(false)
 const editedAlias = ref('')
+const aliasError = ref('')
 
 const userName = computed(() => securityStore.user?.firstName || 'Usuario')
 const username = computed(() => securityStore.user?.username || 'Username' )
 const accountCvu = computed(() => accountStore.account?.cvu || '')
 const accountAlias = computed(() => accountStore.account?.alias || '')
+
+async function saveAlias() {
+  if (!editedAlias.value || editedAlias.value.trim() === '') {
+    aliasError.value = 'El alias no puede estar vacío'
+    return
+  }
+
+  try {
+    await accountStore.updateAlias(editedAlias.value)
+    editingAlias.value = false
+    aliasError.value = ''
+  } catch (err) {
+    aliasError.value = err instanceof Error ? err.message : 'Error al actualizar el alias'
+  }
+}
 
 async function fetchUserData() {
   try {
@@ -144,17 +175,6 @@ async function copyToClipboard(text: string) {
     }, 2000)
   } catch (err) {
     console.error('Failed to copy text:', err)
-  }
-}
-
-async function confirmAliasUpdate() {
-  try {
-    await accountStore.updateAlias(editedAlias.value)
-    console.log('Alias actualizado correctamente:', editedAlias.value)
-    editingAlias.value = false
-  } catch (err) {
-    console.error('Error actualizando alias:', err)
-    console.log('Alias que se intentó actualizar:', editedAlias.value)
   }
 }
 

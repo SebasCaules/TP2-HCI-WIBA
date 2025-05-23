@@ -1,7 +1,7 @@
 <template>
     <div>
         <!-- Selector de cantidad de items por página -->
-        <div class="table-controls">
+        <!-- <div class="table-controls">
             <v-spacer />
             <v-select
                 v-model="itemsPerPageLocal"
@@ -12,7 +12,7 @@
                 class="items-per-page-select"
                 style="max-width: 140px; min-width: 120px;"
             />
-        </div>
+        </div> -->
         <v-data-table
             :items="paginatedItems"
             :headers="headers"

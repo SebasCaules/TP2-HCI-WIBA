@@ -14,6 +14,29 @@ export interface RegistrationData {
     metadata: Record<string, any>;
 }
 
+/**
+ * Genera un username basado en el nombre y apellido del usuario.
+ * El formato es: primera letra del nombre + apellido completo, todo en minúsculas.
+ * 
+ * @param firstName - El nombre del usuario
+ * @param lastName - El apellido del usuario
+ * @returns El username generado
+ * @throws Error si firstName o lastName están vacíos
+ */
+export function generateUsername(firstName: string, lastName: string): string {
+    if (!firstName || !lastName) {
+        throw new Error('El nombre y apellido son requeridos para generar el username')
+    }
+
+    // Obtener la primera letra del nombre y convertir a minúscula
+    const firstInitial = firstName.trim()[0].toUpperCase()
+    
+    // Convertir el apellido a minúscula y eliminar espacios
+    const cleanLastName = lastName.trim().toUpperCase().replace(/\s+/g, '')
+    
+    return `${firstInitial}${cleanLastName}`
+}
+
 export interface User {
     id: number;
     firstName: string;

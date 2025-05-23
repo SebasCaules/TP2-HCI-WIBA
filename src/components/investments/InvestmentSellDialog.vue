@@ -13,43 +13,19 @@
                 </v-btn>
             </div>
             <v-card-text style="padding-bottom: 0">
-                <v-form ref="form" v-model="isFormValid" @update:model-value="checkFormState">
-                    <div class="withdraw-fund-selector">
-                        <div class="withdraw-main-name">
-                            <span class="withdraw-main-fullname">{{ selectedInvestment?.stock?.name }}</span>
-                        </div>
-                    </div>
+                <v-form ref="form" v-model="isFormValid">
                     <div class="withdraw-form">
                         <div class="mb-4">
-                            <strong>Cuotapartes disponibles:</strong>
-                            {{ formatShares(selectedInvestment?.quantity ?? 0) }}
+                            <strong>Saldo disponible:</strong>
+                            {{ formatMoney(totalBalance) }}
                         </div>
 
                         <CustomTextField
-                            v-model.number="withdrawAmount"
+                            v-model="amount"
                             label="Monto a retirar"
                             type="number"
-                            :rules="[
-                                (v: number) => typeof v === 'number' && !isNaN(v) || 'El monto es requerido',
-                                (v: number) => v > 0 || 'El monto debe ser mayor a 0',
-                                (v: number) => v <= (selectedInvestment?.total_value ?? 0) || 'No puede retirar más de lo que posee',
-                            ]"
-                            required
-                            @input="syncWithdrawSharesFromAmount"
-                            class="mb-4"
-                        />
-
-                        <CustomTextField
-                            v-model.number="withdrawShares"
-                            label="Cantidad a retirar (cuotapartes)"
-                            type="number"
-                            :rules="[
-                                (v: number) => typeof v === 'number' && !isNaN(v) || 'La cantidad es requerida',
-                                (v: number) => v > 0 || 'La cantidad debe ser mayor a 0',
-                                (v: number) => v <= (selectedInvestment?.quantity ?? 0) || 'No puede retirar más de lo que posee',
-                            ]"
-                            required
-                            @input="syncWithdrawAmountFromShares"
+                            :error-messages="error"
+                            @update:model-value="handleAmountChange"
                             class="mb-4"
                         />
                     </div>
@@ -65,50 +41,27 @@
                     color="primary"
                     :loading="isLoading"
                     :disabled="isButtonDisabled"
-                    @click="showConfirmDialog = true"
-                >Confirmar</FilledButton>
+                    @click="handleWithdraw"
+                >Continuar</FilledButton>
             </v-card-actions>
         </v-card>
     </v-dialog>
-
-    <InvestmentConfirmDialog
-        v-if="selectedInvestment?.stock"
-        v-model="showConfirmDialog"
-        mode="sell"
-        :stock="selectedInvestment.stock"
-        :quantity="withdrawShares"
-        :total-amount="withdrawAmount"
-        :new-balance="(selectedInvestment?.total_value ?? 0) - withdrawAmount"
-        @confirm="handleWithdraw"
-    />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { type Stock } from "@/services/investments";
+import { useInvestmentStore } from "@/stores/investmentStore";
 import CustomTextField from "@/components/ui/CustomTextField.vue";
 import FilledButton from "@/components/ui/FilledButton.vue";
-import InvestmentConfirmDialog from "./InvestmentConfirmDialog.vue";
-
-interface PortfolioItem {
-    id: number;
-    user_id: string;
-    stock_id: number;
-    quantity: number;
-    average_price: number;
-    total_value: number;
-    stock?: Stock;
-    variation_percentage: number;
-}
 
 const props = defineProps<{
     modelValue: boolean;
-    selectedInvestment: PortfolioItem | null;
+    totalBalance: number;
 }>();
 
 const emit = defineEmits<{
     (e: 'update:modelValue', value: boolean): void;
-    (e: 'withdraw', data: { amount: number; shares: number; stockId: number }): void;
+    (e: 'continue', data: { amount: number }): void;
 }>();
 
 const dialog = computed({
@@ -116,99 +69,82 @@ const dialog = computed({
     set: (value) => emit('update:modelValue', value)
 });
 
+const investmentStore = useInvestmentStore();
 const form = ref();
 const isFormValid = ref(true);
 const isLoading = ref(false);
-const withdrawAmount = ref<number>(0);
-const withdrawShares = ref<number>(0);
-const showConfirmDialog = ref(false);
+const amount = ref("");
+const error = ref("");
 
 const isButtonDisabled = computed(() => {
     return (
         !isFormValid.value ||
         isLoading.value ||
-        typeof withdrawAmount.value !== 'number' ||
-        isNaN(withdrawAmount.value) ||
-        withdrawAmount.value <= 0 ||
-        typeof withdrawShares.value !== 'number' ||
-        isNaN(withdrawShares.value) ||
-        withdrawShares.value <= 0
+        typeof parseFloat(amount.value) !== 'number' ||
+        isNaN(parseFloat(amount.value)) ||
+        parseFloat(amount.value) <= 0 ||
+        parseFloat(amount.value) > props.totalBalance
     );
 });
 
-// Debug function to check form state
-const checkFormState = () => {
-
-};
-
-function formatShares(value: number) {
+function formatMoney(value: number) {
     return value.toLocaleString("es-AR", {
+        style: "currency",
+        currency: "ARS",
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
 }
 
-const syncWithdrawSharesFromAmount = () => {
-    if (!props.selectedInvestment?.stock?.current_price) {
-        withdrawShares.value = 0;
-        return;
-    }
-    const price = props.selectedInvestment.stock.current_price;
-    if (price > 0) {
-        withdrawShares.value = +(Number(withdrawAmount.value) / price).toFixed(6);
-    } else {
-        withdrawShares.value = 0;
-    }
-    checkFormState();
+const handleAmountChange = (value: string) => {
+    amount.value = value;
+    validateAmount();
 };
 
-const syncWithdrawAmountFromShares = () => {
-    if (!props.selectedInvestment?.stock?.current_price) {
-        withdrawAmount.value = 0;
-        return;
+const validateAmount = () => {
+    const value = parseFloat(amount.value);
+    if (isNaN(value)) {
+        error.value = "Ingrese un monto válido";
+        return false;
     }
-    const price = props.selectedInvestment.stock.current_price;
-    if (price > 0) {
-        withdrawAmount.value = +(Number(withdrawShares.value) * price).toFixed(2);
-    } else {
-        withdrawAmount.value = 0;
+    if (value <= 0) {
+        error.value = "El monto debe ser mayor a 0";
+        return false;
     }
-    checkFormState();
+    if (value > props.totalBalance) {
+        error.value = "Monto excede el saldo disponible";
+        return false;
+    }
+    error.value = "";
+    return true;
 };
 
 const handleWithdraw = async () => {
-    if (!props.selectedInvestment) return;
-    
+    if (!validateAmount()) return;
 
-    const { valid } = await form.value?.validate();
-
-    if (!valid) return;
-
-    emit('withdraw', {
-        amount: Number(withdrawAmount.value),
-        shares: Number(withdrawShares.value),
-        stockId: props.selectedInvestment.stock_id
-    });
+    try {
+        isLoading.value = true;
+        emit('continue', { amount: parseFloat(amount.value) });
+        closeDialog();
+    } catch (error: any) {
+        console.error('Error al realizar el retiro:', error);
+        error.value = error.message || "Error al realizar el retiro";
+    } finally {
+        isLoading.value = false;
+    }
 };
 
 const closeDialog = () => {
     dialog.value = false;
-    withdrawAmount.value = 0;
-    withdrawShares.value = 0;
+    amount.value = "";
     form.value?.reset();
-    showConfirmDialog.value = false;
 };
 
 // Initialize values when dialog opens
 watch(() => props.modelValue, (newValue: boolean) => {
-    if (newValue && props.selectedInvestment) {
-        withdrawAmount.value = Number(props.selectedInvestment.total_value) || 0;
-        withdrawShares.value = Number(props.selectedInvestment.quantity) || 0;
+    if (newValue) {
+        amount.value = props.totalBalance.toString();
     }
-});
-
-// Watch for changes in form validity
-watch([withdrawAmount, withdrawShares], () => {
 });
 </script>
 
@@ -243,24 +179,6 @@ watch([withdrawAmount, withdrawShares], () => {
     margin-right: -8px;
     position: absolute;
     right: 0;
-}
-
-.withdraw-fund-selector {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.withdraw-main-name {
-    text-align: center;
-}
-
-.withdraw-main-fullname {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--text);
 }
 
 .withdraw-form {

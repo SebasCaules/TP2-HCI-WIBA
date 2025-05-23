@@ -57,10 +57,12 @@
                   class="dashboard-invest-tooltip"
                   :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
               >
-                  <strong>{{ tooltip.label }}</strong
-                  ><br />
+                  <strong>{{ tooltip.label }}</strong><br />
                   {{ formatPercent(tooltip.percent) }}<br />
-                  {{ formatMoney(tooltip.value) }}
+                  {{ formatMoney(tooltip.value) }}<br />
+                  <span :class="tooltip.return && tooltip.return >= 0 ? 'text-success' : 'text-error'">
+                      {{ tooltip.return && tooltip.return >= 0 ? '+' : '' }}{{ formatPercent(tooltip.return || 0) }}
+                  </span>
               </div>
               <div class="dashboard-invest-legend">
                   <div v-for="slice in chartSlices" :key="slice.type">
@@ -78,8 +80,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getPortfolio } from '@/services/investments'
-import { investmentTypeColors, investmentTypeLabels } from '@/types/types'
+import { useInvestmentStore } from '@/stores/investmentStore'
 
 const props = defineProps<{
   userId: string
@@ -92,80 +93,96 @@ const props = defineProps<{
 const title = props.title || 'Inversiones'
 const size = props.size || 160
 
-const portfolio = ref<any[]>([])
+const investmentStore = useInvestmentStore()
 const loading = ref(true)
 const error = ref<string | null>(null)
 
 onMounted(async () => {
   try {
-      loading.value = true
-      portfolio.value = await getPortfolio(props.userId)
+    loading.value = true
+    await investmentStore.fetchDailyRate()
+    await investmentStore.fetchDailyReturns()
   } catch (e: any) {
-      error.value = e.message || 'Error al cargar inversiones'
+    error.value = e.message || 'Error al cargar inversiones'
   } finally {
-      loading.value = false
+    loading.value = false
   }
 })
 
-const investments = computed(() => portfolio.value)
+const totalBalance = computed(() => investmentStore.currentInvestment?.amount ?? 0)
+const totalGain = computed(() => investmentStore.totalReturns)
+const percentageChange = computed(() => investmentStore.dailyRate * 100)
 
-const totalBalance = computed(() => {
-  return investments.value.reduce((sum, inv) => sum + inv.total_value, 0)
-})
-
-const totalInitialBalance = computed(() => {
-  return investments.value.reduce((sum, inv) => {
-      const initial = inv.total_value / (1 + inv.variation_percentage / 100)
-      return sum + initial
-  }, 0)
-})
-
-const totalGain = computed(() => {
-  return totalBalance.value - totalInitialBalance.value
-})
-
-const percentageChange = computed(() => {
-  return totalInitialBalance.value > 0
-      ? (totalGain.value / totalInitialBalance.value) * 100
-      : 0
-})
+// Function to get color for each fund
+function getFundColor(fundId: string): string {
+    const colors = {
+        growth: '#489fb5',    // Blue
+        tech: '#4caf50',      // Green
+        value: '#ff9800',     // Orange
+        crypto: '#9c27b0',    // Purple
+        realestate: '#f44336' // Red
+    };
+    return colors[fundId as keyof typeof colors] || '#757575';
+}
 
 const chartSlices = computed(() => {
-  const total = totalBalance.value
-  const grouped: Record<string, number> = {}
-  investments.value.forEach(inv => {
-      const type = inv.stock?.symbol ?? 'FND-A'
-      grouped[type] = (grouped[type] || 0) + (inv.total_value ?? 0)
-  })
-  let offset = 25
-  return Object.entries(investmentTypeColors)
-      .map(([type, color]) => {
-          const value = grouped[type] || 0
-          const percent = total > 0 ? (value / total) * 100 : 0
-          const slice = {
-              type,
-              color: String(color),
-              label: String(investmentTypeLabels[type as keyof typeof investmentTypeLabels] || type),
-              value,
-              percent,
-              offset
-          }
-          offset -= (percent / 100) * 100
-          return slice
-      })
-      .filter(slice => slice.percent > 0)
-})
+    const total = totalBalance.value;
+    if (total <= 0) return [];
 
-const tooltip = ref({ show: false, x: 0, y: 0, label: '', percent: 0, value: 0 })
+    // Get the daily returns for each fund
+    const fundReturns = investmentStore.dailyReturns;
+    if (!fundReturns || fundReturns.length === 0) return [];
+
+    // Calculate the percentage for each fund (equal distribution)
+    const percentagePerFund = 100 / fundReturns.length;
+    let currentOffset = 25; // Starting offset
+
+    return fundReturns.map((fund, index) => {
+        const slice = {
+            type: fund.fund_id,
+            color: getFundColor(fund.fund_id),
+            label: fund.fund_name,
+            value: total / fundReturns.length,
+            percent: percentagePerFund,
+            offset: currentOffset,
+            return: fund.adjusted_return
+        };
+        
+        // Update offset for next slice
+        currentOffset = (currentOffset + percentagePerFund) % 100;
+        return slice;
+    });
+});
+
+interface TooltipState {
+    show: boolean;
+    x: number;
+    y: number;
+    label: string;
+    percent: number;
+    value: number;
+    return?: number;
+}
+
+const tooltip = ref<TooltipState>({
+    show: false,
+    x: 0,
+    y: 0,
+    label: '',
+    percent: 0,
+    value: 0
+});
+
 function showTooltip(e: MouseEvent, slice: any) {
-  tooltip.value = {
-      show: true,
-      x: e.offsetX - 125,
-      y: e.offsetY - 85,
-      label: slice.label,
-      percent: slice.percent,
-      value: slice.value
-  }
+    tooltip.value = {
+        show: true,
+        x: e.offsetX - 125,
+        y: e.offsetY - 85,
+        label: slice.label,
+        percent: slice.percent,
+        value: slice.value,
+        return: slice.return
+    }
 }
 function hideTooltip() {
   tooltip.value.show = false

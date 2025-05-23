@@ -150,25 +150,25 @@ const handleSubmit = async (): Promise<void> => {
   if (!validateForm()) return
   loading.value = true
   try {
-    console.log('Iniciando proceso de login...');
+
     const credentials: Credentials = {
       email: email.value,
       password: password.value
     }
     
-    console.log('Llamando a securityStore.login...');
+
     await securityStore.login(credentials, true)
-    console.log('Login exitoso, obteniendo usuario actual...');
+
     
     const user = await securityStore.getCurrentUser()
     if (!user) {
       throw new Error('No se pudo obtener la información del usuario')
     }
-    console.log('Usuario obtenido exitosamente:', user);
+
     
-    console.log('Redirigiendo a /dashboard...');
+
     await router.push('/dashboard')
-    console.log('Redirección completada');
+
   } catch (error) {
     console.error('Error durante el login:', error);
     if (error instanceof Error) {

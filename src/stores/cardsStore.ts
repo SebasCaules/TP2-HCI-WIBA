@@ -9,14 +9,14 @@ export const useCardsStore = defineStore("cards", () => {
     const error = ref<string | null>(null);
 
     async function fetchCards(): Promise<void> {
-        console.log('Fetching cards...');
-        console.log('Current API token:', Api.token);
+
+
         isLoading.value = true;
         error.value = null;
         try {
-            console.log('Making API call to get cards...');
+
             const fetchedCards = await CardsApi.getCards();
-            console.log('Raw API response:', fetchedCards);
+
             
             // Validate response
             if (!fetchedCards) {
@@ -40,7 +40,7 @@ export const useCardsStore = defineStore("cards", () => {
                 return isValid;
             });
 
-            console.log('Validated cards:', validCards);
+
             cards.value = validCards;
         } catch (err) {
             console.error('Error in fetchCards:', err);

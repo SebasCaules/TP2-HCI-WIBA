@@ -14,40 +14,13 @@
             </div>
             <v-card-text style="padding-bottom: 0">
                 <v-form v-model="isFormValid">
-                    <v-select
-                        v-model="selectedFund"
-                        :items="fundOptions"
-                        label="Seleccionar Fondo"
-                        item-title="name"
-                        item-value="id"
-                        required
-                        density="comfortable"
-                        variant="underlined"
-                    ></v-select>
                     <div class="investment-form">
                         <CustomTextField
-                            v-model.number="investmentAmount"
+                            v-model="amount"
                             label="Monto a invertir"
-                            prefix="$"
                             type="number"
-                            :rules="[
-                                (v: number) => v > 0 || 'El monto debe ser mayor a 0',
-                                (v: number) => v <= availableBalance || 'Saldo insuficiente',
-                            ]"
-                            required
-                            @input="syncSharesFromAmount"
-                            class="mb-4"
-                        />
-
-                        <CustomTextField
-                            v-model.number="investmentShares"
-                            label="Cantidad de cuotapartes"
-                            type="number"
-                            :rules="[
-                                (v: number) => v > 0 || 'La cantidad debe ser mayor a 0',
-                            ]"
-                            required
-                            @input="syncAmountFromShares"
+                            :error-messages="error"
+                            @update:model-value="handleAmountChange"
                             class="mb-4"
                         />
 
@@ -69,45 +42,28 @@
                     color="primary"
                     :loading="isLoading"
                     :disabled="!isFormValid || isLoading"
-                    @click="showConfirmDialog = true"
-                    >Confirmar</FilledButton
+                    @click="handleInvest"
+                    >Continuar</FilledButton
                 >
             </v-card-actions>
         </v-card>
     </v-dialog>
-
-    <InvestmentConfirmDialog
-        v-if="selectedStock"
-        v-model="showConfirmDialog"
-        mode="buy"
-        :stock="selectedStock"
-        :quantity="investmentShares"
-        :total-amount="investmentAmount"
-        :new-balance="availableBalance - investmentAmount"
-        @confirm="handleInvestment"
-    />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { type Stock } from "@/services/investments";
+import { useInvestmentStore } from "@/stores/investmentStore";
 import CustomTextField from "@/components/ui/CustomTextField.vue";
 import FilledButton from "@/components/ui/FilledButton.vue";
-import InvestmentConfirmDialog from "./InvestmentConfirmDialog.vue";
 
 const props = defineProps<{
     modelValue: boolean;
-    fundOptions: { id: number; name: string }[];
     availableBalance: number;
-    stocks: Stock[];
 }>();
 
 const emit = defineEmits<{
     (e: "update:modelValue", value: boolean): void;
-    (
-        e: "invest",
-        data: { amount: number; shares: number; stockId: number }
-    ): void;
+    (e: "continue", data: { amount: number }): void;
 }>();
 
 const dialog = computed({
@@ -115,17 +71,11 @@ const dialog = computed({
     set: (value) => emit("update:modelValue", value),
 });
 
+const investmentStore = useInvestmentStore();
 const isFormValid = ref(false);
 const isLoading = ref(false);
-const selectedFund = ref<number | null>(null);
-const investmentAmount = ref(0);
-const investmentShares = ref(0);
-const showConfirmDialog = ref(false);
-
-const selectedStock = computed(() => {
-    if (!selectedFund.value) return null;
-    return props.stocks.find(s => s.id === selectedFund.value) || null;
-});
+const amount = ref("");
+const error = ref("");
 
 function formatMoney(value: number) {
     return value.toLocaleString("es-AR", {
@@ -136,57 +86,67 @@ function formatMoney(value: number) {
     });
 }
 
-const syncSharesFromAmount = () => {
-    if (!selectedFund.value) {
-        investmentShares.value = 0;
-        return;
-    }
-    const price =
-        props.stocks.find((s) => s.id === selectedFund.value)?.current_price ||
-        0;
-    if (price > 0) {
-        investmentShares.value = +(investmentAmount.value / price).toFixed(6);
-    } else {
-        investmentShares.value = 0;
-    }
-};
-
-const syncAmountFromShares = () => {
-    if (!selectedFund.value) {
-        investmentAmount.value = 0;
-        return;
-    }
-    const price =
-        props.stocks.find((s) => s.id === selectedFund.value)?.current_price ||
-        0;
-    if (price > 0) {
-        investmentAmount.value = +(investmentShares.value * price).toFixed(2);
-    } else {
-        investmentAmount.value = 0;
-    }
-};
-
-watch(selectedFund, () => {
-    investmentAmount.value = 0;
-    investmentShares.value = 0;
+const formattedAmount = computed(() => {
+    if (!amount.value) return "";
+    const value = parseFloat(amount.value);
+    if (isNaN(value)) return "";
+    return value.toLocaleString("es-AR", {
+        style: "currency",
+        currency: "ARS",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
 });
 
-const handleInvestment = () => {
-    if (!selectedFund.value) return;
-
-    emit("invest", {
-        amount: investmentAmount.value,
-        shares: investmentShares.value,
-        stockId: selectedFund.value,
-    });
+const handleAmountChange = (value: string) => {
+    amount.value = value;
+    isFormValid.value = validateAmount();
 };
+
+const validateAmount = () => {
+    const value = parseFloat(amount.value);
+    if (isNaN(value)) {
+        error.value = "Ingrese un monto válido";
+        return false;
+    }
+    if (value <= 0) {
+        error.value = "El monto debe ser mayor a 0";
+        return false;
+    }
+    if (value > props.availableBalance) {
+        error.value = "Saldo insuficiente";
+        return false;
+    }
+    error.value = "";
+    return true;
+};
+
+const handleInvest = async () => {
+    if (!validateAmount()) return;
+    
+    try {
+        isLoading.value = true;
+        emit("continue", { amount: parseFloat(amount.value) });
+        amount.value = "";
+        error.value = "";
+    } catch (e: any) {
+        error.value = e.message || "Error al realizar la inversión";
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+watch(() => props.modelValue, (newValue) => {
+    if (!newValue) {
+        amount.value = "";
+        error.value = "";
+    }
+});
 
 const closeDialog = () => {
     dialog.value = false;
-    selectedFund.value = null;
-    investmentAmount.value = 0;
-    investmentShares.value = 0;
-    showConfirmDialog.value = false;
+    amount.value = "";
+    error.value = "";
 };
 </script>
 
@@ -246,10 +206,6 @@ const closeDialog = () => {
     border: none;
 }
 
-:deep(.v-select) {
-    width: 100%;
-}
-
 :deep(.v-field) {
     border: 1.5px solid #bdbdbd !important;
     border-radius: 12px !important;
@@ -276,11 +232,6 @@ const closeDialog = () => {
     color: #424242 !important;
     padding: 0.2rem 0 !important;
     letter-spacing: 0.01em !important;
-}
-
-:deep(.v-select__selection) {
-    display: flex !important;
-    align-items: center !important;
 }
 
 :deep(.v-field__outline) {
@@ -310,40 +261,5 @@ const closeDialog = () => {
 :deep(.v-field--disabled) {
     opacity: 0.7 !important;
     cursor: not-allowed !important;
-}
-
-/* Improve vertical alignment of selected item and dropdown icon in v-select */
-:deep(.v-select__selection-text) {
-    display: flex !important;
-    align-items: center !important;
-    height: 100% !important;
-    line-height: normal !important;
-}
-
-/* Centrado vertical mejorado de la flecha del v-select */
-:deep(.v-select__icon) {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    height: 100% !important;
-    position: absolute !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    right: 1rem !important;
-}
-
-:deep(.v-field__input) {
-    display: flex !important;
-    align-items: center !important;
-    height: 100% !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-}
-</style>
-
-<style scoped>
-:deep(.v-field__append-inner) {
-    padding-top: 0 !important;
-    align-items: center !important;
 }
 </style>

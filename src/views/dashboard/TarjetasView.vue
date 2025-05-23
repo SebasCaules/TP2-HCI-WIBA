@@ -162,7 +162,7 @@ function getBrandLogo(brand: string) {
 const transparentPixel =
     "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
 function handleCardAdded(card: any) {
-    console.log("Tarjeta agregada:", JSON.stringify(card, null, 2));
+
     fetchCards();
 }
 </script>

@@ -24,10 +24,10 @@ class Api {
     }
 
     static async fetch(url: string, secure: boolean, init: FetchOptions = {}, controller?: AbortController): Promise<ApiResponse> {
-        console.log('API fetch called:', { url, secure, hasToken: !!Api.token });
+
         
         if (secure && Api.token) {
-            console.log('Adding authorization header with token');
+
             if (!init.headers) {
                 init.headers = new Headers();
             } else if (typeof init.headers === 'object' && !(init.headers instanceof Headers)) {
@@ -43,11 +43,11 @@ class Api {
         const timer = setTimeout(() => controller.abort(), Api.timeout);
 
         try {
-            console.log('Making fetch request to:', url);
+
             const response = await fetch(url, init);
-            console.log('Response status:', response.status);
+
             const text = await response.text();
-            console.log('Response text:', text);
+
             const json = text ? JSON.parse(text) : {};
             
             if (!response.ok) {
@@ -82,25 +82,6 @@ class Api {
     }
 
     static async post(url: string, secure: boolean, data: unknown, controller?: AbortController): Promise<ApiResponse> {
-        console.log('[Api] POST request details:', {
-            url,
-            secure,
-            data,
-            dataType: typeof data,
-            stringifiedData: JSON.stringify(data),
-            headers: {
-                "Content-Type": "application/json; charset=utf-8"
-            },
-            fullRequest: {
-                method: "POST",
-                url,
-                headers: {
-                    "Content-Type": "application/json; charset=utf-8"
-                },
-                body: JSON.stringify(data)
-            }
-        });
-        
         return await Api.fetch(url, secure, {
             method: "POST",
             headers: new Headers({

@@ -188,13 +188,11 @@ import { ref, onMounted, computed } from 'vue'
 import { useSecurityStore } from '@/stores/securityStore'
 import { useCardsStore } from '@/stores/cardsStore'
 import { useAccountStore } from '@/stores/accountStore'
-import { Api } from '@/api/Api'
 import type { Payment } from '@/api/payment'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import AddCardDialog from '@/components/AddCardDialog.vue'
 import BackButton from '@/components/ui/BackButton.vue'
-import { depositToAccount } from '@/services/account'
 import { usePaymentStore } from '@/stores/paymentStore'
 
 interface DisplayCard {
@@ -322,21 +320,7 @@ const payments = computed<Payment[]>(() => {
 })
 
 async function confirmDeposit() {
-  console.log('[DepositarView] confirmDeposit started', {
-    rawAmount: amount.value,
-    rawAmountType: typeof amount.value,
-    parsedAmount: Number(amount.value),
-    parsedAmountType: typeof Number(amount.value),
-    hasDecimal: amount.value.includes('.'),
-    decimalPlaces: amount.value.split('.')[1]?.length || 0,
-    isFinite: Number.isFinite(Number(amount.value)),
-    isNaN: isNaN(Number(amount.value)),
-    stringifiedAmount: JSON.stringify(amount.value),
-    stringifiedParsedAmount: JSON.stringify(Number(amount.value))
-  })
-
   if (!securityStore.user) {
-    console.log('[DepositarView] No user in security store')
     showSnackbar.value = true
     snackbarText.value = 'Error: No hay usuario autenticado'
     snackbarColor.value = 'error'
@@ -344,7 +328,6 @@ async function confirmDeposit() {
   }
   
   if (!amount.value || amount.value.trim() === '') {
-    console.log('[DepositarView] No amount provided')
     showSnackbar.value = true
     snackbarText.value = 'Por favor ingrese un monto'
     snackbarColor.value = 'error'
@@ -353,13 +336,6 @@ async function confirmDeposit() {
 
   const parsedAmount = Number(amount.value)
   if (!Number.isFinite(parsedAmount) || isNaN(parsedAmount) || parsedAmount <= 0) {
-    console.log('[DepositarView] Invalid amount:', {
-      amount: amount.value,
-      parsedAmount,
-      isFinite: Number.isFinite(parsedAmount),
-      isNaN: isNaN(parsedAmount),
-      isPositive: parsedAmount > 0
-    })
     showSnackbar.value = true
     snackbarText.value = 'El monto ingresado no es válido'
     snackbarColor.value = 'error'
@@ -367,25 +343,16 @@ async function confirmDeposit() {
   }
 
   try {
-    console.log('[DepositarView] Attempting to recharge account with amount:', {
-      amount: parsedAmount,
-      amountType: typeof parsedAmount,
-      stringified: JSON.stringify(parsedAmount)
-    })
     loading.value = true
     await accountStore.recharge(parsedAmount)
-    console.log('[DepositarView] Recharge successful')
     
     showConfirmDialog.value = false
     amount.value = ''
     selectedCard.value = null
     showSuccessDialog.value = true
     
-    console.log('[DepositarView] Refreshing payments list')
     await paymentStore.fetchPayments()
-    console.log('[DepositarView] Payments list refreshed')
   } catch (error) {
-    console.error('[DepositarView] Error during recharge:', error)
     showSnackbar.value = true
     snackbarText.value = error instanceof Error ? error.message : 'Error al realizar el depósito'
     snackbarColor.value = 'error'
