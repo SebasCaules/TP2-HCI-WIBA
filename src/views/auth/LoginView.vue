@@ -99,8 +99,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useSecurityStore } from '@/stores/securityStore'
-import { UserApi, type Credentials } from '@/api/user.ts'
+import { useSecurityStore } from '@/stores/securityStore.ts'
+import type { Credentials } from '@/api/user.ts'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import BackButton from '@/components/ui/BackButton.vue'
@@ -200,8 +200,17 @@ const handleResetPassword = async (): Promise<void> => {
       return
     }
 
-    // TODO: Implement password reset functionality with the new API
-    resetError.value = 'Funcionalidad no disponible temporalmente'
+    await securityStore.resetPasswordRequest(resetEmail.value)
+    resetSuccess.value = 'Se han enviado las instrucciones a tu correo electrónico.'
+    setTimeout(() => {
+      showResetDialog.value = false
+      resetEmail.value = ''
+      resetSuccess.value = ''
+      router.push('/reset-password')
+    }, 3000)
+  } catch (err: any) {
+    console.error('Error requesting password reset:', err)
+    resetError.value = securityStore.error || 'Error al solicitar el restablecimiento de contraseña.'
   } finally {
     isResetting.value = false
   }

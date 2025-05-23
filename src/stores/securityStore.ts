@@ -8,6 +8,8 @@ const SECURITY_TOKEN_KEY = "security-token";
 export const useSecurityStore = defineStore("security", () => {
     const token = ref<string | null>(null);
     const user = ref<User | null>(null);
+    const isLoading = ref(false);
+    const error = ref<string | null>(null);
 
     const isLoggedIn = computed(() => {
         return token.value != null;
@@ -84,5 +86,45 @@ export const useSecurityStore = defineStore("security", () => {
         return result;
     }
 
-    return { user, isLoggedIn, initialize, login, logout, getCurrentUser, setUser };
+    async function resetPasswordRequest(email: string): Promise<void> {
+        isLoading.value = true;
+        error.value = null;
+        
+        try {
+            await UserApi.requestPasswordReset(email);
+        } catch (err: any) {
+            error.value = err.description || 'Error al solicitar el reseteo de contraseña';
+            throw err;
+        } finally {
+            isLoading.value = false;
+        }
+    }
+
+    async function confirmPasswordChange(code: string, password: string): Promise<void> {
+        isLoading.value = true;
+        error.value = null;
+        
+        try {
+            await UserApi.changePassword(code, password);
+        } catch (err: any) {
+            error.value = err.description || 'Error al cambiar la contraseña';
+            throw err;
+        } finally {
+            isLoading.value = false;
+        }
+    }
+
+    return { 
+        user, 
+        isLoggedIn, 
+        isLoading,
+        error,
+        initialize, 
+        login, 
+        logout, 
+        getCurrentUser, 
+        setUser,
+        resetPasswordRequest,
+        confirmPasswordChange 
+    };
 }); 

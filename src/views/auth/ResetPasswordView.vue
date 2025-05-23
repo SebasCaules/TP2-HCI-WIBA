@@ -18,6 +18,13 @@
                 class="reset-password-form"
             >
                 <CustomTextField
+                    v-model="verificationCode"
+                    placeholder="Código de verificación"
+                    :rules="verificationCodeRules"
+                    class="reset-password-input"
+                />
+
+                <CustomTextField
                     v-model="password"
                     type="password"
                     placeholder="Nueva contraseña"
@@ -53,22 +60,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useRoute } from "vue-router";
+import { ref, computed } from "vue";
+import { useRouter } from "vue-router";
 import CustomTextField from "@/components/ui/CustomTextField.vue";
 import FilledButton from "@/components/ui/FilledButton.vue";
+import { useSecurityStore } from "@/stores/securityStore.ts";
 
 interface PasswordRules {
     (v: string): boolean | string;
 }
 
-const route = useRoute();
+const router = useRouter();
+const securityStore = useSecurityStore();
 
+const verificationCode = ref("");
 const password = ref("");
 const confirmPassword = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
 const resetSuccess = ref(false);
+
+const verificationCodeRules: PasswordRules[] = [
+    (v: string) => !!v || "El código de verificación es requerido",
+];
 
 const passwordRules: PasswordRules[] = [
     (v: string) => !!v || "La contraseña es requerida",
@@ -83,6 +97,7 @@ const confirmPasswordRules: PasswordRules[] = [
 
 const isFormValid = computed(() => {
     return (
+        verificationCode.value &&
         password.value &&
         confirmPassword.value &&
         password.value === confirmPassword.value &&
@@ -90,26 +105,18 @@ const isFormValid = computed(() => {
     );
 });
 
-onMounted(async () => {
-    // TODO: Implement token validation with the new API
-    const token = route.query.token as string;
-    if (!token) {
-        error.value = "El enlace de recuperación ha expirado o no es válido. Por favor, solicita un nuevo enlace.";
-        return;
-    }
-});
-
 const handleSubmit = async (): Promise<void> => {
     if (!validateForm()) return;
 
     loading.value = true;
     try {
-        // TODO: Implement password reset with the new API
-        error.value = "Funcionalidad no disponible temporalmente";
-    } catch (err) {
-        if (err instanceof Error) {
-            error.value = "Error al restablecer la contraseña";
-        }
+        await securityStore.confirmPasswordChange(verificationCode.value, password.value);
+        resetSuccess.value = true;
+        setTimeout(() => {
+            router.push('/login');
+        }, 3000);
+    } catch (err: any) {
+        error.value = securityStore.error || "Error al restablecer la contraseña. Por favor, intenta nuevamente.";
     } finally {
         loading.value = false;
     }

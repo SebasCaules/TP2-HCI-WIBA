@@ -80,4 +80,27 @@ export class UserApi {
         const url = UserApi.getUrl(`update-alias?alias=${encodeURIComponent(newAlias)}`);
         await Api.put(url, true, undefined, controller);
     }
+
+    static async resetPasswordWithToken(token: string, newPassword: string, controller?: AbortController): Promise<void> {
+        try {
+            console.log('Making API call to reset password');
+            const url = UserApi.getUrl("reset-password");
+            console.log('Reset password URL:', url);
+            const response = await Api.post(url, false, { token, newPassword }, controller);
+            console.log('Reset password response:', response);
+        } catch (error) {
+            console.error('Error in resetPasswordWithToken:', error);
+            throw error;
+        }
+    }
+
+    static async requestPasswordReset(email: string, controller?: AbortController): Promise<void> {
+        const url = `${UserApi.getUrl("reset-password")}?email=${encodeURIComponent(email)}`;
+        await Api.post(url, false, undefined, controller);
+    }
+
+    static async changePassword(code: string, password: string, controller?: AbortController): Promise<void> {
+        const url = UserApi.getUrl("change-password");
+        await Api.post(url, false, { code, password }, controller);
+    }
 }
