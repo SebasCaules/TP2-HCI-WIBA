@@ -47,7 +47,7 @@
       <v-list-item v-for="p in payments" :key="p.uuid">
         <v-list-item-content>
           <v-list-item-title>{{ p.description }} - ${{ p.amount }}</v-list-item-title>
-          <v-list-item-subtitle>ID: {{ p.uuid }} | Método: {{ p.method || 'PULL' }}</v-list-item-subtitle>
+          <v-list-item-subtitle>ID: {{ p.uuid }}</v-list-item-subtitle>
         </v-list-item-content>
         <v-list-item-action>
           <v-btn icon @click="pushPayment(p.uuid)" :disabled="loading">
