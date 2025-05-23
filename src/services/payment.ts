@@ -1,5 +1,5 @@
 // src/services/payment.ts
-import { Api } from "@/api/api";
+import { Api } from "@/api/Api";
 
 export interface PaymentRequest {
   description: string;

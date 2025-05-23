@@ -20,6 +20,7 @@ defineProps<{
   icon?: string
   type?: 'button' | 'submit' | 'reset'
   disabled?: boolean
+  fullWidth?: boolean
 }>()
 defineEmits(['click'])
 </script>
@@ -27,7 +28,7 @@ defineEmits(['click'])
 <style scoped>
 .icon-filled-btn {
   width: 100%;
-  max-width: 280px;
+  max-width: v-bind('fullWidth ? "100%" : "340px"');
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -43,9 +44,11 @@ defineEmits(['click'])
   letter-spacing: normal;
   border: none;
   outline: none;
-  transition: background 0.2s;
+  transition: all 0.2s;
   cursor: pointer;
-  gap: 0.6rem;
+  text-decoration: none;
+  padding: 0 1.5rem;
+  gap: 0.5rem;
 }
 .icon-filled-btn:disabled {
   opacity: 0.6;

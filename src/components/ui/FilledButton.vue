@@ -24,7 +24,7 @@ defineEmits(['click'])
 <style scoped>
 .filled-btn {
   width: 100%;
-  max-width: v-bind('fullWidth ? "none" : "340px"');
+  max-width: v-bind('fullWidth ? "100%" : "340px"');
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -45,12 +45,12 @@ defineEmits(['click'])
 }
 
 .filled-btn:not(.btn-secondary) {
-  background: #41a7b7 !important;
-  color: #fff !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
 }
 
 .filled-btn:not(.btn-secondary):active {
-  background: #368a97 !important;
+  background: var(--hover) !important;
 }
 
 .filled-btn:disabled {
