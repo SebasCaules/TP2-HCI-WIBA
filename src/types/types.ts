@@ -5,6 +5,9 @@ export interface Contact {
     username: string;
     initials: string;
     account_number?: string;
+    type: 'cvu' | 'alias';
+    addedAt: string;
+    error?: string;  // Optional error message for UI feedback
 }
 
 export interface ContactResponse {

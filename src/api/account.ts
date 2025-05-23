@@ -8,6 +8,11 @@ export interface Account {
     alias: string
 }
 
+export interface UserVerificationResponse {
+    firstName: string
+    lastName: string
+}
+
 export class AccountApi {
     static baseUrl = `${Api.baseUrl}/account`
 
@@ -25,14 +30,28 @@ export class AccountApi {
         }
     }
 
-    static async verifyCvu(cvu: string): Promise<boolean> {
-        const res = await Api.get(`${this.baseUrl}/verify-cvu?cvu=${cvu}`, true)
-        return res.valid
+    static async verifyCvu(cvu: string): Promise<UserVerificationResponse> {
+        try {
+            const res = await Api.get(`${this.baseUrl}/verify-cvu?cvu=${encodeURIComponent(cvu)}`, true)
+            return res as UserVerificationResponse
+        } catch (error: any) {
+            if (error?.response?.status === 404) {
+                throw new Error('CVU no encontrado')
+            }
+            throw error
+        }
     }
 
-    static async verifyAlias(alias: string): Promise<boolean> {
-        const res = await Api.get(`${this.baseUrl}/verify-alias?alias=${alias}`, true)
-        return res.valid
+    static async verifyAlias(alias: string): Promise<UserVerificationResponse> {
+        try {
+            const res = await Api.get(`${this.baseUrl}/verify-alias?alias=${encodeURIComponent(alias)}`, true)
+            return res as UserVerificationResponse
+        } catch (error: any) {
+            if (error?.response?.status === 404) {
+                throw new Error('Alias no encontrado')
+            }
+            throw error
+        }
     }
 
     static async updateAlias(newAlias: string): Promise<Account> {

@@ -15,7 +15,7 @@
                         :items="contacts"
                         :headers="headers"
                         :items-per-page="5"
-                        :loading="loading"
+                        :loading="contactsLoading"
                         empty-icon="mdi-account-group"
                         no-data-message="No hay contactos disponibles"
                     >
@@ -61,52 +61,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useAuthStore } from "@/stores/auth";
+import { ref, onMounted, computed, watch } from "vue";
+import { useSecurityStore } from "@/stores/securityStore";
 import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 import AddContactDialog from "@/components/AddContactDialog.vue";
 import ConfirmContactDialog from "@/components/ConfirmContactDialog.vue";
-import { fetchContacts, removeContact, addContact } from "@/services/contacts";
+import { fetchContacts, removeContact, addContact, loading as contactsLoading } from "@/services/contacts";
 import type { Contact } from "@/types/types";
+import { useRouter } from "vue-router";
 
-const authStore = useAuthStore();
-const userId = authStore.user?.id;
+const router = useRouter();
+const securityStore = useSecurityStore();
+const userId = computed(() => securityStore.user?.id?.toString());
 
 const contacts = ref<Contact[]>([]);
-const loading = ref(true);
-const showDialog = ref(false);
-const showConfirmDialog = ref(false);
-const contactToConfirm = ref<Contact | null>(null);
-let pendingContact = ref<Contact | null>(null);
-
 const headers = [
     { key: "name", title: "Nombre", align: "start" as const },
     { key: "username", title: "Usuario", align: "start" as const },
     { key: "actions", title: "Acciones", align: "end" as const },
 ];
 
+const showDialog = ref(false);
+const showConfirmDialog = ref(false);
+const contactToConfirm = ref<Contact | null>(null);
+
 async function loadContacts() {
-    if (!userId) {
+    if (!userId.value) {
         console.error("No user ID available");
         return;
     }
 
-    loading.value = true;
     try {
-        const { contacts: fetchedContacts } = await fetchContacts(userId);
+        const { contacts: fetchedContacts } = await fetchContacts(userId.value);
         contacts.value = fetchedContacts;
     } catch (error) {
         console.error("Error loading contacts:", error);
-    } finally {
-        loading.value = false;
     }
 }
 
 async function handleRemoveContact(contactId: string) {
-    if (!userId) return;
+    if (!userId.value) return;
 
-    const success = await removeContact(userId, contactId);
+    const success = await removeContact(userId.value, contactId);
     if (success) {
         await loadContacts();
     }
@@ -119,24 +116,50 @@ function onContactFound(contact: Contact) {
 }
 
 async function confirmContact() {
-    if (!userId || !contactToConfirm.value) return;
-    // Insertar en la base de datos solo si se confirma
+    if (!userId.value || !contactToConfirm.value) return;
+    
     try {
-        await addContact(userId, contactToConfirm.value.id);
+        const result = await addContact(
+            userId.value,
+            contactToConfirm.value.id,
+            contactToConfirm.value.first_name,
+            contactToConfirm.value.last_name
+        );
+
+        if (!result.success) {
+            // Show error in the dialog
+            if (contactToConfirm.value) {
+                contactToConfirm.value.error = result.error;
+            }
+            return;
+        }
+
+        showConfirmDialog.value = false;
+        await loadContacts();
     } catch (error) {
-        // Manejar error si es necesario
-        console.error('Error agregando contacto:', error);
+        console.error('Error adding contact:', error);
+        if (contactToConfirm.value) {
+            contactToConfirm.value.error = 'Error al agregar el contacto';
+        }
     }
-    showConfirmDialog.value = false;
-    await loadContacts();
 }
 
 function cancelContact() {
     showConfirmDialog.value = false;
-    // Si quieres eliminar el contacto recién agregado, hazlo aquí
 }
 
+// Watch for authentication state changes
+watch(() => securityStore.isLoggedIn, (isLoggedIn) => {
+    if (!isLoggedIn) {
+        router.push('/login');
+    }
+});
+
 onMounted(async () => {
+    if (!securityStore.isLoggedIn) {
+        router.push('/login');
+        return;
+    }
     await loadContacts();
 });
 </script>

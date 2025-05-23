@@ -1,9 +1,15 @@
-import { supabase } from '@/plugins/supabase';
 import { ref } from 'vue';
-import type { Contact, ContactResponse } from '@/types/types';
+import type { Contact } from '@/types/types';
 
 export const contacts = ref<Contact[]>([]);
-export const loading = ref(true);
+export const loading = ref(false);
+
+interface StoredContact {
+    firstName: string;
+    lastName: string;
+    type: 'cvu' | 'alias';
+    addedAt: string;
+}
 
 function capitalize(str: string): string {
   if (!str) return '';
@@ -19,48 +25,116 @@ function getInitials(firstName: string, lastName: string): string {
   return `${firstInitial}${lastInitial}`;
 }
 
-export async function fetchContacts(userId: string): Promise<{ contacts: Contact[], rawContacts: ContactResponse[] }> {
+function getStorageKey(userId: string): string {
+  return `contacts_${userId}`;
+}
+
+function isCvu(identifier: string): boolean {
+  // CVU format: 20 characters, only uppercase letters (except I) and numbers
+  const cvuRegex = /^[A-HJ-Z0-9]{20}$/;
+  return cvuRegex.test(identifier);
+}
+
+function isAlias(identifier: string): boolean {
+  // Alias format: three uppercase words separated by dots
+  const aliasRegex = /^[A-Z]+\.[A-Z]+\.[A-Z]+$/;
+  return aliasRegex.test(identifier);
+}
+
+function getContactType(identifier: string): 'cvu' | 'alias' {
+  if (isCvu(identifier)) return 'cvu';
+  if (isAlias(identifier)) return 'alias';
+  throw new Error('Invalid identifier format. Must be either a CVU (20 alphanumeric characters) or an alias (WORD.WORD.WORD)');
+}
+
+// New function to check if a contact already exists by name
+function contactExistsByName(contactsMap: Record<string, StoredContact>, firstName: string, lastName: string): boolean {
+    const normalizedFirstName = firstName.toLowerCase().trim();
+    const normalizedLastName = lastName.toLowerCase().trim();
+    
+    return Object.values(contactsMap).some(contact => 
+        contact.firstName.toLowerCase().trim() === normalizedFirstName && 
+        contact.lastName.toLowerCase().trim() === normalizedLastName
+    );
+}
+
+// New function to validate contact addition
+async function validateContactAddition(
+    userId: string,
+    contactId: string,
+    firstName: string,
+    lastName: string,
+    userCvu?: string,
+    userAlias?: string
+): Promise<{ isValid: boolean; error?: string }> {
+    if (!userId || !contactId) {
+        return { isValid: false, error: 'Invalid user or contact ID' };
+    }
+
+    // Check if trying to add self
+    if (userCvu && contactId === userCvu) {
+        return { isValid: false, error: 'No puedes agregarte a ti mismo como contacto' };
+    }
+    if (userAlias && contactId === userAlias) {
+        return { isValid: false, error: 'No puedes agregarte a ti mismo como contacto' };
+    }
+
+    try {
+        const storedContacts = localStorage.getItem(getStorageKey(userId));
+        const contactsMap = storedContacts ? JSON.parse(storedContacts) : {};
+
+        // Check if contact already exists by ID
+        if (contactsMap[contactId]) {
+            return { isValid: false, error: 'Este contacto ya existe en tu lista' };
+        }
+
+        // Check if contact already exists by name
+        if (contactExistsByName(contactsMap, firstName, lastName)) {
+            return { isValid: false, error: 'Ya tienes un contacto con este nombre' };
+        }
+
+        return { isValid: true };
+    } catch (error) {
+        console.error('Error validating contact:', error);
+        return { isValid: false, error: 'Error al validar el contacto' };
+    }
+}
+
+export async function fetchContacts(userId: string): Promise<{ contacts: Contact[] }> {
   if (!userId) {
     console.error('No user ID available');
-    return { contacts: [], rawContacts: [] };
+    return { contacts: [] };
   }
 
+  loading.value = true;
   try {
-    const { data, error } = await supabase
-      .from('user_contacts')
-      .select(`
-        contact_id,
-        contact:users!user_contacts_contact_id_fkey (
-          id,
-          first_name,
-          last_name,
-          username
-        )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    const storedContacts = localStorage.getItem(getStorageKey(userId));
+    const contactsMap = storedContacts ? JSON.parse(storedContacts) : {};
+    
+    // Convert the map to an array of Contact objects
+    const contacts = Object.entries(contactsMap).map(([identifier, data]) => {
+      const contactData = data as StoredContact;
+      return {
+        id: identifier,
+        first_name: capitalize(contactData.firstName),
+        last_name: capitalize(contactData.lastName),
+        username: identifier,
+        initials: getInitials(contactData.firstName, contactData.lastName),
+        account_number: contactData.type === 'cvu' ? identifier : undefined,
+        type: contactData.type,
+        addedAt: contactData.addedAt
+      };
+    });
 
-    if (error) {
-      console.error('Error fetching contacts:', error);
-      return { contacts: [], rawContacts: [] };
-    }
+    // Sort contacts by addedAt (most recent first)
+    contacts.sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
 
-    if (data) {
-      const typedData = data as unknown as ContactResponse[];
-      const contacts = typedData.map(row => ({
-        id: row.contact.id,
-        first_name: capitalize(row.contact.first_name),
-        last_name: capitalize(row.contact.last_name),
-        username: row.contact.username,
-        initials: getInitials(row.contact.first_name, row.contact.last_name)
-      }));
-      return { contacts, rawContacts: typedData };
-    }
-
-    return { contacts: [], rawContacts: [] };
+    return { contacts };
   } catch (error) {
-    console.error('Unexpected error fetching contacts:', error);
-    return { contacts: [], rawContacts: [] };
+    console.error('Error fetching contacts:', error);
+    return { contacts: [] };
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -68,17 +142,13 @@ export async function removeContact(userId: string, contactId: string): Promise<
   if (!userId) return false;
 
   try {
-    const { error } = await supabase
-      .from('user_contacts')
-      .delete()
-      .eq('user_id', userId)
-      .eq('contact_id', contactId);
+    const storedContacts = localStorage.getItem(getStorageKey(userId));
+    if (!storedContacts) return false;
 
-    if (error) {
-      console.error('Error removing contact:', error);
-      return false;
-    }
-
+    const contactsMap = JSON.parse(storedContacts);
+    delete contactsMap[contactId];
+    
+    localStorage.setItem(getStorageKey(userId), JSON.stringify(contactsMap));
     return true;
   } catch (error) {
     console.error('Error removing contact:', error);
@@ -86,23 +156,42 @@ export async function removeContact(userId: string, contactId: string): Promise<
   }
 }
 
-export async function addContact(userId: string, contactId: string): Promise<boolean> {
-  if (!userId || !contactId) return false;
-  try {
-    const { error } = await supabase
-      .from('user_contacts')
-      .insert({
-        user_id: userId,
-        contact_id: contactId,
-        created_at: new Date().toISOString(),
-      });
-    if (error) {
-      console.error('Error adding contact:', error);
-      return false;
+export async function addContact(
+    userId: string,
+    contactId: string,
+    firstName: string,
+    lastName: string,
+    userCvu?: string,
+    userAlias?: string
+): Promise<{ success: boolean; error?: string }> {
+    if (!userId || !contactId) {
+        return { success: false, error: 'Invalid user or contact ID' };
     }
-    return true;
-  } catch (error) {
-    console.error('Error adding contact:', error);
-    return false;
-  }
+
+    try {
+        // Validate contact addition
+        const validation = await validateContactAddition(userId, contactId, firstName, lastName, userCvu, userAlias);
+        if (!validation.isValid) {
+            return { success: false, error: validation.error };
+        }
+
+        const storedContacts = localStorage.getItem(getStorageKey(userId));
+        const contactsMap = storedContacts ? JSON.parse(storedContacts) : {};
+
+        // Create new contact entry
+        const newContact: StoredContact = {
+            firstName,
+            lastName,
+            type: getContactType(contactId),
+            addedAt: new Date().toISOString()
+        };
+
+        // Add to map and save
+        contactsMap[contactId] = newContact;
+        localStorage.setItem(getStorageKey(userId), JSON.stringify(contactsMap));
+        return { success: true };
+    } catch (error) {
+        console.error('Error adding contact:', error);
+        return { success: false, error: 'Error al agregar el contacto' };
+    }
 }
