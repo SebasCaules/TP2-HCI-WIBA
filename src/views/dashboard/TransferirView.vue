@@ -33,7 +33,7 @@
             <div class="transfer-form-group">
                 <CustomTextField
                     v-model="reason"
-                    placeholder="Motivo (opcional)"
+                    placeholder="Descripción"
                     class="transfer-reason-input"
                 />
             </div>
@@ -232,6 +232,30 @@
             </v-card>
         </v-dialog>
 
+        <!-- Error Dialog -->
+        <v-dialog v-model="showErrorDialog" max-width="400px">
+            <v-card class="error-dialog">
+                <div class="error-dialog-header">
+                    <v-btn
+                        icon
+                        class="dialog-close-btn"
+                        @click="showErrorDialog = false"
+                    >
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </div>
+                <div class="error-dialog-content">
+                    <v-icon color="error" size="48">mdi-alert-circle</v-icon>
+                    <div class="error-dialog-title">
+                        Error en la transferencia
+                    </div>
+                    <div class="error-dialog-message">
+                        {{ errorDialogMessage }}
+                    </div>
+                </div>
+            </v-card>
+        </v-dialog>
+
         <!-- Add Payment Method Dialog -->
         <v-dialog 
             v-model="showPaymentMethodDialog" 
@@ -301,9 +325,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { supabase } from "@/plugins/supabase";
-import { useAuthStore } from "@/stores/auth";
+import { useSecurityStore } from "@/stores/securityStore";
 import CustomTextField from "@/components/ui/CustomTextField.vue";
 import FilledButton from "@/components/ui/FilledButton.vue";
 import AddContactDialog from "@/components/AddContactDialog.vue";
@@ -356,8 +380,11 @@ const cardsStore = useCardsStore()
 const accountStore = useAccountStore()
 const paymentStore = usePaymentStore()
 
-const authStore = useAuthStore();
-const userId = computed(() => authStore.user?.id);
+const securityStore = useSecurityStore();
+const userId = computed(() => securityStore.user?.id?.toString());
+
+const showErrorDialog = ref(false);
+const errorDialogMessage = ref("");
 
 async function fetchContacts() {
     if (!userId.value) return;
@@ -397,8 +424,17 @@ function isValidEmail(value: string): boolean {
 const isTransferValid = computed(() => {
     const n = parseFloat(amount.value);
     const recipientValue = recipient.value.trim();
+    const descriptionValue = reason.value.trim();
+    
     if (isNaN(n) || n <= 0) return false;
     if (!recipientValue) return false;
+    if (!descriptionValue) return false;
+    
+    // Check if using account balance and if there's sufficient balance
+    if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
+        errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
+        return false;
+    }
     
     return isValidEmail(recipientValue) || 
            isValidCvu(recipientValue) || 
@@ -411,7 +447,53 @@ function formatAmount() {
     // Limit to 10 digits
     value = value.slice(0, 10);
     amount.value = value;
+
+    // Clear error message if amount is valid
+    const n = parseFloat(value);
+    if (!isNaN(n) && n > 0) {
+        // Only clear balance error if using account payment method
+        if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
+            errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
+        } else {
+            // Clear error if it was related to amount
+            if (errorMessage.value === "El monto debe ser mayor a cero." || 
+                errorMessage.value === "Saldo insuficiente para realizar la transferencia.") {
+                errorMessage.value = "";
+            }
+        }
+    }
 }
+
+// Add a watch on amount to handle validation
+watch(amount, (newValue) => {
+    const n = parseFloat(newValue);
+    if (isNaN(n) || n <= 0) {
+        errorMessage.value = "El monto debe ser mayor a cero.";
+    } else if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
+        errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
+    } else {
+        // Clear error if it was related to amount
+        if (errorMessage.value === "El monto debe ser mayor a cero." || 
+            errorMessage.value === "Saldo insuficiente para realizar la transferencia.") {
+            errorMessage.value = "";
+        }
+    }
+});
+
+// Add a watch on selectedPaymentMethod to update error message when payment method changes
+watch(selectedPaymentMethod, (newMethod) => {
+    const n = parseFloat(amount.value);
+    if (!isNaN(n) && n > 0) {
+        if (newMethod === 'account' && n > accountBalance.value) {
+            errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
+        } else {
+            // Clear error if it was related to balance
+            if (errorMessage.value === "Saldo insuficiente para realizar la transferencia.") {
+                errorMessage.value = "";
+            }
+        }
+    }
+});
 
 function formatNumber(value: string) {
     return value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -419,16 +501,17 @@ function formatNumber(value: string) {
 
 async function handleTransfer() {
     errorMessage.value = "";
-    recipientFirstName.value = "";
-    recipientLastName.value = "";
     const n = parseFloat(amount.value);
     const recipientValue = recipient.value.trim();
+    const descriptionValue = reason.value.trim();
     
     // Debug validation
     console.log('Validating recipient:', recipientValue);
     console.log('Is email?', isValidEmail(recipientValue));
     console.log('Is CVU?', isValidCvu(recipientValue));
     console.log('Is alias?', isValidAlias(recipientValue));
+    console.log('Payment method:', selectedPaymentMethod.value);
+    console.log('Account balance:', accountBalance.value);
     
     if (isNaN(n) || n <= 0) {
         errorMessage.value = "El monto debe ser mayor a cero.";
@@ -438,103 +521,104 @@ async function handleTransfer() {
         errorMessage.value = "Debes ingresar un email, CVU o alias.";
         return;
     }
+    if (!descriptionValue) {
+        errorMessage.value = "Debes ingresar una descripción.";
+        return;
+    }
+    if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
+        errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
+        return;
+    }
 
     // Get sender user id
-    const senderId = userId.value;
-    if (!senderId) {
+    if (!securityStore.isLoggedIn || !securityStore.user?.id) {
         errorMessage.value = "Usuario no autenticado.";
         return;
     }
 
     try {
-        const payload: PaymentRequest = {
-            amount: n,
-            description: reason.value || undefined
-        };
-        
-        let payment: Payment;
-        let transferType: 'email' | 'cvu' | 'alias';
-        
-        if (isValidEmail(recipientValue)) {
-            transferType = 'email';
-            console.log('Processing transfer by email');
-            payment = await paymentStore.transferToEmail(recipientValue, payload);
-        } else if (isValidCvu(recipientValue)) {
-            transferType = 'cvu';
-            console.log('Processing transfer by CVU');
-            payment = await paymentStore.transferToCvu(recipientValue, payload);
-        } else if (isValidAlias(recipientValue)) {
-            transferType = 'alias';
-            console.log('Processing transfer by alias');
-            payment = await paymentStore.transferToAlias(recipientValue, payload);
-        } else {
+        // Validate recipient format
+        if (!isValidEmail(recipientValue) && !isValidCvu(recipientValue) && !isValidAlias(recipientValue)) {
             console.log('Invalid recipient format');
             errorMessage.value = "Formato de email, CVU o alias inválido.";
             return;
         }
 
-        console.log(`Transfer initiated by ${transferType}:`, {
-            recipient: recipientValue,
-            amount: n,
-            reason: reason.value || 'No reason provided'
-        });
-
-        // Set recipient info for confirmation dialog
-        recipientFirstName.value = payment.receiver.firstName;
-        recipientLastName.value = payment.receiver.lastName;
-        
-        // Show confirmation dialog
+        // Show confirmation dialog with generic recipient info
+        // The actual recipient info will be returned by the transfer endpoint
+        recipientFirstName.value = "Usuario";
+        recipientLastName.value = "";
         showConfirmDialog.value = true;
     } catch (error) {
-        console.error('Transfer error:', error);
-        errorMessage.value = error instanceof Error ? error.message : "Error al procesar la transferencia.";
+        console.error('Transfer validation error:', error);
+        showErrorDialog.value = true;
+        errorDialogMessage.value = error instanceof Error ? error.message : "Error al validar la transferencia.";
         return;
     }
 }
 
 async function confirmTransfer() {
-    if (!amount.value || !recipient.value || !userId.value) return;
+    if (!amount.value || !recipient.value || !reason.value || !userId.value) return;
     const n = parseFloat(amount.value);
     const recipientValue = recipient.value.trim();
+    const descriptionValue = reason.value.trim();
+
+    // Double check balance before confirming transfer
+    if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
+        errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
+        showConfirmDialog.value = false;
+        return;
+    }
 
     // Debug validation
     console.log('Confirming transfer for recipient:', recipientValue);
     console.log('Is email?', isValidEmail(recipientValue));
     console.log('Is CVU?', isValidCvu(recipientValue));
     console.log('Is alias?', isValidAlias(recipientValue));
+    console.log('Payment method:', selectedPaymentMethod.value);
+    console.log('Selected card:', selectedCard.value);
+    console.log('Account balance:', accountBalance.value);
 
     try {
         const payload: PaymentRequest = {
             amount: n,
-            description: reason.value || undefined
+            description: descriptionValue,
+            metadata: {}
         };
         
         let payment: Payment;
         let transferType: 'email' | 'cvu' | 'alias';
+        const cardId = selectedPaymentMethod.value === 'card' && selectedCard.value ? selectedCard.value.id : undefined;
         
         if (isValidEmail(recipientValue)) {
             transferType = 'email';
-            console.log('Confirming transfer by email');
-            payment = await paymentStore.transferToEmail(recipientValue, payload);
+            console.log('Confirming transfer by email with payload:', payload, 'cardId:', cardId);
+            payment = await paymentStore.transferToEmail(recipientValue, payload, cardId);
         } else if (isValidCvu(recipientValue)) {
             transferType = 'cvu';
-            console.log('Confirming transfer by CVU');
-            payment = await paymentStore.transferToCvu(recipientValue, payload);
+            console.log('Confirming transfer by CVU with cardId:', cardId);
+            payment = await paymentStore.transferToCvu(recipientValue, payload, cardId);
         } else if (isValidAlias(recipientValue)) {
             transferType = 'alias';
-            console.log('Confirming transfer by alias');
-            payment = await paymentStore.transferToAlias(recipientValue, payload);
+            console.log('Confirming transfer by alias with cardId:', cardId);
+            payment = await paymentStore.transferToAlias(recipientValue, payload, cardId);
         } else {
             console.log('Invalid recipient format during confirmation');
-            errorMessage.value = "Formato de email, CVU o alias inválido.";
+            showErrorDialog.value = true;
+            errorDialogMessage.value = "Formato de email, CVU o alias inválido.";
             return;
         }
+
+        // Update recipient info from the payment response
+        recipientFirstName.value = payment.receiver.firstName;
+        recipientLastName.value = payment.receiver.lastName;
 
         console.log(`Transfer confirmed by ${transferType}:`, {
             recipient: recipientValue,
             amount: n,
-            reason: reason.value || 'No reason provided',
-            paymentId: payment.id
+            reason: descriptionValue,
+            paymentId: payment.id,
+            cardId: cardId
         });
 
         // Success
@@ -546,7 +630,9 @@ async function confirmTransfer() {
         showSuccessDialog.value = true;
     } catch (error) {
         console.error('Transfer confirmation error:', error);
-        errorMessage.value = error instanceof Error ? error.message : "Error al confirmar la transferencia.";
+        showConfirmDialog.value = false;
+        showErrorDialog.value = true;
+        errorDialogMessage.value = error instanceof Error ? error.message : "Error al confirmar la transferencia.";
         return;
     }
 }
@@ -1084,4 +1170,38 @@ onMounted(() => {
     border-radius: 1.5rem;
     padding: 0.8rem 2rem;
 }
+
+.error-dialog {
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.error-dialog-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+}
+
+.error-dialog-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 0 1rem 1rem;
+}
+
+.error-dialog-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--error);
+    margin-top: 0.5rem;
+}
+
+.error-dialog-message {
+    font-size: 1.05rem;
+    color: var(--text);
+    margin-bottom: 1rem;
+}
 </style>
+

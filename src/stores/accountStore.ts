@@ -65,6 +65,18 @@ export const useAccountStore = defineStore('account', () => {
         }
     }
 
+    async function verifyEmail(email: string): Promise<UserVerificationResponse> {
+        try {
+            const response = await AccountApi.verifyEmail(email)
+            error.value = null
+            return response
+        } catch (err) {
+            console.error('[AccountStore] Error verifying email:', err)
+            error.value = err instanceof Error ? err.message : 'Error al verificar el email'
+            throw err
+        }
+    }
+
     return {
         account,
         error,
@@ -72,6 +84,7 @@ export const useAccountStore = defineStore('account', () => {
         recharge,
         updateAlias,
         verifyCvu,
-        verifyAlias
+        verifyAlias,
+        verifyEmail
     }
 })
