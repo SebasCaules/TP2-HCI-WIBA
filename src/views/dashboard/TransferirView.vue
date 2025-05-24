@@ -37,6 +37,19 @@
                     class="transfer-reason-input"
                 />
             </div>
+            <!-- Selección de tarjeta -->
+            <div class="transfer-form-group">
+                <button type="button" class="deposit-method-box" @click="showCardDialog = true">
+                    <img :src="selectedCard?.logo" :alt="selectedCard?.brand" class="deposit-card-logo" v-if="selectedCard" />
+                    <span class="deposit-method-text" v-if="selectedCard">
+                        <b>{{ selectedCard.brand }}</b> *{{ selectedCard.number_last4 }}
+                    </span>
+                    <span class="deposit-method-text" v-else>
+                        Selecciona una tarjeta
+                    </span>
+                    <v-icon class="deposit-select-icon">mdi-chevron-right</v-icon>
+                </button>
+            </div>
             <FilledButton
                 class="transfer-continue-btn"
                 @click="handleTransfer"
@@ -209,6 +222,57 @@
                 </div>
             </v-card>
         </v-dialog>
+
+        <!-- Card Selection Dialog -->
+        <v-dialog 
+            v-model="showCardDialog" 
+            max-width="960px" 
+            :retain-focus="false"
+            :scrim="true"
+        >
+            <v-card class="select-card-dialog">
+                <div class="select-card-dialog-header">
+                    <span class="select-card-title">Seleccionar tarjeta</span>
+                    <v-btn icon class="dialog-close-btn" @click="showCardDialog = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </div>
+                <div class="select-card-list-custom">
+                    <template v-if="cards.length > 0">
+                        <div
+                            v-for="card in cards"
+                            :key="card.id"
+                            class="select-card-custom"
+                            :class="{ selected: selectedCard && selectedCard.id === card.id }"
+                            @click="selectCard(card)"
+                        >
+                            <img :src="card.logo" :alt="card.brand" class="select-card-logo" />
+                            <div class="select-card-info">
+                                <div class="select-card-brand"><b>{{ card.brand }}</b> *{{ card.number_last4 }}</div>
+                                <div class="select-card-expiry">Vence {{ card.expiry }}</div>
+                            </div>
+                            <v-icon v-if="selectedCard && selectedCard.id === card.id" color="primary" class="select-card-check">mdi-check-circle</v-icon>
+                        </div>
+                    </template>
+                    <div v-else class="no-cards-message">
+                        <v-icon size="48" color="primary">mdi-credit-card-outline</v-icon>
+                        <div class="no-cards-title">No tienes tarjetas guardadas</div>
+                        <div class="no-cards-subtitle">Agrega una tarjeta para transferir</div>
+                    </div>
+                </div>
+                <v-card-actions class="select-card-actions">
+                    <FilledButton class="add-card-btn" @click="showAddCardDialog = true">
+                        Agregar tarjeta
+                    </FilledButton>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+        <!-- Add Card Dialog -->
+        <AddCardDialog
+            :model-value="showAddCardDialog"
+            @update:model-value="(val: boolean) => { showAddCardDialog = val }"
+            @card-added="fetchCards"
+        />
     </v-container>
 </template>
 
@@ -219,10 +283,12 @@ import { useAuthStore } from "@/stores/auth";
 import CustomTextField from "@/components/ui/CustomTextField.vue";
 import FilledButton from "@/components/ui/FilledButton.vue";
 import AddContactDialog from "@/components/AddContactDialog.vue";
+import AddCardDialog from "@/components/AddCardDialog.vue";
 import BackButton from "@/components/ui/BackButton.vue";
 import { v4 as uuidv4 } from "uuid";
-import type { Contact } from "@/types/types";
+import type { Contact, Card } from "@/types/types";
 import { fetchContacts as fetchContactsBackend, removeContact as removeContactBackend } from '@/services/contacts';
+import { getCards } from '@/services/cards';
 
 import { useTransactionStore } from "@/stores/transactionStore";
 import { useSecurityStore } from "@/stores/securityStore";
@@ -250,6 +316,11 @@ const showSuccessDialog = ref(false);
 const contacts = ref<Contact[]>([]);
 const loading = ref(false);
 const showAddContactDialog = ref(false);
+const showCardDialog = ref(false);
+const showAddCardDialog = ref(false);
+const cards = ref<Card[]>([]);
+const selectedCard = ref<Card | null>(null);
+const selectedCardId = ref<string | null>(null);
 
 const authStore = useAuthStore();
 const userId = computed(() => authStore.user?.id);
@@ -263,8 +334,6 @@ async function fetchContacts() {
         console.error("Error fetching contacts:", error);
     }
 }
-
-onMounted(fetchContacts);
 
 function selectContact(contact: Contact) {
     recipient.value = contact.username;
@@ -295,6 +364,35 @@ function formatNumber(value: string) {
     return value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+function getBrandLogo(brand: string) {
+    if (brand === 'Visa') return 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png';
+    if (brand === 'Mastercard') return 'https://brandlogos.net/wp-content/uploads/2021/11/mastercard-logo.png';
+    if (brand === 'Amex') return 'https://upload.wikimedia.org/wikipedia/commons/f/fa/American_Express_logo_%282018%29.svg';
+    return '';
+}
+
+async function fetchCards() {
+    if (!userId.value) return;
+    const fetchedCards = await getCards(userId.value);
+    cards.value = (fetchedCards || []).map(card => ({
+        ...card,
+        logo: getBrandLogo(card.brand)
+    }));
+    if (!selectedCard.value && cards.value.length > 0) {
+        selectCard(cards.value[0]);
+    }
+}
+
+function selectCard(card: Card) {
+    selectedCard.value = card;
+    selectedCardId.value = card.id;
+    showCardDialog.value = false;
+}
+
+onMounted(() => {
+    fetchContacts();
+    fetchCards();
+});
 
 async function handleTransfer() {
   errorMessage.value = "";
@@ -305,7 +403,7 @@ async function handleTransfer() {
   const recipientValue = recipient.value.trim();
   const transactionStore = useTransactionStore();
   const securityStore = useSecurityStore();
-  const cardIdValue = selectedCardId.value; // Asegurate de tener esto vinculado
+  const cardIdValue = selectedCardId.value; // Usar el ID de la tarjeta seleccionada
 
   if (isNaN(n) || n <= 0) {
     errorMessage.value = "El monto debe ser mayor a cero.";
@@ -332,7 +430,7 @@ async function handleTransfer() {
       recipientValue,
       cardIdValue,
       n,
-      description.value || "Transferencia"
+      reason.value || "Transferencia"
     );
 
     if (transaction) {
@@ -489,9 +587,7 @@ async function removeContact(contactId: string) {
     width: 100%;
     max-width: 400px;
 }
-.transfer-form-group:last-of-type {
-    margin-bottom: 0;
-}
+
 .transfer-recipient-input,
 .transfer-amount-input,
 .transfer-reason-input {
@@ -499,7 +595,7 @@ async function removeContact(contactId: string) {
     max-width: 400px;
 }
 .transfer-continue-btn {
-    margin-top: 0.4rem;
+    margin-top: 1rem;
     font-size: 1.1rem;
     font-weight: 700;
     height: 50px;
@@ -725,9 +821,9 @@ async function removeContact(contactId: string) {
     justify-content: center;
     padding: 3rem 2rem;
     text-align: center;
-    background: #f8fafc;
+    background: var(--input);
     border-radius: 14px;
-    border: 2px dashed #e0e0e0;
+    border: 2px dashed var(--card-border-dashed);
     width: 100%;
     gap: 1rem;
 }
@@ -743,5 +839,142 @@ async function removeContact(contactId: string) {
     font-size: 1.05rem;
     color: var(--muted-text);
     font-family: var(--font-sans), sans-serif;
+}
+
+.select-card-dialog {
+    border-radius: 1.5rem !important;
+    overflow: visible;
+    box-shadow: 0 2px 16px 0 rgba(60, 60, 60, 0.1);
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 3rem;
+}
+.select-card-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 1rem 0;
+}
+.select-card-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-family: var(--font-sans), sans-serif;
+}
+.select-card-list-custom {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 1.5rem 0;
+    width: 100%;
+    padding-right: 0.5rem;
+}
+.select-card-custom {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border-radius: 14px;
+    border: 2px solid #e0e0e0;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s;
+    position: relative;
+}
+.select-card-custom:hover {
+    border-color: var(--primary);
+    background: #f0f4f8;
+}
+.select-card-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    margin-right: 1.5rem;
+}
+.select-card-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.select-card-brand {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.select-card-brand b {
+    font-weight: 700;
+}
+.select-card-expiry {
+    font-size: 1rem;
+    color: var(--muted-text);
+    margin-top: 0.2rem;
+}
+.select-card-check {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+}
+.select-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+.add-card-btn {
+    min-width: 200px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 1.5rem;
+    padding: 0.8rem 2rem;
+}
+.deposit-method-box {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  height: 48px;
+  padding: 0 1.1rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.18s;
+  font-size: 1.06rem;
+  font-family: var(--font-sans, sans-serif);
+  cursor: pointer;
+  outline: none;
+  gap: 0.8rem;
+}
+.deposit-method-box:hover,
+.deposit-method-box:focus {
+  border-color: var(--primary);
+}
+.deposit-card-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  display: flex;
+  align-items: center;
+}
+.deposit-method-text {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+  font-family: var(--font-sans), sans-serif;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+.deposit-select-icon {
+  color: var(--muted-text);
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 </style>
