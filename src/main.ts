@@ -34,5 +34,10 @@ app.use(createPinia())
 app.use(router)
 app.use(vuetify)
 
+// Initialize security store
+import { useSecurityStore } from '@/stores/securityStore'
+const securityStore = useSecurityStore()
+securityStore.initialize()
+
 // Mount app
 app.mount('#app')
