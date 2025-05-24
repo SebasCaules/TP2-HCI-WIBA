@@ -487,6 +487,9 @@ function toggleBalanceVisibility() {
 .dashboard-list-amount.positive {
     color: var(--success);
 }
+.dashboard-invest-body {
+    padding: 0;
+}
 .dashboard-invest-card {
     background: var(--card);
     border-radius: var(--radius-lg);
@@ -523,9 +526,6 @@ function toggleBalanceVisibility() {
     color: var(--primary-foreground);
     font-weight: 500;
     text-align: right;
-}
-.dashboard-invest-body {
-    padding: 1.2rem 1.5rem 1.5rem 1.5rem;
 }
 .dashboard-invest-chart {
     display: flex;
