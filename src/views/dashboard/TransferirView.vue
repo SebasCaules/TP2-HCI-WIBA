@@ -6,7 +6,7 @@
             <div class="transfer-form-group">
                 <CustomTextField
                     v-model="recipient"
-                    placeholder="Usuario o número de cuenta"
+                    placeholder="Email, CVU o alias"
                     class="transfer-recipient-input"
                 >
                     <template #right>
@@ -36,6 +36,28 @@
                     placeholder="Motivo (opcional)"
                     class="transfer-reason-input"
                 />
+            </div>
+            <div class="transfer-form-group">
+                <button type="button" class="deposit-method-box" @click="showPaymentMethodDialog = true">
+                    <template v-if="selectedPaymentMethod === 'account'">
+                        <v-icon color="primary" class="deposit-method-icon">mdi-wallet</v-icon>
+                        <span class="deposit-method-text">
+                            <b>Saldo de la cuenta</b>
+                        </span>
+                    </template>
+                    <template v-else-if="selectedCard">
+                        <img :src="selectedCard?.logo" :alt="selectedCard?.brand" class="deposit-card-logo" />
+                        <span class="deposit-method-text">
+                            <b>{{ selectedCard.brand }}</b> *{{ selectedCard.number_last4 }}
+                        </span>
+                    </template>
+                    <template v-else>
+                        <span class="deposit-method-text">
+                            Selecciona un método de pago
+                        </span>
+                    </template>
+                    <v-icon class="deposit-select-icon">mdi-chevron-right</v-icon>
+                </button>
             </div>
             <FilledButton
                 class="transfer-continue-btn"
@@ -209,6 +231,72 @@
                 </div>
             </v-card>
         </v-dialog>
+
+        <!-- Add Payment Method Dialog -->
+        <v-dialog 
+            v-model="showPaymentMethodDialog" 
+            max-width="960px" 
+            :retain-focus="false"
+            :scrim="true"
+        >
+            <v-card class="select-card-dialog">
+                <div class="select-card-dialog-header">
+                    <span class="select-card-title">Seleccionar método de pago</span>
+                    <v-btn icon class="dialog-close-btn" @click="showPaymentMethodDialog = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </div>
+                <div class="select-card-list-custom">
+                    <!-- Account Balance Option -->
+                    <div
+                        class="select-card-custom"
+                        :class="{ selected: selectedPaymentMethod === 'account' }"
+                        @click="selectPaymentMethod('account')"
+                    >
+                        <v-icon color="primary" size="32" class="select-card-icon">mdi-wallet</v-icon>
+                        <div class="select-card-info">
+                            <div class="select-card-brand">Saldo de la cuenta</div>
+                            <div class="select-card-balance">Saldo disponible: ${{ formatNumber(accountBalance.toString()) }}</div>
+                        </div>
+                        <v-icon v-if="selectedPaymentMethod === 'account'" color="primary" class="select-card-check">mdi-check-circle</v-icon>
+                    </div>
+                    <!-- Cards -->
+                    <template v-if="cards.length > 0">
+                        <div
+                            v-for="card in cards"
+                            :key="card.id"
+                            class="select-card-custom"
+                            :class="{ selected: selectedCard && selectedCard.id === card.id }"
+                            @click="selectCard(card)"
+                        >
+                            <img :src="card.logo" :alt="card.brand" class="select-card-logo" />
+                            <div class="select-card-info">
+                                <div class="select-card-brand">{{ card.brand }} *{{ card.number_last4 }}</div>
+                                <div class="select-card-expiry">Vence {{ card.expiry }}</div>
+                            </div>
+                            <v-icon v-if="selectedCard && selectedCard.id === card.id" color="primary" class="select-card-check">mdi-check-circle</v-icon>
+                        </div>
+                    </template>
+                    <div v-if="cards.length === 0" class="no-cards-message">
+                        <v-icon size="48" color="primary">mdi-credit-card-outline</v-icon>
+                        <div class="no-cards-title">No tienes tarjetas guardadas</div>
+                        <div class="no-cards-subtitle">Agrega una tarjeta para realizar transferencias</div>
+                    </div>
+                </div>
+                <v-card-actions class="select-card-actions">
+                    <FilledButton class="add-card-btn" @click="showAddCardDialog = true">
+                        Agregar tarjeta
+                    </FilledButton>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Add Card Dialog -->
+        <AddCardDialog
+            :model-value="showAddCardDialog"
+            @update:model-value="showAddCardDialog = $event"
+            @card-added="fetchCards"
+        />
     </v-container>
 </template>
 
@@ -223,6 +311,20 @@ import BackButton from "@/components/ui/BackButton.vue";
 import { v4 as uuidv4 } from "uuid";
 import type { Contact } from "@/types/types";
 import { fetchContacts as fetchContactsBackend, removeContact as removeContactBackend } from '@/services/contactsDeprecated';
+import { useCardsStore } from '@/stores/cardsStore'
+import { useAccountStore } from '@/stores/accountStore'
+import AddCardDialog from '@/components/AddCardDialog.vue'
+import { usePaymentStore } from '@/stores/paymentStore'
+import type { PaymentRequest, Payment } from '@/api/payment'
+
+interface DisplayCard {
+    id: string
+    brand: string
+    number_last4: string
+    expiry: string
+    holder: string
+    logo: string
+}
 
 interface ContactData {
     contact_id: string;
@@ -246,6 +348,13 @@ const showSuccessDialog = ref(false);
 const contacts = ref<Contact[]>([]);
 const loading = ref(false);
 const showAddContactDialog = ref(false);
+const showPaymentMethodDialog = ref(false)
+const showAddCardDialog = ref(false)
+const selectedPaymentMethod = ref<'account' | 'card'>('account')
+const selectedCard = ref<DisplayCard | null>(null)
+const cardsStore = useCardsStore()
+const accountStore = useAccountStore()
+const paymentStore = usePaymentStore()
 
 const authStore = useAuthStore();
 const userId = computed(() => authStore.user?.id);
@@ -267,16 +376,33 @@ function selectContact(contact: Contact) {
     showContactDialog.value = false;
 }
 
+// Helper functions for validation
+function isValidCvu(value: string): boolean {
+    // CVU is 20 chars, uppercase letters (except I) and numbers
+    const cvuRegex = /^[A-HJ-Z0-9]{20}$/;
+    return cvuRegex.test(value);
+}
+
+function isValidAlias(value: string): boolean {
+    // Alias is three uppercase words separated by dots
+    const aliasRegex = /^[A-Z]+\.[A-Z]+\.[A-Z]+$/;
+    return aliasRegex.test(value);
+}
+
+function isValidEmail(value: string): boolean {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(value);
+}
+
 const isTransferValid = computed(() => {
     const n = parseFloat(amount.value);
     const recipientValue = recipient.value.trim();
     if (isNaN(n) || n <= 0) return false;
     if (!recipientValue) return false;
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-    const accountRegex = /^\d{12}$/;
-    return (
-        usernameRegex.test(recipientValue) || accountRegex.test(recipientValue)
-    );
+    
+    return isValidEmail(recipientValue) || 
+           isValidCvu(recipientValue) || 
+           isValidAlias(recipientValue);
 });
 
 function formatAmount() {
@@ -297,175 +423,132 @@ async function handleTransfer() {
     recipientLastName.value = "";
     const n = parseFloat(amount.value);
     const recipientValue = recipient.value.trim();
+    
+    // Debug validation
+    console.log('Validating recipient:', recipientValue);
+    console.log('Is email?', isValidEmail(recipientValue));
+    console.log('Is CVU?', isValidCvu(recipientValue));
+    console.log('Is alias?', isValidAlias(recipientValue));
+    
     if (isNaN(n) || n <= 0) {
         errorMessage.value = "El monto debe ser mayor a cero.";
         return;
     }
     if (!recipientValue) {
-        errorMessage.value = "Debes ingresar un usuario o número de cuenta.";
+        errorMessage.value = "Debes ingresar un email, CVU o alias.";
         return;
     }
+
     // Get sender user id
     const senderId = userId.value;
     if (!senderId) {
         errorMessage.value = "Usuario no autenticado.";
         return;
     }
-    // Find recipient user id
-    let recipientUserId = null;
-    let recipientUsername = null;
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-    const accountRegex = /^\d{12}$/;
-    if (accountRegex.test(recipientValue)) {
-        // Lookup by account number, then join to users for names
-        const { data, error } = await supabase
-            .from("accounts")
-            .select("user_id, users(first_name, last_name)")
-            .eq("account_number", recipientValue)
-            .single();
-        if (error || !data) {
-            errorMessage.value = "No se encontró una cuenta con ese número.";
-            return;
-        }
-        recipientUserId = data.user_id;
-        let userObj: any = data.users;
-        // Si es array, tomar el primer elemento; si no, dejar como está
-        if (Array.isArray(userObj)) {
-          userObj = userObj[0];
-        }
-        if (
-            userObj &&
-            typeof userObj === "object" &&
-            "first_name" in userObj &&
-            "last_name" in userObj
-        ) {
-            recipientFirstName.value = userObj.first_name || "";
-            recipientLastName.value = userObj.last_name || "";
+
+    try {
+        const payload: PaymentRequest = {
+            amount: n,
+            description: reason.value || undefined
+        };
+        
+        let payment: Payment;
+        let transferType: 'email' | 'cvu' | 'alias';
+        
+        if (isValidEmail(recipientValue)) {
+            transferType = 'email';
+            console.log('Processing transfer by email');
+            payment = await paymentStore.transferToEmail(recipientValue, payload);
+        } else if (isValidCvu(recipientValue)) {
+            transferType = 'cvu';
+            console.log('Processing transfer by CVU');
+            payment = await paymentStore.transferToCvu(recipientValue, payload);
+        } else if (isValidAlias(recipientValue)) {
+            transferType = 'alias';
+            console.log('Processing transfer by alias');
+            payment = await paymentStore.transferToAlias(recipientValue, payload);
         } else {
-            recipientFirstName.value = "";
-            recipientLastName.value = "";
-        }
-    } else if (usernameRegex.test(recipientValue)) {
-        // Lookup by username
-        const { data, error } = await supabase
-            .from("users")
-            .select("id, username, first_name, last_name")
-            .eq("username", recipientValue)
-            .single();
-        if (error || !data) {
-            errorMessage.value = "No se encontró un usuario con ese nombre.";
+            console.log('Invalid recipient format');
+            errorMessage.value = "Formato de email, CVU o alias inválido.";
             return;
         }
-        recipientUserId = data.id;
-        recipientUsername = data.username;
-        recipientFirstName.value = data.first_name || "";
-        recipientLastName.value = data.last_name || "";
-    } else {
-        errorMessage.value = "Usuario o número de cuenta inválido.";
+
+        console.log(`Transfer initiated by ${transferType}:`, {
+            recipient: recipientValue,
+            amount: n,
+            reason: reason.value || 'No reason provided'
+        });
+
+        // Set recipient info for confirmation dialog
+        recipientFirstName.value = payment.receiver.firstName;
+        recipientLastName.value = payment.receiver.lastName;
+        
+        // Show confirmation dialog
+        showConfirmDialog.value = true;
+    } catch (error) {
+        console.error('Transfer error:', error);
+        errorMessage.value = error instanceof Error ? error.message : "Error al procesar la transferencia.";
         return;
     }
-    // Not self
-    if (recipientUserId === senderId) {
-        errorMessage.value = "No puedes transferirte a ti mismo.";
-        return;
-    }
-    // Check sender balance
-    const { data: senderAccount, error: senderError } = await supabase
-        .from("accounts")
-        .select("balance")
-        .eq("user_id", senderId)
-        .single();
-    if (senderError || !senderAccount) {
-        errorMessage.value = "No se pudo obtener tu cuenta.";
-        return;
-    }
-    if (senderAccount.balance < n) {
-        errorMessage.value = "Saldo insuficiente.";
-        return;
-    }
-    // All checks passed
-    showConfirmDialog.value = true;
 }
 
 async function confirmTransfer() {
     if (!amount.value || !recipient.value || !userId.value) return;
     const n = parseFloat(amount.value);
-    const senderId = userId.value;
-    let recipientId = null;
-    // Find recipient user id again (should be cached, but for safety)
     const recipientValue = recipient.value.trim();
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-    const accountRegex = /^\d{12}$/;
-    if (accountRegex.test(recipientValue)) {
-        const { data } = await supabase
-            .from("accounts")
-            .select("user_id")
-            .eq("account_number", recipientValue)
-            .single();
-        recipientId = data?.user_id;
-    } else if (usernameRegex.test(recipientValue)) {
-        const { data } = await supabase
-            .from("users")
-            .select("id")
-            .eq("username", recipientValue)
-            .single();
-        recipientId = data?.id;
-    }
-    if (!recipientId) {
-        errorMessage.value = "No se pudo encontrar el destinatario.";
-        return;
-    }
-    // Get sender and recipient account ids and balances
-    const { data: senderAccount } = await supabase
-        .from("accounts")
-        .select("id, balance")
-        .eq("user_id", senderId)
-        .single();
-    const { data: recipientAccount } = await supabase
-        .from("accounts")
-        .select("id, balance")
-        .eq("user_id", recipientId)
-        .single();
-    if (!senderAccount || !recipientAccount) {
-        errorMessage.value =
-            "No se pudo obtener la cuenta de origen o destino.";
-        return;
-    }
-    // Perform atomic transfer using a PostgREST RPC or multiple requests (simulate transaction)
-    // 1. Subtract from sender
-    const { error: senderUpdateError } = await supabase
-        .from("accounts")
-        .update({ balance: senderAccount.balance - n })
-        .eq("id", senderAccount.id);
-    // 2. Add to recipient
-    const { error: recipientUpdateError } = await supabase
-        .from("accounts")
-        .update({ balance: recipientAccount.balance + n })
-        .eq("id", recipientAccount.id);
-    // 3. Insert transaction
-    const { error: transactionError } = await supabase
-        .from("transactions")
-        .insert({
-            id: uuidv4(),
-            user_id: senderId,
-            recipient_id: recipientId,
-            description: reason.value || "",
-            transaction_type: "transfer",
-            amount: Number(n),
-            created_at: new Date(),
+
+    // Debug validation
+    console.log('Confirming transfer for recipient:', recipientValue);
+    console.log('Is email?', isValidEmail(recipientValue));
+    console.log('Is CVU?', isValidCvu(recipientValue));
+    console.log('Is alias?', isValidAlias(recipientValue));
+
+    try {
+        const payload: PaymentRequest = {
+            amount: n,
+            description: reason.value || undefined
+        };
+        
+        let payment: Payment;
+        let transferType: 'email' | 'cvu' | 'alias';
+        
+        if (isValidEmail(recipientValue)) {
+            transferType = 'email';
+            console.log('Confirming transfer by email');
+            payment = await paymentStore.transferToEmail(recipientValue, payload);
+        } else if (isValidCvu(recipientValue)) {
+            transferType = 'cvu';
+            console.log('Confirming transfer by CVU');
+            payment = await paymentStore.transferToCvu(recipientValue, payload);
+        } else if (isValidAlias(recipientValue)) {
+            transferType = 'alias';
+            console.log('Confirming transfer by alias');
+            payment = await paymentStore.transferToAlias(recipientValue, payload);
+        } else {
+            console.log('Invalid recipient format during confirmation');
+            errorMessage.value = "Formato de email, CVU o alias inválido.";
+            return;
+        }
+
+        console.log(`Transfer confirmed by ${transferType}:`, {
+            recipient: recipientValue,
+            amount: n,
+            reason: reason.value || 'No reason provided',
+            paymentId: payment.id
         });
-    if (senderUpdateError || recipientUpdateError || transactionError) {
-        errorMessage.value =
-            "Error al realizar la transferencia. Intenta de nuevo.";
+
+        // Success
+        showConfirmDialog.value = false;
+        recipient.value = "";
+        amount.value = "";
+        reason.value = "";
+        errorMessage.value = "";
+        showSuccessDialog.value = true;
+    } catch (error) {
+        console.error('Transfer confirmation error:', error);
+        errorMessage.value = error instanceof Error ? error.message : "Error al confirmar la transferencia.";
         return;
     }
-    // Success
-    showConfirmDialog.value = false;
-    recipient.value = "";
-    amount.value = "";
-    reason.value = "";
-    errorMessage.value = "";
-    showSuccessDialog.value = true;
 }
 
 async function removeContact(contactId: string) {
@@ -477,6 +560,66 @@ async function removeContact(contactId: string) {
         console.error("Error removing contact:", error);
     }
 }
+
+const accountBalance = computed(() => accountStore.account?.balance || 0)
+
+const cards = computed<DisplayCard[]>(() => {
+    if (!cardsStore.cards) return []
+    return cardsStore.cards.map(card => {
+        const cardType = card.type === 'CREDIT' ? 'Crédito' : 'Débito'
+        const last4 = card.number.match(/\d{4}$/)?.[0] || ''
+        return {
+            id: String(card.id),
+            brand: card.metadata?.brand || getCardBrand(card.number),
+            number_last4: last4,
+            expiry: card.expirationDate,
+            holder: card.fullName,
+            logo: getBrandLogo(card.metadata?.brand || getCardBrand(card.number))
+        }
+    })
+})
+
+function getCardBrand(number: string) {
+    const n = number.replace(/\D/g, '')
+    if (n.startsWith('4')) return 'Visa'
+    if (n.startsWith('5') || n.startsWith('2')) return 'Mastercard'
+    if (n.startsWith('3')) return 'Amex'
+    return 'Desconocida'
+}
+
+function getBrandLogo(brand: string) {
+    if (brand === 'Visa') return 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png'
+    if (brand === 'Mastercard') return 'https://brandlogos.net/wp-content/uploads/2021/11/mastercard-logo.png'
+    if (brand === 'Amex') return 'https://upload.wikimedia.org/wikipedia/commons/f/fa/American_Express_logo_%282018%29.svg'
+    return 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='
+}
+
+function selectPaymentMethod(method: 'account' | 'card') {
+    selectedPaymentMethod.value = method
+    if (method === 'account') {
+        selectedCard.value = null
+    }
+    showPaymentMethodDialog.value = false
+}
+
+function selectCard(card: DisplayCard) {
+    selectedCard.value = card
+    selectedPaymentMethod.value = 'card'
+    showPaymentMethodDialog.value = false
+}
+
+async function fetchCards() {
+    try {
+        await cardsStore.fetchCards()
+    } catch (error) {
+        console.error('Error fetching cards:', error)
+    }
+}
+
+onMounted(() => {
+    fetchCards()
+    accountStore.fetchAccount()
+})
 </script>
 
 <style scoped>
@@ -529,8 +672,9 @@ async function removeContact(contactId: string) {
     width: 100%;
     max-width: 400px;
 }
+
 .transfer-continue-btn {
-    margin-top: 0.4rem;
+    margin-top: 1.5rem;
     font-size: 1.1rem;
     font-weight: 700;
     height: 50px;
@@ -774,5 +918,170 @@ async function removeContact(contactId: string) {
     font-size: 1.05rem;
     color: var(--muted-text);
     font-family: var(--font-sans), sans-serif;
+}
+
+.deposit-method-box {
+    display: flex;
+    align-items: center;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    background: transparent;
+    height: 48px;
+    padding: 0 1.1rem;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.18s;
+    font-size: 1.06rem;
+    font-family: var(--font-sans, sans-serif);
+    cursor: pointer;
+    outline: none;
+    gap: 0.8rem;
+}
+
+.deposit-method-box:hover,
+.deposit-method-box:focus {
+    border-color: var(--primary);
+}
+
+.deposit-card-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    display: flex;
+    align-items: center;
+}
+
+.deposit-method-icon {
+    font-size: 24px;
+}
+
+.deposit-method-text {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+    flex: 1;
+    font-family: var(--font-sans), sans-serif;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.deposit-select-icon {
+    color: var(--muted-text);
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.select-card-dialog {
+    border-radius: 2rem !important;
+    overflow: visible;
+    box-shadow: var(--shadow-card);
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 3rem;
+}
+
+.select-card-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 1rem 0;
+}
+
+.select-card-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-family: var(--font-sans), sans-serif;
+}
+
+.select-card-list-custom {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 1.5rem 0;
+    width: 100%;
+    padding-right: 0.5rem;
+}
+
+.select-card-custom {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    background: var(--input);
+    border-radius: 14px;
+    border: 2px solid var(--card-border);
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s;
+    position: relative;
+}
+
+.select-card-custom.selected {
+    border-color: var(--primary);
+    background: var(--muted);
+}
+
+.select-card-custom:hover {
+    border-color: var(--primary);
+    background: var(--card);
+}
+
+.select-card-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    margin-right: 1.5rem;
+}
+
+.select-card-icon {
+    margin-right: 1.5rem;
+}
+
+.select-card-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.select-card-brand {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.select-card-balance,
+.select-card-expiry {
+    font-size: 1rem;
+    color: var(--muted-text);
+    margin-top: 0.2rem;
+}
+
+.select-card-check {
+    font-size: 1.8rem;
+    margin-left: 1.5rem;
+}
+
+.select-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.5rem 0 0 0;
+}
+
+.add-card-btn {
+    min-width: 200px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 1.5rem;
+    padding: 0.8rem 2rem;
 }
 </style>
