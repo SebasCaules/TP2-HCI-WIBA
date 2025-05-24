@@ -10,24 +10,24 @@ export interface Payment {
     id: number;
     uuid?: string;
     amount: number;
-    status: "pending" | "completed" | "failed";
+    pending: boolean;
     created_at: string;
     updated_at?: string;
     user_id?: number;
     description?: string;
-    method: "ACCOUNT" | "CARD";
+    method: "ACCOUNT" | "CARD" | null;
     payer: {
         id: number;
         firstName: string;
         lastName: string;
-    };
+    } | null;
     receiver: {
         id: number;
         firstName: string;
         lastName: string;
-    };
+    } | null;
     card: any | null;
-    metadata: Record<string, any>;
+    metadata: Record<string, any> | null;
 }
 
 export interface PaginatedResponse {
@@ -75,14 +75,38 @@ export const PaymentApi = {
         return response as Payment;
     },
 
-    async getAll(): Promise<PaginatedResponse> {
-        const response = await Api.get(BASE_URL, true);
+    async getAll(page: number = 1, pageSize: number = 10): Promise<PaginatedResponse> {
+        const query = new URLSearchParams({
+            page: page.toString(),
+            pageSize: pageSize.toString()
+        });
+        const response = await Api.get(`${BASE_URL}?${query.toString()}`, true);
         return response as PaginatedResponse;
     },
 
-    async getByUuid(id: string): Promise<Payment> {
-        const response = await Api.get(`${BASE_URL}/${id}`, true);
-        return response as Payment;
+    async getByUuid(uuid: string): Promise<Payment> {
+        console.log('🔍 API: Getting payment by UUID:', uuid);
+        // First get all payments to find the one with matching UUID
+        const response = await this.getAll(1, 1000) as PaginatedResponse;
+        console.log('📦 API: All payments:', response);
+        
+        // Verify response structure
+        if (!response || !Array.isArray(response.results)) {
+            console.error('Invalid response structure:', response);
+            throw new Error('Invalid response from server');
+        }
+        
+        // Find the payment with matching UUID in the results array
+        const payment = response.results.find(p => p.uuid === uuid);
+        if (!payment) {
+            throw new Error('Payment not found');
+        }
+        
+        console.log('✅ Found payment with index:', payment.id);
+        // Now get the specific payment using its ID
+        const specificPayment = await this.getById(payment.id);
+        console.log('📦 API: Specific payment response:', specificPayment);
+        return specificPayment;
     },
 
     // NUEVAS FUNCIONES DEL OTRO CÓDIGO

@@ -44,7 +44,7 @@ import FilledButton from '@/components/ui/FilledButton.vue';
 import CustomTextField from '@/components/ui/CustomTextField.vue';
 import { useSecurityStore } from '@/stores/securityStore';
 import { useAccountStore } from '@/stores/accountStore';
-import { addContact } from '@/services/contactsDeprecated';
+import { addContact } from '@/services/contacts';
 import type { Contact } from '@/types/types';
 import { useRouter } from 'vue-router';
 

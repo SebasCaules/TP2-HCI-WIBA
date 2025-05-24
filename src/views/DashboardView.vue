@@ -259,6 +259,7 @@ import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import InvestmentCard from "@/components/investments/InvestmentCard.vue";
 import type { Contact } from "@/types/types";
 import type { DashboardData } from "@/services/dashboardDeprecated";
+import { fetchContacts } from "@/services/contacts";
 
 const securityStore = useSecurityStore();
 const accountStore = useAccountStore();
@@ -312,6 +313,11 @@ async function fetchData() {
             throw new Error("No se pudo obtener la información del usuario");
         }
 
+        // Fetch contacts
+        const { contacts: fetchedContacts } = await fetchContacts(
+            userId.value.toString()
+        );
+
         dashboardData.value = {
             user: {
                 id: user.id.toString(),
@@ -325,10 +331,10 @@ async function fetchData() {
             },
             transactions: [], // TODO: Implementar obtención de transacciones reales
             bills: [], // TODO: Implementar obtención de facturas reales
-            contacts: [], // TODO: Implementar obtención de contactos reales
+            contacts: fetchedContacts,
             cards: [], // TODO: Implementar obtención de tarjetas reales
         };
-        contacts.value = [];
+        contacts.value = fetchedContacts;
     } catch (e) {
         error.value =
             e instanceof Error ? e.message : "Error al cargar los datos";

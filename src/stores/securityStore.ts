@@ -16,16 +16,12 @@ export const useSecurityStore = defineStore("security", () => {
     });
 
     function initialize(): void {
-
         const storedToken = localStorage.getItem(SECURITY_TOKEN_KEY);
-
         if (storedToken) setToken(storedToken);
     }
 
     function setUser(value: User | null): void {
-
         if (value) {
-            // Generar username localmente
             try {
                 value.username = generateUsername(value.firstName, value.lastName);
             } catch (err) {
@@ -36,52 +32,40 @@ export const useSecurityStore = defineStore("security", () => {
     }
 
     function setToken(value: string | null): void {
-
         token.value = value;
         Api.token = value;
     }
 
     function updateToken(value: string, rememberMe: boolean): void {
-
         if (rememberMe) {
-
             localStorage.setItem(SECURITY_TOKEN_KEY, value);
         }
         setToken(value);
     }
 
     function removeToken(): void {
-
         localStorage.removeItem(SECURITY_TOKEN_KEY);
         setToken(null);
     }
 
     async function login(credentials: Credentials, rememberMe: boolean): Promise<void> {
-
         const result = await UserApi.login(credentials);
-
         updateToken(result.token, rememberMe);
     }
 
     async function logout(): Promise<void> {
-
         try {
             await UserApi.logout();
-
         } finally {
             removeToken();
         }
     }
 
     async function getCurrentUser(): Promise<User | null> {
-
         if (user.value) {
-
             return user.value;
         }
-
         const result = await UserApi.get();
-
         setUser(result);
         return result;
     }
@@ -114,6 +98,34 @@ export const useSecurityStore = defineStore("security", () => {
         }
     }
 
+    async function verify(code: string, email: string): Promise<void> {
+        isLoading.value = true;
+        error.value = null;
+        
+        try {
+            await UserApi.verify(code, email);
+        } catch (err: any) {
+            error.value = err.description || 'Error al verificar el código';
+            throw err;
+        } finally {
+            isLoading.value = false;
+        }
+    }
+
+    async function resendVerification(email: string): Promise<void> {
+        isLoading.value = true;
+        error.value = null;
+        
+        try {
+            await UserApi.resendVerification(email);
+        } catch (err: any) {
+            error.value = err.description || 'Error al reenviar el código de verificación';
+            throw err;
+        } finally {
+            isLoading.value = false;
+        }
+    }
+
     return { 
         user, 
         isLoggedIn, 
@@ -125,6 +137,8 @@ export const useSecurityStore = defineStore("security", () => {
         getCurrentUser, 
         setUser,
         resetPasswordRequest,
-        confirmPasswordChange 
+        confirmPasswordChange,
+        verify,
+        resendVerification
     };
 }); 

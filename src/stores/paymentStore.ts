@@ -23,15 +23,14 @@ export const usePaymentStore = defineStore("payment", () => {
         totalCount: 0
     });
 
-    console.log('🔄 Store initialized with payments:', payments.value);
-
+    
     async function fetchPayments() {
         console.log('📥 Fetching payments...');
         console.log('Current payments before fetch:', payments.value);
         loading.value = true;
         error.value = null;
         try {
-            const response = await PaymentApi.getAll() as PaginatedResponse;
+            const response = await PaymentApi.getAll(1, 1000) as PaginatedResponse;
             console.log('📦 API response for fetchPayments:', response);
             payments.value = response.results;
             pagination.value = response.paging;
@@ -43,10 +42,33 @@ export const usePaymentStore = defineStore("payment", () => {
             loading.value = false;
         }
     }
+    console.log('🔄 Store initialized with payments:', payments.value);
+    
+    async function getPaymentByUuid(uuid: string): Promise<Payment> {
+        console.log('🔍 Store: Getting payment by UUID:', uuid);
+        loading.value = true;
+        error.value = null;
+        try {
+            const payment = await PaymentApi.getByUuid(uuid);
+            console.log('📦 Store: Payment API response:', payment);
+            if (!payment) {
+                throw new Error('Payment not found');
+            }
+            return payment;
+        } catch (e) {
+            error.value = e instanceof Error ? e.message : 'Error al obtener el pago';
+            console.error('❌ Store: Error getting payment by UUID:', e);
+            throw e;
+        } finally {
+            loading.value = false;
+        }
+    }
 
     async function createPayment(payload: PaymentRequest) {
         console.log('➕ Creating new payment with payload:', payload);
         console.log('Current payments before create:', payments.value);
+        loading.value = true;
+        error.value = null;
         try {
             const payment = await PaymentApi.pull(payload);
             console.log('📦 API response for createPayment:', payment);
@@ -54,24 +76,30 @@ export const usePaymentStore = defineStore("payment", () => {
             console.log('🔄 New payments array before assignment:', newPayments);
             payments.value = newPayments;
             console.log('✅ Updated payments after create:', payments.value);
+            await fetchPayments();
             return payment;
         } catch (e) {
             console.error('❌ Error creating payment:', e);
             throw e;
+        } finally {
+            loading.value = false;
         }
     }
 
     async function confirmPayment(uuid: string, cardId?: string) {
-        console.log('✅ Confirming payment with uuid:', uuid, 'cardId:', cardId);
-        console.log('Current payments before confirm:', payments.value);
+        console.log('💳 Store: Confirming payment:', { uuid, cardId });
+        loading.value = true;
+        error.value = null;
         try {
             await PaymentApi.push(uuid, cardId);
-            console.log('📦 Payment confirmed successfully');
+            console.log('✅ Store: Payment confirmed successfully');
             await fetchPayments();
-            console.log('✅ Payments refreshed after confirmation:', payments.value);
+            console.log('🔄 Store: Payments list refreshed');
         } catch (e) {
-            console.error('❌ Error confirming payment:', e);
+            console.error('❌ Store: Error confirming payment:', e);
             throw e;
+        } finally {
+            loading.value = false;
         }
     }
 
@@ -178,6 +206,7 @@ export const usePaymentStore = defineStore("payment", () => {
         error,
         pagination,
         fetchPayments,
+        getPaymentByUuid,
         createPayment,
         confirmPayment,
         transferToEmail,

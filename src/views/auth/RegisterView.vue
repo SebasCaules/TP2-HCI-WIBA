@@ -176,7 +176,7 @@ const handleRegister = async (): Promise<void> => {
     }
     
     await UserApi.createUser(registrationData)
-    router.push('/confirmacion')
+    router.push(`/confirmacion?email=${encodeURIComponent(email.value)}`)
   } catch (error: any) {
     if (error.code === 400) {
       // Manejar errores de validación específicos

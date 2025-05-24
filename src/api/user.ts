@@ -71,14 +71,20 @@ export class UserApi {
         return response as User;
     }
 
-    static async verify(code: string, controller?: AbortController): Promise<User> {
-        const response = await Api.post(`${UserApi.getUrl("verify")}?code=${code}`, false, null, controller);
+    static async verify(code: string, email: string, controller?: AbortController): Promise<User> {
+        const url = UserApi.getUrl(`verify?code=${encodeURIComponent(code)}`);
+        const response = await Api.post(url, false, undefined, controller);
         return response as User;
     }
     
     static async updateAlias(newAlias: string, controller?: AbortController): Promise<void> {
         const url = UserApi.getUrl(`update-alias?alias=${encodeURIComponent(newAlias)}`);
         await Api.put(url, true, undefined, controller);
+    }
+
+    static async resendVerification(email: string, controller?: AbortController): Promise<void> {
+        const url = UserApi.getUrl(`resend-verification?email=${encodeURIComponent(email)}`);
+        await Api.post(url, false, undefined, controller);
     }
 
     static async resetPasswordWithToken(token: string, newPassword: string, controller?: AbortController): Promise<void> {

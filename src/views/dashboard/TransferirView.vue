@@ -222,7 +222,7 @@ import AddContactDialog from "@/components/AddContactDialog.vue";
 import BackButton from "@/components/ui/BackButton.vue";
 import { v4 as uuidv4 } from "uuid";
 import type { Contact } from "@/types/types";
-import { fetchContacts as fetchContactsBackend, removeContact as removeContactBackend } from '@/services/contactsDeprecated';
+import { fetchContacts as fetchContactsBackend, removeContact as removeContactBackend } from '@/services/contacts';
 
 interface ContactData {
     contact_id: string;
