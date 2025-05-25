@@ -27,7 +27,15 @@ export const usePaymentStore = defineStore("payment", () => {
         error.value = null;
         try {
             const payment = await PaymentApi.push(uuid, cardId);
-            return payment;
+            const paymentWithTimestamp = {
+                ...payment,
+                metadata: {
+                    ...payment.metadata,
+                    timestamp: new Date().toISOString()
+                }
+            };
+            await fetchPayments();
+            return paymentWithTimestamp;
         } catch (e) {
             error.value = e instanceof Error ? e.message : 'Error al confirmar el pago';
             console.error('Error confirming payment:', e);
