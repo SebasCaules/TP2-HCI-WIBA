@@ -334,7 +334,7 @@ import AddContactDialog from "@/components/AddContactDialog.vue";
 import BackButton from "@/components/ui/BackButton.vue";
 import { v4 as uuidv4 } from "uuid";
 import type { Contact } from "@/types/types";
-import { fetchContacts as fetchContactsBackend, removeContact as removeContactBackend } from '@/services/contactsDeprecated';
+import { fetchContacts as fetchContactsBackend, removeContact as removeContactBackend } from '@/services/contacts';
 import { useCardsStore } from '@/stores/cardsStore'
 import { useAccountStore } from '@/stores/accountStore'
 import AddCardDialog from '@/components/AddCardDialog.vue'
@@ -593,15 +593,15 @@ async function confirmTransfer() {
         if (isValidEmail(recipientValue)) {
             transferType = 'email';
             console.log('Confirming transfer by email with payload:', payload, 'cardId:', cardId);
-            payment = await paymentStore.transferToEmail(recipientValue, payload, cardId);
+            payment = await paymentStore.transferByEmail(recipientValue, payload, cardId);
         } else if (isValidCvu(recipientValue)) {
             transferType = 'cvu';
             console.log('Confirming transfer by CVU with cardId:', cardId);
-            payment = await paymentStore.transferToCvu(recipientValue, payload, cardId);
+            payment = await paymentStore.transferByCVU(recipientValue, payload, cardId);
         } else if (isValidAlias(recipientValue)) {
             transferType = 'alias';
             console.log('Confirming transfer by alias with cardId:', cardId);
-            payment = await paymentStore.transferToAlias(recipientValue, payload, cardId);
+            payment = await paymentStore.transferByAlias(recipientValue, payload, cardId);
         } else {
             console.log('Invalid recipient format during confirmation');
             showErrorDialog.value = true;

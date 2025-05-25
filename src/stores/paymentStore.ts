@@ -65,11 +65,13 @@ export const usePaymentStore = defineStore("payment", () => {
         }
     }
 
-    async function transferByEmail(email: string, cardId: string, payload: PaymentRequest): Promise<Payment> {
+    async function transferByEmail(email: string, payload: PaymentRequest, cardId?: string): Promise<Payment> {
         loading.value = true;
         error.value = null;
         try {
-            return await PaymentApi.transferByEmail(email, cardId, payload);
+            const payment = await PaymentApi.transferByEmail(email, payload, cardId);
+            await fetchPayments(); // Actualizar la lista de pagos
+            return payment;
         } catch (e) {
             error.value = e instanceof Error ? e.message : 'Error al realizar la transferencia';
             console.error('Error transferring by email:', e);
@@ -79,11 +81,13 @@ export const usePaymentStore = defineStore("payment", () => {
         }
     }
 
-    async function transferByCVU(cvu: string, cardId: string, payload: PaymentRequest): Promise<Payment> {
+    async function transferByCVU(cvu: string, payload: PaymentRequest, cardId?: string): Promise<Payment> {
         loading.value = true;
         error.value = null;
         try {
-            return await PaymentApi.transferByCVU(cvu, cardId, payload);
+            const payment = await PaymentApi.transferByCVU(cvu, payload, cardId);
+            await fetchPayments(); // Actualizar la lista de pagos
+            return payment;
         } catch (e) {
             error.value = e instanceof Error ? e.message : 'Error al realizar la transferencia';
             console.error('Error transferring by CVU:', e);
@@ -93,11 +97,13 @@ export const usePaymentStore = defineStore("payment", () => {
         }
     }
 
-    async function transferByAlias(alias: string, cardId: string, payload: PaymentRequest): Promise<Payment> {
+    async function transferByAlias(alias: string, payload: PaymentRequest, cardId?: string): Promise<Payment> {
         loading.value = true;
         error.value = null;
         try {
-            return await PaymentApi.transferByAlias(alias, cardId, payload);
+            const payment = await PaymentApi.transferByAlias(alias, payload, cardId);
+            await fetchPayments(); // Actualizar la lista de pagos
+            return payment;
         } catch (e) {
             error.value = e instanceof Error ? e.message : 'Error al realizar la transferencia';
             console.error('Error transferring by alias:', e);

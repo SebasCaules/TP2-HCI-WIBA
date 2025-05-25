@@ -255,6 +255,7 @@
 import { ref, onMounted, computed, watch } from "vue";
 import { useSecurityStore } from "@/stores/securityStore.ts";
 import { useAccountStore } from "@/stores/accountStore";
+import { useTransactionStore } from '@/stores/transactionStore';
 import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import InvestmentCard from "@/components/investments/InvestmentCard.vue";
 import type { Contact } from "@/types/types";
@@ -263,6 +264,7 @@ import { fetchContacts } from "@/services/contacts";
 
 const securityStore = useSecurityStore();
 const accountStore = useAccountStore();
+const transactionStore = useTransactionStore();
 const userId = computed(() => securityStore.user?.id);
 const loading = ref(true);
 const error = ref<string | null>(null);
@@ -309,6 +311,9 @@ async function fetchData() {
         // Obtener datos de cuenta
         await accountStore.fetchAccount();
 
+        // Obtener transacciones
+        await transactionStore.fetchTransactions();
+
         if (!user) {
             throw new Error("No se pudo obtener la información del usuario");
         }
@@ -329,7 +334,7 @@ async function fetchData() {
                 balance: accountStore.account?.balance ?? 0,
                 account_number: accountStore.account?.cvu ?? "Sin CVU",
             },
-            transactions: [], // TODO: Implementar obtención de transacciones reales
+            transactions: transactionStore.transactions.slice(0, 7),
             bills: [], // TODO: Implementar obtención de facturas reales
             contacts: fetchedContacts,
             cards: [], // TODO: Implementar obtención de tarjetas reales

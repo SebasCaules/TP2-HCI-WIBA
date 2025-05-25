@@ -1,18 +1,5 @@
 <template>
     <div>
-        <!-- Selector de cantidad de items por página -->
-        <!-- <div class="table-controls">
-            <v-spacer />
-            <v-select
-                v-model="itemsPerPageLocal"
-                :items="itemsPerPageOptions"
-                label="Filas por página"
-                hide-details
-                dense
-                class="items-per-page-select"
-                style="max-width: 140px; min-width: 120px;"
-            />
-        </div> -->
         <v-data-table
             :items="paginatedItems"
             :headers="headers"
@@ -74,14 +61,22 @@
                 </div>
             </template>
 
-            <!-- Pagination -->
+            <!-- Pagination and items per page selector -->
             <template #bottom>
-                <div class="table-pagination">
+                <div class="pagination-footer">
                     <v-pagination
                         v-if="pageCount > 1"
                         v-model="currentPage"
                         :length="pageCount"
                         rounded
+                    />
+                    <v-select
+                        v-model="itemsPerPageLocal"
+                        :items="itemsPerPageOptions"
+                        hide-details
+                        density="compact"
+                        class="items-per-page-selector"
+                        menu-icon="mdi-chevron-down"
                     />
                 </div>
             </template>
@@ -159,18 +154,6 @@ const handleRowClick = (item: any) => {
 </script>
 
 <style scoped>
-.table-controls {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    margin-bottom: 0.5rem;
-}
-
-.items-per-page-select {
-    min-width: 120px;
-    max-width: 140px;
-}
-
 .table-pagination {
     display: flex;
     justify-content: center;
@@ -298,5 +281,23 @@ const handleRowClick = (item: any) => {
     .base-data-table :deep(td[data-priority="high"]) {
         display: table-cell !important;
     }
+}
+
+.pagination-footer {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding: 0 1rem;
+}
+
+.items-per-page-selector {
+    background-color: var(--surface);
+    border-radius: 999px;
+    min-width: 100px;
+    max-width: 140px;
+    font-size: 0.875rem;
+    padding: 4px 12px;
 }
 </style>

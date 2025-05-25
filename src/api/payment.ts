@@ -54,21 +54,29 @@ export const PaymentApi = {
         const response = await Api.put(`${BASE_URL}/push?${query.toString()}`, true, {});
         return response as Payment;
     },
+    
+    async get(): Promise<Payment[]> {
+        const response = await Api.get(BASE_URL, true);
+        return response as Payment[];
+    },
 
-    async transferByEmail(email: string, cardId: string, payload: PaymentRequest): Promise<Payment> {
-        const query = new URLSearchParams({ email, cardId });
+    async transferByEmail(email: string, payload: PaymentRequest, cardId?: string): Promise<Payment> {
+        const query = new URLSearchParams({ email });
+        if (cardId) query.append("cardId", cardId);
         const response = await Api.post(`${BASE_URL}/transfer-email?${query.toString()}`, true, payload);
         return response as Payment;
     },
 
-    async transferByCVU(cvu: string, cardId: string, payload: PaymentRequest): Promise<Payment> {
-        const query = new URLSearchParams({ cvu, cardId });
+    async transferByCVU(cvu: string, payload: PaymentRequest, cardId?: string): Promise<Payment> {
+        const query = new URLSearchParams({ cvu });
+        if (cardId) query.append("cardId", cardId);
         const response = await Api.post(`${BASE_URL}/transfer-cvu?${query.toString()}`, true, payload);
         return response as Payment;
     },
 
-    async transferByAlias(alias: string, cardId: string, payload: PaymentRequest): Promise<Payment> {
-        const query = new URLSearchParams({ alias, cardId });
+    async transferByAlias(alias: string, payload: PaymentRequest, cardId?: string): Promise<Payment> {
+        const query = new URLSearchParams({ alias });
+        if (cardId) query.append("cardId", cardId);
         const response = await Api.post(`${BASE_URL}/transfer-alias?${query.toString()}`, true, payload);
         return response as Payment;
     },

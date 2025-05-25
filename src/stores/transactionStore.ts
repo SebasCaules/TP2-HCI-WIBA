@@ -11,9 +11,8 @@ export const useTransactionStore = defineStore('transaction', () => {
     loading.value = true;
     error.value = null;
     try {
-      const res = await PaymentApi.get();
-      // Verifica si es un array o un objeto con .results
-      transactions.value = Array.isArray(res) ? res : res?.results ?? [];
+      const res = await PaymentApi.getAll();
+      transactions.value = res.results;
     } catch (e) {
       error.value = 'Error al obtener transacciones';
       transactions.value = [];
