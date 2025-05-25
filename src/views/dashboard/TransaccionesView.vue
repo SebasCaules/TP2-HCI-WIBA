@@ -10,13 +10,21 @@
           :loading="transactionStore.loading"
         >
           <template #item.date="{ item }">
-            {{ formatDate(item.date ?? item.created_at) }}
+            {{ formatDate(getTransactionDate(item)) }}
           </template>
           <template #item.description="{ item }">
             {{ item.description ?? '-' }}
           </template>
           <template #item.type="{ item }">
-            {{ item.method === 'ACCOUNT' ? 'Cuenta' : item.method === 'CARD' ? 'Tarjeta' : 'Otro' }}
+            <template v-if="item.method === 'ACCOUNT'">
+              Cuenta
+            </template>
+            <template v-else-if="item.method === 'CARD' && item.card">
+              Tarjeta *{{ item.card.number.slice(-4) }}
+            </template>
+            <template v-else>
+              Otro
+            </template>
           </template>
           <template #item.amount="{ item }">
             ${{ item.amount?.toFixed(2) ?? '-' }}
@@ -41,6 +49,11 @@ const headers = [
   { title: 'Monto', key: 'amount' },
 ];
 
+function getTransactionDate(item: any): string {
+  // Try to get timestamp from metadata first, fall back to created_at
+  return item.metadata?.timestamp || item.created_at;
+}
+
 function formatDate(dateStr: string): string {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
@@ -49,7 +62,8 @@ function formatDate(dateStr: string): string {
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    second: '2-digit'
   });
 }
 

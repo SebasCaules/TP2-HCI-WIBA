@@ -104,7 +104,7 @@
                                 tx.description
                             }}</v-list-item-title>
                             <v-list-item-subtitle class="dashboard-list-date">{{
-                                formatDate(tx.created_at)
+                                formatDate(getTransactionDate(tx))
                             }}</v-list-item-subtitle>
                             <template #append>
                                 <span
@@ -371,16 +371,23 @@ const balance = computed(() => dashboardData.value?.account.balance ?? null);
 const transactions = computed(() => dashboardData.value?.transactions ?? []);
 const bills = computed(() => dashboardData.value?.bills ?? []);
 
-function formatDate(timestamp: string): string {
-    if (!timestamp) return "Fecha no disponible";
-    const parsedDate = new Date(timestamp);
-    return isNaN(parsedDate.getTime())
-        ? "Fecha inválida"
-        : parsedDate.toLocaleDateString("es-AR", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-          });
+function getTransactionDate(item: any): string {
+    // Try to get timestamp from metadata first, fall back to created_at
+    return item.metadata?.timestamp || item.created_at;
+}
+
+function formatDate(dateStr: string): string {
+    if (!dateStr) return "Fecha no disponible";
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "Fecha no disponible";
+    
+    return date.toLocaleDateString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
 }
 
 function toggleBalanceVisibility() {

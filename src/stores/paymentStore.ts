@@ -69,7 +69,14 @@ export const usePaymentStore = defineStore("payment", () => {
         loading.value = true;
         error.value = null;
         try {
-            const payment = await PaymentApi.transferByEmail(email, payload, cardId);
+            const payloadWithTimestamp = {
+                ...payload,
+                metadata: {
+                    ...payload.metadata,
+                    timestamp: new Date().toISOString()
+                }
+            };
+            const payment = await PaymentApi.transferByEmail(email, payloadWithTimestamp, cardId);
             await fetchPayments(); // Actualizar la lista de pagos
             return payment;
         } catch (e) {
@@ -85,7 +92,14 @@ export const usePaymentStore = defineStore("payment", () => {
         loading.value = true;
         error.value = null;
         try {
-            const payment = await PaymentApi.transferByCVU(cvu, payload, cardId);
+            const payloadWithTimestamp = {
+                ...payload,
+                metadata: {
+                    ...payload.metadata,
+                    timestamp: new Date().toISOString()
+                }
+            };
+            const payment = await PaymentApi.transferByCVU(cvu, payloadWithTimestamp, cardId);
             await fetchPayments(); // Actualizar la lista de pagos
             return payment;
         } catch (e) {
@@ -101,7 +115,14 @@ export const usePaymentStore = defineStore("payment", () => {
         loading.value = true;
         error.value = null;
         try {
-            const payment = await PaymentApi.transferByAlias(alias, payload, cardId);
+            const payloadWithTimestamp = {
+                ...payload,
+                metadata: {
+                    ...payload.metadata,
+                    timestamp: new Date().toISOString()
+                }
+            };
+            const payment = await PaymentApi.transferByAlias(alias, payloadWithTimestamp, cardId);
             await fetchPayments(); // Actualizar la lista de pagos
             return payment;
         } catch (e) {

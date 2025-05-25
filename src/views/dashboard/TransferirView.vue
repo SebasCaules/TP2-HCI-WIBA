@@ -27,7 +27,7 @@
                     type="number"
                     placeholder="Monto"
                     class="transfer-amount-input"
-                    @input="formatAmount"
+                    @input="handleAmountInput"
                 />
             </div>
             <div class="transfer-form-group">
@@ -379,6 +379,7 @@ const selectedCard = ref<DisplayCard | null>(null)
 const cardsStore = useCardsStore()
 const accountStore = useAccountStore()
 const paymentStore = usePaymentStore()
+const isClearingFields = ref(false)
 
 const securityStore = useSecurityStore();
 const userId = computed(() => securityStore.user?.id?.toString());
@@ -441,18 +442,19 @@ const isTransferValid = computed(() => {
            isValidAlias(recipientValue);
 });
 
-function formatAmount() {
+function handleAmountInput() {
     // Remove any non-digit characters
     let value = amount.value.replace(/\D/g, "");
     // Limit to 10 digits
     value = value.slice(0, 10);
     amount.value = value;
 
-    // Clear error message if amount is valid
-    const n = parseFloat(value);
-    if (!isNaN(n) && n > 0) {
-        // Only clear balance error if using account payment method
-        if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
+    // Only validate if there's a value
+    if (value) {
+        const n = parseFloat(value);
+        if (isNaN(n) || n <= 0) {
+            errorMessage.value = "El monto debe ser mayor a cero.";
+        } else if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
             errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
         } else {
             // Clear error if it was related to amount
@@ -461,39 +463,14 @@ function formatAmount() {
                 errorMessage.value = "";
             }
         }
-    }
-}
-
-// Add a watch on amount to handle validation
-watch(amount, (newValue) => {
-    const n = parseFloat(newValue);
-    if (isNaN(n) || n <= 0) {
-        errorMessage.value = "El monto debe ser mayor a cero.";
-    } else if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
-        errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
     } else {
-        // Clear error if it was related to amount
+        // Clear amount-related errors when field is empty
         if (errorMessage.value === "El monto debe ser mayor a cero." || 
             errorMessage.value === "Saldo insuficiente para realizar la transferencia.") {
             errorMessage.value = "";
         }
     }
-});
-
-// Add a watch on selectedPaymentMethod to update error message when payment method changes
-watch(selectedPaymentMethod, (newMethod) => {
-    const n = parseFloat(amount.value);
-    if (!isNaN(n) && n > 0) {
-        if (newMethod === 'account' && n > accountBalance.value) {
-            errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
-        } else {
-            // Clear error if it was related to balance
-            if (errorMessage.value === "Saldo insuficiente para realizar la transferencia.") {
-                errorMessage.value = "";
-            }
-        }
-    }
-});
+}
 
 function formatNumber(value: string) {
     return value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -623,11 +600,13 @@ async function confirmTransfer() {
 
         // Success
         showConfirmDialog.value = false;
+        isClearingFields.value = true; // Set flag before clearing
+        errorMessage.value = "";
         recipient.value = "";
         amount.value = "";
         reason.value = "";
-        errorMessage.value = "";
         showSuccessDialog.value = true;
+        isClearingFields.value = false; // Reset flag after clearing
     } catch (error) {
         console.error('Transfer confirmation error:', error);
         showConfirmDialog.value = false;
