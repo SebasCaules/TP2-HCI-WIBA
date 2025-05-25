@@ -54,6 +54,37 @@ export class AccountApi {
         }
     }
 
+    static async verifyEmail(email: string): Promise<UserVerificationResponse> {
+        // Mock implementation for development
+        // TODO: Replace with actual backend call once endpoint is implemented
+        try {
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Mock user data - in a real implementation this would come from the backend
+            const mockUsers = [
+                { email: 'ahv2@gmail.com', firstName: 'Alexis', lastName: 'Hernandez' },
+                { email: 'test@example.com', firstName: 'Test', lastName: 'User' }
+            ];
+            
+            const user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+            
+            if (!user) {
+                throw { code: 404, description: 'Email no encontrado' };
+            }
+            
+            return {
+                firstName: user.firstName,
+                lastName: user.lastName
+            };
+        } catch (error: any) {
+            if (error?.code === 404) {
+                throw new Error('Email no encontrado');
+            }
+            throw error;
+        }
+    }
+
     static async updateAlias(newAlias: string): Promise<Account> {
         if (!newAlias || newAlias.trim() === '') {
             throw new Error('El alias no puede estar vacío')

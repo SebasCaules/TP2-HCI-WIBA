@@ -160,7 +160,15 @@ onMounted(async () => {
         router.push('/login');
         return;
     }
-    await loadContacts();
+    
+    try {
+        // Ensure we have the current user data
+        await securityStore.getCurrentUser();
+        await loadContacts();
+    } catch (error) {
+        console.error('Error loading user data:', error);
+        router.push('/login');
+    }
 });
 </script>
 
