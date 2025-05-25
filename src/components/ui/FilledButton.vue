@@ -17,6 +17,7 @@ defineProps<{
   disabled?: boolean
   fullWidth?: boolean
   to?: string
+  variant?: 'primary' | 'secondary'
 }>()
 defineEmits(['click'])
 </script>
@@ -56,5 +57,14 @@ defineEmits(['click'])
 .filled-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.filled-btn.filled-button--secondary {
+  background-color: var(--secondary) !important;
+  color: white !important;
+}
+
+.filled-btn.filled-button--secondary:active {
+  background-color: var(--secondary-hover) !important;
 }
 </style> 

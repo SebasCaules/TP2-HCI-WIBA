@@ -270,17 +270,8 @@ function handleDeposit() {
 }
 
 const payments = computed<Payment[]>(() => {
-  if (!paymentStore.payments) return []
-  // If payments is an object with a results array, return the results array
-  if (typeof paymentStore.payments === 'object' && 'results' in paymentStore.payments) {
-    return (paymentStore.payments as { results: Payment[] }).results
-  }
-  // If payments is already an array, return it
-  if (Array.isArray(paymentStore.payments)) {
-    return paymentStore.payments as Payment[]
-  }
-  // Fallback to empty array
-  return []
+  if (!paymentStore.payments?.results) return []
+  return paymentStore.payments.results
 })
 
 async function confirmDeposit() {
@@ -308,6 +299,17 @@ async function confirmDeposit() {
 
   try {
     loading.value = true
+    // Primero creamos el pago
+    const payment = await paymentStore.createPayment({
+      amount: parsedAmount,
+      description: 'Depósito a cuenta',
+      metadata: {
+        cardId: selectedCard.value?.id,
+        cardBrand: selectedCard.value?.brand
+      }
+    })
+
+    // Luego recargamos la cuenta
     await accountStore.recharge(parsedAmount)
     
     showConfirmDialog.value = false
@@ -362,10 +364,15 @@ function getStatusText(status: string) {
 async function handlePushDeposit(paymentId: number) {
   loading.value = true
   try {
-    await paymentStore.pushDeposit(paymentId)
+    const payment = await paymentStore.getPaymentById(paymentId)
+    if (!payment) {
+      throw new Error('Pago no encontrado')
+    }
+    await paymentStore.confirmPayment(payment.uuid, selectedCard.value?.id)
     showSnackbar.value = true
     snackbarText.value = 'Depósito completado correctamente'
     snackbarColor.value = 'success'
+    await paymentStore.fetchPayments()
   } catch (error) {
     showSnackbar.value = true
     snackbarText.value = error instanceof Error ? error.message : 'Error al completar el depósito'
@@ -375,9 +382,9 @@ async function handlePushDeposit(paymentId: number) {
   }
 }
 
-onMounted(() => {
-  fetchCards()
-  paymentStore.fetchPayments()
+onMounted(async () => {
+  await fetchCards()
+  await paymentStore.fetchPayments()
 })
 </script>
 

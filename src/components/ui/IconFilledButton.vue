@@ -1,6 +1,9 @@
 <template>
   <button
     class="icon-filled-btn"
+    :class="[
+      variant === 'secondary' ? 'icon-filled-btn--secondary' : 'icon-filled-btn--primary'
+    ]"
     :type="type"
     :disabled="disabled"
     @click="$emit('click', $event)"
@@ -21,6 +24,7 @@ defineProps<{
   type?: 'button' | 'submit' | 'reset'
   disabled?: boolean
   fullWidth?: boolean
+  variant?: 'primary' | 'secondary'
 }>()
 defineEmits(['click'])
 </script>
@@ -37,8 +41,6 @@ defineEmits(['click'])
   font-weight: 700;
   border-radius: 2rem;
   height: 50px;
-  background: #41a7b7 !important;
-  color: #fff !important;
   box-shadow: none;
   text-transform: none;
   letter-spacing: normal;
@@ -50,17 +52,39 @@ defineEmits(['click'])
   padding: 0 1.5rem;
   gap: 0.5rem;
 }
+
+.icon-filled-btn--primary {
+  background: var(--primary) !important;
+  color: #fff !important;
+}
+
+.icon-filled-btn--primary:active {
+  background: var(--primary-hover) !important;
+}
+
+.icon-filled-btn--secondary {
+  background: var(--muted) !important;
+  color: var(--muted-foreground) !important;
+}
+
+.icon-filled-btn--secondary:active {
+  background: var(--muted-hover) !important;
+}
+.icon-filled-btn--secondary:hover {
+  background: var(--muted-hover) !important;
+  color: var(--muted-foreground-hover) !important;
+}
+
 .icon-filled-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-.icon-filled-btn:active {
-  background: #368a97 !important;
-}
+
 .icon-filled-btn__icon {
   display: flex;
   align-items: center;
 }
+
 .icon-filled-btn__text {
   display: flex;
   align-items: center;
