@@ -195,6 +195,19 @@ const expiryError = computed(() => {
   if (!/^\d{2}\/\d{2}$/.test(newCard.value.expiry)) return 'Formato: MM/AA'
   const [mm, yy] = newCard.value.expiry.split('/')
   if (mm && (parseInt(mm) < 1 || parseInt(mm) > 12)) return 'Mes inválido'
+  
+  // Check if card is expired
+  const currentDate = new Date()
+  const currentYear = currentDate.getFullYear() % 100 // Get last 2 digits of year
+  const currentMonth = currentDate.getMonth() + 1 // getMonth() returns 0-11
+  
+  const expiryMonth = parseInt(mm)
+  const expiryYear = parseInt(yy)
+  
+  if (expiryYear < currentYear || (expiryYear === currentYear && expiryMonth < currentMonth)) {
+    return 'Tarjeta vencida'
+  }
+  
   return ''
 })
 
