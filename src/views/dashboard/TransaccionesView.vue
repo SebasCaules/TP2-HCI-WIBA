@@ -2,9 +2,18 @@
   <v-container class="transactions-container" fluid>
     <h1 class="transactions-title">Historial de Transacciones</h1>
 
+    <v-switch
+      v-model="showTable"
+      inset
+      class="mb-4"
+      label="Mostrar como tabla"
+      color="primary"
+    ></v-switch>
+
     <v-card class="transactions-card">
       <v-card-text>
         <BaseDataTable
+          v-if="showTable"
           :headers="headers"
           :items="transactionStore.transactions"
           :loading="transactionStore.loading"
@@ -30,17 +39,26 @@
             ${{ item.amount?.toFixed(2) ?? '-' }}
           </template>
         </BaseDataTable>
+
+        <div v-else>
+          <canvas id="transactionChart"></canvas>
+        </div>
       </v-card-text>
     </v-card>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, ref, watch, nextTick } from 'vue';
 import { useTransactionStore } from '@/stores/transactionStore';
 import BaseDataTable from '@/components/ui/BaseDataTable.vue';
+import { Chart, registerables } from 'chart.js';
+
+Chart.register(...registerables);
 
 const transactionStore = useTransactionStore();
+const showTable = ref(true);
+let chartInstance: Chart | null = null;
 
 const headers = [
   { title: 'Fecha', key: 'date' },
@@ -50,7 +68,6 @@ const headers = [
 ];
 
 function getTransactionDate(item: any): string {
-  // Try to get timestamp from metadata first, fall back to created_at
   return item.metadata?.timestamp || item.created_at;
 }
 
@@ -67,8 +84,47 @@ function formatDate(dateStr: string): string {
   });
 }
 
-onMounted(() => {
-  transactionStore.fetchTransactions();
+function renderChart() {
+  const ctx = document.getElementById('transactionChart') as HTMLCanvasElement;
+  if (!ctx) return;
+  if (chartInstance) chartInstance.destroy();
+
+  const data = transactionStore.transactions.reduce((acc: Record<string, number>, tx: any) => {
+    const type = tx.method || 'Otro';
+    acc[type] = (acc[type] || 0) + tx.amount;
+    return acc;
+  }, {});
+
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(data),
+      datasets: [
+        {
+          label: 'Montos por tipo de transacción',
+          data: Object.values(data),
+          backgroundColor: ['#4F46E5', '#6366F1', '#818CF8']
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+watch(showTable, async (val) => {
+  if (!val) await nextTick(renderChart);
+});
+
+onMounted(async () => {
+  await transactionStore.fetchTransactions();
+  if (!showTable.value) renderChart();
 });
 </script>
 
