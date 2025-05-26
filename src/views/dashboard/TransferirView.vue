@@ -425,11 +425,9 @@ function isValidEmail(value: string): boolean {
 const isTransferValid = computed(() => {
     const n = parseFloat(amount.value);
     const recipientValue = recipient.value.trim();
-    const descriptionValue = reason.value.trim();
     
     if (isNaN(n) || n <= 0) return false;
     if (!recipientValue) return false;
-    if (!descriptionValue) return false;
     
     // Check if using account balance and if there's sufficient balance
     if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
@@ -480,7 +478,6 @@ async function handleTransfer() {
     errorMessage.value = "";
     const n = parseFloat(amount.value);
     const recipientValue = recipient.value.trim();
-    const descriptionValue = reason.value.trim();
     
     // Debug validation
     console.log('Validating recipient:', recipientValue);
@@ -496,10 +493,6 @@ async function handleTransfer() {
     }
     if (!recipientValue) {
         errorMessage.value = "Debes ingresar un email, CVU o alias.";
-        return;
-    }
-    if (!descriptionValue) {
-        errorMessage.value = "Debes ingresar una descripción.";
         return;
     }
     if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
@@ -521,10 +514,20 @@ async function handleTransfer() {
             return;
         }
 
-        // Show confirmation dialog with generic recipient info
-        // The actual recipient info will be returned by the transfer endpoint
-        recipientFirstName.value = "Usuario";
-        recipientLastName.value = "";
+        // Get receiver info before showing confirmation dialog
+        let receiverInfo;
+        if (isValidCvu(recipientValue)) {
+            receiverInfo = await accountStore.verifyCvu(recipientValue);
+        } else if (isValidAlias(recipientValue)) {
+            receiverInfo = await accountStore.verifyAlias(recipientValue);
+        } else {
+            // For email, we'll get the info from the transfer response
+            receiverInfo = { firstName: 'Usuario', lastName: '' };
+        }
+
+        // Update recipient info in the UI
+        recipientFirstName.value = receiverInfo.firstName;
+        recipientLastName.value = receiverInfo.lastName;
         showConfirmDialog.value = true;
     } catch (error) {
         console.error('Transfer validation error:', error);
@@ -535,7 +538,7 @@ async function handleTransfer() {
 }
 
 async function confirmTransfer() {
-    if (!amount.value || !recipient.value || !reason.value || !userId.value) return;
+    if (!amount.value || !recipient.value || !userId.value) return;
     const n = parseFloat(amount.value);
     const recipientValue = recipient.value.trim();
     const descriptionValue = reason.value.trim();
@@ -547,38 +550,34 @@ async function confirmTransfer() {
         return;
     }
 
-    // Debug validation
-    console.log('Confirming transfer for recipient:', recipientValue);
-    console.log('Is email?', isValidEmail(recipientValue));
-    console.log('Is CVU?', isValidCvu(recipientValue));
-    console.log('Is alias?', isValidAlias(recipientValue));
-    console.log('Payment method:', selectedPaymentMethod.value);
-    console.log('Selected card:', selectedCard.value);
-    console.log('Account balance:', accountBalance.value);
-
     try {
-        const payload: PaymentRequest = {
-            amount: n,
-            description: descriptionValue,
-            metadata: {}
-        };
-        
-        let payment: Payment;
+        let receiverInfo;
         let transferType: 'email' | 'cvu' | 'alias';
         const cardId = selectedPaymentMethod.value === 'card' && selectedCard.value ? selectedCard.value.id : undefined;
-        
+
+        // Get receiver info based on the type of identifier
         if (isValidEmail(recipientValue)) {
             transferType = 'email';
-            console.log('Confirming transfer by email with payload:', payload, 'cardId:', cardId);
-            payment = await paymentStore.transferByEmail(recipientValue, payload, cardId);
+            // For email transfers, we need to make the transfer first to get the receiver info
+            const formattedDescription = descriptionValue
+                ? `Transferencia: ${descriptionValue}`
+                : 'Transferencia';
+            const initialPayload: PaymentRequest = {
+                amount: n,
+                description: formattedDescription,
+                metadata: {}
+            };
+            const payment = await paymentStore.transferByEmail(recipientValue, initialPayload, cardId);
+            receiverInfo = {
+                firstName: payment.receiver.firstName,
+                lastName: payment.receiver.lastName
+            };
         } else if (isValidCvu(recipientValue)) {
             transferType = 'cvu';
-            console.log('Confirming transfer by CVU with cardId:', cardId);
-            payment = await paymentStore.transferByCVU(recipientValue, payload, cardId);
+            receiverInfo = await accountStore.verifyCvu(recipientValue);
         } else if (isValidAlias(recipientValue)) {
             transferType = 'alias';
-            console.log('Confirming transfer by alias with cardId:', cardId);
-            payment = await paymentStore.transferByAlias(recipientValue, payload, cardId);
+            receiverInfo = await accountStore.verifyAlias(recipientValue);
         } else {
             console.log('Invalid recipient format during confirmation');
             showErrorDialog.value = true;
@@ -586,27 +585,39 @@ async function confirmTransfer() {
             return;
         }
 
-        // Update recipient info from the payment response
-        recipientFirstName.value = payment.receiver.firstName;
-        recipientLastName.value = payment.receiver.lastName;
+        // Format the description for CVU and alias
+        if (transferType !== 'email') {
+            const formattedDescription = descriptionValue
+                ? `Transferencia a ${receiverInfo.firstName} ${receiverInfo.lastName}: ${descriptionValue}`
+                : `Transferencia a ${receiverInfo.firstName} ${receiverInfo.lastName}`;
+            const payload: PaymentRequest = {
+                amount: n,
+                description: formattedDescription,
+                metadata: {}
+            };
+            if (transferType === 'cvu') {
+                await paymentStore.transferByCVU(recipientValue, payload, cardId);
+            } else {
+                await paymentStore.transferByAlias(recipientValue, payload, cardId);
+            }
+        }
 
         console.log(`Transfer confirmed by ${transferType}:`, {
             recipient: recipientValue,
             amount: n,
             reason: descriptionValue,
-            paymentId: payment.id,
             cardId: cardId
         });
 
         // Success
         showConfirmDialog.value = false;
-        isClearingFields.value = true; // Set flag before clearing
+        isClearingFields.value = true;
         errorMessage.value = "";
         recipient.value = "";
         amount.value = "";
         reason.value = "";
         showSuccessDialog.value = true;
-        isClearingFields.value = false; // Reset flag after clearing
+        isClearingFields.value = false;
     } catch (error) {
         console.error('Transfer confirmation error:', error);
         showConfirmDialog.value = false;

@@ -113,8 +113,7 @@ async function handleSubmit() {
     try {
         const result = await paymentStore.createPayment({
             description: form.value.description,
-            amount: form.value.amount,
-            metadata: {}
+            amount: form.value.amount
         });
         payment.value = result;
         showSuccessDialog.value = true;

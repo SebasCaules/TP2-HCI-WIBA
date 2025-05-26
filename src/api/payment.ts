@@ -15,10 +15,19 @@ export interface Payment {
     updated_at?: string;
     description?: string;
     method: string;
+    payer: {
+        id: number;
+        firstName: string;
+        lastName: string;
+    };
     receiver: {
         id: number;
         firstName: string;
         lastName: string;
+    };
+    card?: {
+        id: number;
+        number: string;
     };
     metadata: Record<string, any> | null;
 }

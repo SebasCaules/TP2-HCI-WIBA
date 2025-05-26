@@ -22,6 +22,7 @@
                         header.align ? `text-${header.align}` : '',
                         header.class || '',
                     ]"
+                    :style="header.width ? { width: header.width } : {}"
                 >
                     {{ header.title }}
                 </th>
@@ -39,6 +40,7 @@
                         header.align ? `text-${header.align}` : '',
                         header.class || '',
                     ]"
+                    :style="header.width ? { width: header.width } : {}"
                 >
                     <slot :name="`item.${header.key}`" :item="item">
                         {{ item[header.key] }}
@@ -63,22 +65,7 @@
 
             <!-- Pagination and items per page selector -->
             <template #bottom>
-                <div class="pagination-footer">
-                    <v-pagination
-                        v-if="pageCount > 1"
-                        v-model="currentPage"
-                        :length="pageCount"
-                        rounded
-                    />
-                    <v-select
-                        v-model="itemsPerPageLocal"
-                        :items="itemsPerPageOptions"
-                        hide-details
-                        density="compact"
-                        class="items-per-page-selector"
-                        menu-icon="mdi-chevron-down"
-                    />
-                </div>
+                <!-- Removed pagination and items per page selector as requested -->
             </template>
         </v-data-table>
     </div>
@@ -93,6 +80,7 @@ interface Header {
     align?: "start" | "center" | "end";
     sortable?: boolean;
     class?: string;
+    width?: string;
 }
 
 interface Props {
@@ -110,7 +98,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     loading: false,
     itemKey: "id",
-    itemsPerPage: 5,
+    itemsPerPage: 10,
     pagination: false,
     rowClickable: false,
     noDataMessage: "No hay datos disponibles",
@@ -299,5 +287,10 @@ const handleRowClick = (item: any) => {
     max-width: 140px;
     font-size: 0.875rem;
     padding: 4px 12px;
+}
+
+.base-data-table :deep(tbody) {
+    min-height: 480px; /* 10 rows x 48px row height */
+    display: table-row-group;
 }
 </style>

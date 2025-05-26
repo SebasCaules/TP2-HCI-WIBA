@@ -11,7 +11,17 @@ export const usePaymentStore = defineStore("payment", () => {
         loading.value = true;
         error.value = null;
         try {
-            const payment = await PaymentApi.pull(payload);
+            const formattedPayload: PaymentRequest = {
+                amount: payload.amount,
+                description: `${payload.description}`,
+                metadata: {
+                    timestamp: new Date().toISOString()
+                }
+            };
+            console.log('Sending payment request with payload:', formattedPayload);
+            const payment = await PaymentApi.pull(formattedPayload);
+            console.log('Received payment response:', payment);
+            await fetchPayments(); // Update the payments list
             return payment;
         } catch (e) {
             error.value = e instanceof Error ? e.message : 'Error al crear el pago';

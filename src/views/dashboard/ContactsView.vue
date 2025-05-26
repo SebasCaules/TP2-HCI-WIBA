@@ -30,10 +30,6 @@
                             </div>
                         </template>
 
-                        <template #item.username="{ item }">
-                            {{ item.username }}
-                        </template>
-
                         <template #item.actions="{ item }">
                             <div class="text-right">
                                 <span class="delete-action" @click="handleRemoveContact(item.id)">
@@ -78,7 +74,6 @@ const userId = computed(() => securityStore.user?.id?.toString());
 const contacts = ref<Contact[]>([]);
 const headers = [
     { key: "name", title: "Nombre", align: "start" as const },
-    { key: "username", title: "Usuario", align: "start" as const },
     { key: "actions", title: "Acciones", align: "end" as const },
 ];
 

@@ -1,4 +1,4 @@
-import { Api, type ApiResponse } from "./api";
+import { Api, type ApiResponse } from "./Api";
 
 export interface Card {
   id: number;
