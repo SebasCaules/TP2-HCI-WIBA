@@ -169,77 +169,46 @@
                     </div>
                     <v-row>
                         <v-col cols="12">
-                            <v-card class="elevation-1">
-                                <v-card-title class="text-h6 font-weight-bold">
-                                    Mis Inversiones
-                                </v-card-title>
-                                <BaseDataTable
-                                    v-if="investments.length > 0"
-                                    :items="investments"
-                                    :headers="investmentHeaders"
-                                    :items-per-page="5"
-                                    :row-clickable="true"
-                                    :pagination="true"
-                                    :loading="isLoading"
-                                    empty-icon="mdi-chart-line"
-                                    no-data-message="No hay inversiones disponibles"
-                                >
-                                    <template #item.fund_name="{ item }">
-                                        <div class="text-center">
-                                            {{ item.fund_name }}
-                                        </div>
-                                    </template>
+                            <BaseDataTable
+                                :items="investments"
+                                :headers="investmentHeaders"
+                                :loading="isLoading"
+                                :items-per-page="5"
+                                :pagination="true"
+                                :row-clickable="false"
+                                empty-icon="mdi-chart-line"
+                                no-data-message="No hay inversiones disponibles"
+                            >
+                                <template #item.fund_name="{ item }">
+                                    <div class="text-center">
+                                        {{ item.fund_name }}
+                                    </div>
+                                </template>
 
-                                    <template #item.invested_amount="{ item }">
-                                        <div class="text-center">
-                                            {{
-                                                formatMoney(
-                                                    item.invested_amount
-                                                )
-                                            }}
-                                        </div>
-                                    </template>
+                                <template #item.invested_amount="{ item }">
+                                    <div class="text-center">
+                                        {{ formatMoney(item.invested_amount) }}
+                                    </div>
+                                </template>
 
-                                    <template #item.variation="{ item }">
+                                <template #item.variation="{ item }">
+                                    <div class="text-center investment-variation">
                                         <div
-                                            class="text-center investment-variation"
+                                            class="variation-monetary"
+                                            :class="getVariationClass(item.monetary_variation)"
                                         >
-                                            <div
-                                                class="variation-monetary"
-                                                :class="
-                                                    getVariationClass(
-                                                        item.monetary_variation
-                                                    )
-                                                "
-                                            >
-                                                {{
-                                                    formatMoney(
-                                                        item.monetary_variation
-                                                    )
-                                                }}
-                                            </div>
-                                            <div
-                                                class="variation-percentage"
-                                                :class="
-                                                    getVariationClass(
-                                                        item.percentage_variation
-                                                    )
-                                                "
-                                            >
-                                                {{
-                                                    (item.percentage_variation >=
-                                                    0
-                                                        ? "+"
-                                                        : "") +
-                                                    formatPercent(
-                                                        item.percentage_variation
-                                                    )
-                                                }}
-                                            </div>
+                                            {{ formatMoney(item.monetary_variation) }}
                                         </div>
-                                    </template>
-                                </BaseDataTable>
-                            </v-card>
+                                        <div
+                                            class="variation-percentage"
+                                            :class="getVariationClass(item.percentage_variation)"
+                                        >
+                                            {{ (item.percentage_variation >= 0 ? "+" : "") +
+                                                formatPercent(item.percentage_variation) }}
+                                        </div>
+                                    </div>
+                                </template>
+                            </BaseDataTable>
                         </v-col>
                     </v-row>
                 </v-col>
@@ -398,13 +367,24 @@ const investments = computed(() => {
 });
 
 const investmentHeaders = [
-    { title: "Fondo", key: "fund_name", align: "center" as const },
-    {
-        title: "Monto Invertido",
-        key: "invested_amount",
-        align: "center" as const,
+    { 
+        title: 'Fondo', 
+        key: 'fund_name', 
+        align: 'center' as const,
+        width: '200px'
     },
-    { title: "Variación", key: "variation", align: "center" as const },
+    { 
+        title: 'Monto Invertido', 
+        key: 'invested_amount', 
+        align: 'center' as const,
+        width: '200px'
+    },
+    { 
+        title: 'Variación', 
+        key: 'variation', 
+        align: 'center' as const,
+        width: '300px'
+    }
 ];
 
 // Methods for handling investment actions
@@ -724,17 +704,12 @@ const chartSlices = computed(() => {
     background: var(--surface-alt) !important;
 }
 .v-data-table tbody td {
-    font-size: 1.05rem;
     color: var(--text);
     border-bottom: 1px solid var(--border);
     text-align: center;
     vertical-align: middle;
     padding-top: 0.7rem;
     padding-bottom: 0.7rem;
-}
-.v-data-table tbody td .d-flex {
-    justify-content: center;
-    width: 100%;
 }
 .v-data-table tbody td .text-center {
     text-align: center;
@@ -845,7 +820,6 @@ const chartSlices = computed(() => {
 }
 
 .investments-table tbody td {
-    font-size: 1.05rem;
     color: var(--text);
     border-bottom: 1px solid var(--border);
     text-align: center;
@@ -1162,24 +1136,43 @@ const chartSlices = computed(() => {
 /* --- Variación de inversión: ajustes para centrar y alinear montos --- */
 .investment-variation {
     display: inline-flex;
-    align-items: baseline;
-    font-variant-numeric: tabular-nums;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    height: 100%;
     justify-content: center;
 }
 
 .variation-monetary {
     font-weight: 600;
     white-space: nowrap;
-    display: inline-block;
-    text-align: left;
-    min-width: 90px;
-    font-feature-settings: "tnum";
 }
 
 .variation-percentage {
-    font-size: 0.95rem;
-    white-space: nowrap;
-    text-align: right;
-    min-width: 60px;
+    font-size: 0.9rem;
+}
+
+.text-success {
+    color: var(--success) !important;
+}
+
+.text-error {
+    color: var(--error) !important;
+}
+
+/* Override hover effect while keeping clickable */
+:deep(.base-data-table tbody tr:hover) {
+    background: inherit !important;
+    cursor: pointer;
+}
+
+/* Investment specific styles */
+.investment-variation {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    height: 100%;
+    justify-content: center;
 }
 </style>

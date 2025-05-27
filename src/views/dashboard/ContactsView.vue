@@ -10,7 +10,7 @@
                 >
                     Nuevo Contacto
                 </IconFilledButton>
-                <div class="card">
+                <v-card class="elevation-1" style="box-shadow: var(--shadow-card) !important;">
                     <BaseDataTable
                         :items="contacts"
                         :headers="headers"
@@ -38,7 +38,7 @@
                             </div>
                         </template>
                     </BaseDataTable>
-                </div>
+                </v-card>
             </v-col>
         </v-row>
 

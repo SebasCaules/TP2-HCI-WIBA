@@ -10,7 +10,7 @@
                 >
                     Nueva Tarjeta
                 </IconFilledButton>
-                <div class="card">
+                <v-card class="elevation-1" style="box-shadow: var(--shadow-card) !important;">
                     <BaseDataTable
                         :headers="headers"
                         :items="cards"
@@ -52,7 +52,7 @@
                             </div>
                         </template>
                     </BaseDataTable>
-                </div>
+                </v-card>
             </v-col>
         </v-row>
 
@@ -533,20 +533,6 @@ function handleCardAdded(card: any) {
 
 .delete-action:hover {
     text-decoration: underline;
-}
-
-:deep(.v-data-table) {
-    --v-table-row-height: 56px;
-}
-
-:deep(.v-data-table__tr) {
-    height: var(--v-table-row-height) !important;
-}
-
-:deep(.v-data-table__td) {
-    height: var(--v-table-row-height) !important;
-    padding: 0 16px !important;
-    vertical-align: middle !important;
 }
 
 .delete-card-dialog {

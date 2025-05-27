@@ -155,11 +155,12 @@ const handleRowClick = (item: any) => {
     box-shadow: var(--shadow-card);
     width: 100%;
     overflow-x: auto;
+    --v-table-row-height: 70px;
 }
 
 .base-data-table :deep(th),
 .base-data-table :deep(td) {
-    padding: 8px 12px !important;
+    padding: 0 16px !important;
     white-space: nowrap;
 }
 
@@ -173,17 +174,13 @@ const handleRowClick = (item: any) => {
     position: sticky;
     top: 0;
     z-index: 1;
+    height: var(--v-table-row-height) !important;
 }
 
 .base-data-table :deep(tbody tr) {
     transition: background 0.18s;
     border-bottom: 1px solid var(--border);
-    height: 48px;
-}
-
-.base-data-table :deep(tbody tr:hover) {
-    background: var(--surface-alt) !important;
-    cursor: pointer;
+    height: var(--v-table-row-height) !important;
 }
 
 .base-data-table :deep(tbody td) {
@@ -191,7 +188,7 @@ const handleRowClick = (item: any) => {
     color: var(--text);
     border-bottom: none;
     vertical-align: middle;
-    height: 48px;
+    height: var(--v-table-row-height) !important;
 }
 
 /* Intercalado de filas */
@@ -232,16 +229,12 @@ const handleRowClick = (item: any) => {
 @media (max-width: 960px) {
     .base-data-table :deep(th),
     .base-data-table :deep(td) {
-        padding: 6px 8px !important;
+        padding: 0 12px !important;
         font-size: 0.9rem;
     }
 
-    .base-data-table :deep(tbody tr) {
-        height: 40px;
-    }
-
-    .base-data-table :deep(tbody td) {
-        height: 40px;
+    .base-data-table {
+        --v-table-row-height: 40px;
     }
 
     /* Hide less important columns on tablet */
