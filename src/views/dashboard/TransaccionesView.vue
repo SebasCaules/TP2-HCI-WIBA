@@ -24,7 +24,10 @@
           </template>
           <template #item.description="{ item }">
             <span>
-              {{ item.pending ? `Cobro: ${item.description ?? '-'}` : (item.description ?? '-') }}
+              <!-- Hay que hacer esto porque la api marca como pendiente los depósitos por alguna razon -->
+              {{ item.pending && !item.description?.includes('Depósito a cuenta') 
+                ? `Cobro: ${item.description ?? '-'}` 
+                : (item.description ?? '-') }}
             </span>
           </template>
           <template #item.amount="{ item }">
@@ -186,6 +189,45 @@
       </v-card>
     </v-dialog>
 
+    <!-- Deposit Dialog -->
+    <v-dialog v-model="showDepositDialog" max-width="500px">
+      <v-card class="transaction-details-dialog">
+        <div class="transaction-details-header">
+          <span class="transaction-details-title">
+            Depósito
+          </span>
+          <v-btn icon class="dialog-close-btn" @click="showDepositDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
+        <v-card-text>
+          <v-list>
+            <v-list-item>
+              <template v-slot:prepend>
+                <v-icon icon="mdi-currency-usd"></v-icon>
+              </template>
+              <v-list-item-title>Monto</v-list-item-title>
+              <v-list-item-subtitle>${{ Math.abs(selectedTransaction?.amount ?? 0).toFixed(2) }}</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <template v-slot:prepend>
+                <v-icon icon="mdi-calendar"></v-icon>
+              </template>
+              <v-list-item-title>Fecha</v-list-item-title>
+              <v-list-item-subtitle>{{ formatDate(getTransactionDate(selectedTransaction)) }}</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item v-if="selectedTransaction?.card">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-credit-card"></v-icon>
+              </template>
+              <v-list-item-title>Tarjeta</v-list-item-title>
+              <v-list-item-subtitle>*{{ selectedTransaction.card.number.slice(-4) }}</v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
     <v-pagination
       v-model="page"
       :length="Math.ceil(totalCount / pageSize)"
@@ -213,6 +255,7 @@ const currentUserIdRef = computed(() => securityStore.user?.id?.toString());
 const showTable = ref(true);
 const showDetailsDialog = ref(false);
 const showPendingDialog = ref(false);
+const showDepositDialog = ref(false);
 const selectedTransaction = ref<Payment | null>(null);
 let chartInstance: Chart | null = null;
 
@@ -224,7 +267,6 @@ const headers = [
   { title: 'Descripción', key: 'description', width: '300px', align: 'start' as const },
   { title: 'Monto', key: 'amount', width: '150px', align: 'end' as const },
   { title: 'Fecha', key: 'date', width: '180px', align: 'start' as const },
-  { title: 'Estado', key: 'status', width: '120px', align: 'center' as const },
   { title: '', key: 'moreInfo', width: '80px', align: 'center' as const },
 ];
 
@@ -249,11 +291,13 @@ function formatDate(dateStr: string): string {
 }
 
 function showTransactionDetails(transaction: Payment) {
-  if (transaction.pending) {
-    selectedTransaction.value = transaction;
+  selectedTransaction.value = transaction;
+  
+  if (transaction.description?.includes('Depósito')) {
+    showDepositDialog.value = true;
+  } else if (transaction.pending) {
     showPendingDialog.value = true;
   } else {
-    selectedTransaction.value = transaction;
     showDetailsDialog.value = true;
   }
 }
@@ -309,6 +353,16 @@ function isUserPayer(transaction: Payment): boolean {
 
 function getAmountDisplay(transaction: Payment): { amount: number; icon: string; color: string } {
   const isPayer = isUserPayer(transaction);
+  const isDeposit = transaction.description?.includes('Depósito');
+
+  if (isDeposit) {
+    return {
+      amount: Math.abs(transaction.amount),
+      icon: 'mdi-plus',
+      color: 'success'
+    };
+  }
+
   if (transaction.pending) {
     return {
       amount: Math.abs(transaction.amount),
@@ -316,6 +370,7 @@ function getAmountDisplay(transaction: Payment): { amount: number; icon: string;
       color: 'warning'
     };
   }
+
   return {
     amount: Math.abs(transaction.amount),
     icon: isPayer ? 'mdi-minus' : 'mdi-plus',
