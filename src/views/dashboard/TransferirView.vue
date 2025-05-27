@@ -38,26 +38,15 @@
                 />
             </div>
             <div class="transfer-form-group">
-                <button type="button" class="deposit-method-box" @click="showPaymentMethodDialog = true">
-                    <template v-if="selectedPaymentMethod === 'account'">
-                        <v-icon color="primary" class="deposit-method-icon">mdi-wallet</v-icon>
-                        <span class="deposit-method-text">
-                            <b>Saldo de la cuenta</b>
-                        </span>
-                    </template>
-                    <template v-else-if="selectedCard">
-                        <img :src="selectedCard?.logo" :alt="selectedCard?.brand" class="deposit-card-logo" />
-                        <span class="deposit-method-text">
-                            <b>{{ selectedCard.brand }}</b> *{{ selectedCard.number_last4 }}
-                        </span>
-                    </template>
-                    <template v-else>
-                        <span class="deposit-method-text">
-                            Selecciona un método de pago
-                        </span>
-                    </template>
-                    <v-icon class="deposit-select-icon">mdi-chevron-right</v-icon>
-                </button>
+                <PaymentMethodSelector
+                    :selectedPaymentMethod="selectedPaymentMethod"
+                    :selectedCard="selectedCard"
+                    :accountBalance="accountBalance"
+                    :cards="cards"
+                    @update:selectedPaymentMethod="selectedPaymentMethod = $event"
+                    @update:selectedCard="selectedCard = $event"
+                    @add-card="showAddCardDialog = true"
+                />
             </div>
             <FilledButton
                 class="transfer-continue-btn"
@@ -104,7 +93,8 @@
                                 @click="selectContact(contact)"
                             >
                                 <div class="select-contact-name">
-                                    {{ contact.first_name }} {{ contact.last_name }}
+                                    {{ contact.first_name }}
+                                    {{ contact.last_name }}
                                 </div>
                                 <div class="select-contact-detail">
                                     {{ contact.username }}
@@ -256,64 +246,6 @@
             </v-card>
         </v-dialog>
 
-        <!-- Add Payment Method Dialog -->
-        <v-dialog 
-            v-model="showPaymentMethodDialog" 
-            max-width="960px" 
-            :retain-focus="false"
-            :scrim="true"
-        >
-            <v-card class="select-card-dialog">
-                <div class="select-card-dialog-header">
-                    <span class="select-card-title">Seleccionar método de pago</span>
-                    <v-btn icon class="dialog-close-btn" @click="showPaymentMethodDialog = false">
-                        <v-icon>mdi-close</v-icon>
-                    </v-btn>
-                </div>
-                <div class="select-card-list-custom">
-                    <!-- Account Balance Option -->
-                    <div
-                        class="select-card-custom"
-                        :class="{ selected: selectedPaymentMethod === 'account' }"
-                        @click="selectPaymentMethod('account')"
-                    >
-                        <v-icon color="primary" size="32" class="select-card-icon">mdi-wallet</v-icon>
-                        <div class="select-card-info">
-                            <div class="select-card-brand">Saldo de la cuenta</div>
-                            <div class="select-card-balance">Saldo disponible: ${{ formatNumber(accountBalance.toString()) }}</div>
-                        </div>
-                        <v-icon v-if="selectedPaymentMethod === 'account'" color="primary" class="select-card-check">mdi-check-circle</v-icon>
-                    </div>
-                    <!-- Cards -->
-                    <template v-if="cards.length > 0">
-                        <div
-                            v-for="card in cards"
-                            :key="card.id"
-                            class="select-card-custom"
-                            :class="{ selected: selectedCard && selectedCard.id === card.id }"
-                            @click="selectCard(card)"
-                        >
-                            <img :src="card.logo" :alt="card.brand" class="select-card-logo" />
-                            <div class="select-card-info">
-                                <div class="select-card-brand">{{ card.brand }} *{{ card.number_last4 }}</div>
-                                <div class="select-card-expiry">Vence {{ card.expiry }}</div>
-                            </div>
-                            <v-icon v-if="selectedCard && selectedCard.id === card.id" color="primary" class="select-card-check">mdi-check-circle</v-icon>
-                        </div>
-                    </template>
-                    <div v-if="cards.length === 0" class="no-cards-message">
-                        <v-icon size="48" color="primary">mdi-credit-card-outline</v-icon>
-                        <div class="no-cards-title">No tienes tarjetas guardadas</div>
-                        <div class="no-cards-subtitle">Agrega una tarjeta para realizar transferencias</div>
-                    </div>
-                </div>
-                <v-card-actions class="select-card-actions">
-                    <FilledButton class="add-card-btn" @click="showAddCardDialog = true">
-                        Agregar tarjeta
-                    </FilledButton>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
 
         <!-- Add Card Dialog -->
         <AddCardDialog
@@ -325,29 +257,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
-import { supabase } from "@/plugins/supabase";
+import { ref, computed, onMounted } from "vue";
 import { useSecurityStore } from "@/stores/securityStore";
 import CustomTextField from "@/components/ui/CustomTextField.vue";
 import FilledButton from "@/components/ui/FilledButton.vue";
 import AddContactDialog from "@/components/AddContactDialog.vue";
 import BackButton from "@/components/ui/BackButton.vue";
-import { v4 as uuidv4 } from "uuid";
 import type { Contact } from "@/types/types";
-import { fetchContacts as fetchContactsBackend, removeContact as removeContactBackend } from '@/services/contacts';
-import { useCardsStore } from '@/stores/cardsStore'
-import { useAccountStore } from '@/stores/accountStore'
-import AddCardDialog from '@/components/AddCardDialog.vue'
-import { usePaymentStore } from '@/stores/paymentStore'
-import type { PaymentRequest, Payment } from '@/api/payment'
+import {
+    fetchContacts as fetchContactsBackend,
+    removeContact as removeContactBackend,
+} from "@/services/contacts";
+import { useCardsStore } from "@/stores/cardsStore";
+import { useAccountStore } from "@/stores/accountStore";
+import AddCardDialog from "@/components/AddCardDialog.vue";
+import { usePaymentStore } from "@/stores/paymentStore";
+import type { PaymentRequest } from "@/api/payment";
+import PaymentMethodSelector from "@/components/payment/PaymentMethodSelector.vue";
 
 interface DisplayCard {
-    id: string
-    brand: string
-    number_last4: string
-    expiry: string
-    holder: string
-    logo: string
+    id: string;
+    brand: string;
+    number_last4: string;
+    expiry: string;
+    holder: string;
+    logo: string;
 }
 
 interface ContactData {
@@ -370,16 +304,14 @@ const recipientFirstName = ref("");
 const recipientLastName = ref("");
 const showSuccessDialog = ref(false);
 const contacts = ref<Contact[]>([]);
-const loading = ref(false);
 const showAddContactDialog = ref(false);
-const showPaymentMethodDialog = ref(false)
-const showAddCardDialog = ref(false)
-const selectedPaymentMethod = ref<'account' | 'card'>('account')
-const selectedCard = ref<DisplayCard | null>(null)
-const cardsStore = useCardsStore()
-const accountStore = useAccountStore()
-const paymentStore = usePaymentStore()
-const isClearingFields = ref(false)
+const showAddCardDialog = ref(false);
+const selectedPaymentMethod = ref<"account" | "card">("account");
+const selectedCard = ref<DisplayCard | null>(null);
+const cardsStore = useCardsStore();
+const accountStore = useAccountStore();
+const paymentStore = usePaymentStore();
+const isClearingFields = ref(false);
 
 const securityStore = useSecurityStore();
 const userId = computed(() => securityStore.user?.id?.toString());
@@ -390,7 +322,9 @@ const errorDialogMessage = ref("");
 async function fetchContacts() {
     if (!userId.value) return;
     try {
-        const { contacts: fetchedContacts } = await fetchContactsBackend(userId.value);
+        const { contacts: fetchedContacts } = await fetchContactsBackend(
+            userId.value
+        );
         contacts.value = fetchedContacts;
     } catch (error) {
         console.error("Error fetching contacts:", error);
@@ -425,19 +359,22 @@ function isValidEmail(value: string): boolean {
 const isTransferValid = computed(() => {
     const n = parseFloat(amount.value);
     const recipientValue = recipient.value.trim();
-    
+
     if (isNaN(n) || n <= 0) return false;
     if (!recipientValue) return false;
-    
+
     // Check if using account balance and if there's sufficient balance
-    if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
-        errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
+    if (selectedPaymentMethod.value === "account" && n > accountBalance.value) {
+        errorMessage.value =
+            "Saldo insuficiente para realizar la transferencia.";
         return false;
     }
-    
-    return isValidEmail(recipientValue) || 
-           isValidCvu(recipientValue) || 
-           isValidAlias(recipientValue);
+
+    return (
+        isValidEmail(recipientValue) ||
+        isValidCvu(recipientValue) ||
+        isValidAlias(recipientValue)
+    );
 });
 
 function handleAmountInput() {
@@ -452,19 +389,29 @@ function handleAmountInput() {
         const n = parseFloat(value);
         if (isNaN(n) || n <= 0) {
             errorMessage.value = "El monto debe ser mayor a cero.";
-        } else if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
-            errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
+        } else if (
+            selectedPaymentMethod.value === "account" &&
+            n > accountBalance.value
+        ) {
+            errorMessage.value =
+                "Saldo insuficiente para realizar la transferencia.";
         } else {
             // Clear error if it was related to amount
-            if (errorMessage.value === "El monto debe ser mayor a cero." || 
-                errorMessage.value === "Saldo insuficiente para realizar la transferencia.") {
+            if (
+                errorMessage.value === "El monto debe ser mayor a cero." ||
+                errorMessage.value ===
+                    "Saldo insuficiente para realizar la transferencia."
+            ) {
                 errorMessage.value = "";
             }
         }
     } else {
         // Clear amount-related errors when field is empty
-        if (errorMessage.value === "El monto debe ser mayor a cero." || 
-            errorMessage.value === "Saldo insuficiente para realizar la transferencia.") {
+        if (
+            errorMessage.value === "El monto debe ser mayor a cero." ||
+            errorMessage.value ===
+                "Saldo insuficiente para realizar la transferencia."
+        ) {
             errorMessage.value = "";
         }
     }
@@ -478,15 +425,15 @@ async function handleTransfer() {
     errorMessage.value = "";
     const n = parseFloat(amount.value);
     const recipientValue = recipient.value.trim();
-    
+
     // Debug validation
-    console.log('Validating recipient:', recipientValue);
-    console.log('Is email?', isValidEmail(recipientValue));
-    console.log('Is CVU?', isValidCvu(recipientValue));
-    console.log('Is alias?', isValidAlias(recipientValue));
-    console.log('Payment method:', selectedPaymentMethod.value);
-    console.log('Account balance:', accountBalance.value);
-    
+    console.log("Validating recipient:", recipientValue);
+    console.log("Is email?", isValidEmail(recipientValue));
+    console.log("Is CVU?", isValidCvu(recipientValue));
+    console.log("Is alias?", isValidAlias(recipientValue));
+    console.log("Payment method:", selectedPaymentMethod.value);
+    console.log("Account balance:", accountBalance.value);
+
     if (isNaN(n) || n <= 0) {
         errorMessage.value = "El monto debe ser mayor a cero.";
         return;
@@ -495,8 +442,9 @@ async function handleTransfer() {
         errorMessage.value = "Debes ingresar un email, CVU o alias.";
         return;
     }
-    if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
-        errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
+    if (selectedPaymentMethod.value === "account" && n > accountBalance.value) {
+        errorMessage.value =
+            "Saldo insuficiente para realizar la transferencia.";
         return;
     }
 
@@ -508,8 +456,12 @@ async function handleTransfer() {
 
     try {
         // Validate recipient format
-        if (!isValidEmail(recipientValue) && !isValidCvu(recipientValue) && !isValidAlias(recipientValue)) {
-            console.log('Invalid recipient format');
+        if (
+            !isValidEmail(recipientValue) &&
+            !isValidCvu(recipientValue) &&
+            !isValidAlias(recipientValue)
+        ) {
+            console.log("Invalid recipient format");
             errorMessage.value = "Formato de email, CVU o alias inválido.";
             return;
         }
@@ -522,7 +474,7 @@ async function handleTransfer() {
             receiverInfo = await accountStore.verifyAlias(recipientValue);
         } else {
             // For email, we'll get the info from the transfer response
-            receiverInfo = { firstName: 'Usuario', lastName: '' };
+            receiverInfo = { firstName: "Usuario", lastName: "" };
         }
 
         // Update recipient info in the UI
@@ -530,9 +482,12 @@ async function handleTransfer() {
         recipientLastName.value = receiverInfo.lastName;
         showConfirmDialog.value = true;
     } catch (error) {
-        console.error('Transfer validation error:', error);
+        console.error("Transfer validation error:", error);
         showErrorDialog.value = true;
-        errorDialogMessage.value = error instanceof Error ? error.message : "Error al validar la transferencia.";
+        errorDialogMessage.value =
+            error instanceof Error
+                ? error.message
+                : "Error al validar la transferencia.";
         return;
     }
 }
@@ -544,61 +499,78 @@ async function confirmTransfer() {
     const descriptionValue = reason.value.trim();
 
     // Double check balance before confirming transfer
-    if (selectedPaymentMethod.value === 'account' && n > accountBalance.value) {
-        errorMessage.value = "Saldo insuficiente para realizar la transferencia.";
+    if (selectedPaymentMethod.value === "account" && n > accountBalance.value) {
+        errorMessage.value =
+            "Saldo insuficiente para realizar la transferencia.";
         showConfirmDialog.value = false;
         return;
     }
 
     try {
         let receiverInfo;
-        let transferType: 'email' | 'cvu' | 'alias';
-        const cardId = selectedPaymentMethod.value === 'card' && selectedCard.value ? selectedCard.value.id : undefined;
+        let transferType: "email" | "cvu" | "alias";
+        const cardId =
+            selectedPaymentMethod.value === "card" && selectedCard.value
+                ? selectedCard.value.id
+                : undefined;
 
         // Get receiver info based on the type of identifier
         if (isValidEmail(recipientValue)) {
-            transferType = 'email';
+            transferType = "email";
             // For email transfers, we need to make the transfer first to get the receiver info
             const formattedDescription = descriptionValue
                 ? `Transferencia: ${descriptionValue}`
-                : 'Transferencia';
+                : "Transferencia";
             const initialPayload: PaymentRequest = {
                 amount: n,
                 description: formattedDescription,
-                metadata: {}
+                metadata: {},
             };
-            const payment = await paymentStore.transferByEmail(recipientValue, initialPayload, cardId);
+            const payment = await paymentStore.transferByEmail(
+                recipientValue,
+                initialPayload,
+                cardId
+            );
             receiverInfo = {
                 firstName: payment.receiver.firstName,
-                lastName: payment.receiver.lastName
+                lastName: payment.receiver.lastName,
             };
         } else if (isValidCvu(recipientValue)) {
-            transferType = 'cvu';
+            transferType = "cvu";
             receiverInfo = await accountStore.verifyCvu(recipientValue);
         } else if (isValidAlias(recipientValue)) {
-            transferType = 'alias';
+            transferType = "alias";
             receiverInfo = await accountStore.verifyAlias(recipientValue);
         } else {
-            console.log('Invalid recipient format during confirmation');
+            console.log("Invalid recipient format during confirmation");
             showErrorDialog.value = true;
-            errorDialogMessage.value = "Formato de email, CVU o alias inválido.";
+            errorDialogMessage.value =
+                "Formato de email, CVU o alias inválido.";
             return;
         }
 
         // Format the description for CVU and alias
-        if (transferType !== 'email') {
+        if (transferType !== "email") {
             const formattedDescription = descriptionValue
                 ? `Transferencia a ${receiverInfo.firstName} ${receiverInfo.lastName}: ${descriptionValue}`
                 : `Transferencia a ${receiverInfo.firstName} ${receiverInfo.lastName}`;
             const payload: PaymentRequest = {
                 amount: n,
                 description: formattedDescription,
-                metadata: {}
+                metadata: {},
             };
-            if (transferType === 'cvu') {
-                await paymentStore.transferByCVU(recipientValue, payload, cardId);
+            if (transferType === "cvu") {
+                await paymentStore.transferByCVU(
+                    recipientValue,
+                    payload,
+                    cardId
+                );
             } else {
-                await paymentStore.transferByAlias(recipientValue, payload, cardId);
+                await paymentStore.transferByAlias(
+                    recipientValue,
+                    payload,
+                    cardId
+                );
             }
         }
 
@@ -606,7 +578,7 @@ async function confirmTransfer() {
             recipient: recipientValue,
             amount: n,
             reason: descriptionValue,
-            cardId: cardId
+            cardId: cardId,
         });
 
         // Success
@@ -619,10 +591,13 @@ async function confirmTransfer() {
         showSuccessDialog.value = true;
         isClearingFields.value = false;
     } catch (error) {
-        console.error('Transfer confirmation error:', error);
+        console.error("Transfer confirmation error:", error);
         showConfirmDialog.value = false;
         showErrorDialog.value = true;
-        errorDialogMessage.value = error instanceof Error ? error.message : "Error al confirmar la transferencia.";
+        errorDialogMessage.value =
+            error instanceof Error
+                ? error.message
+                : "Error al confirmar la transferencia.";
         return;
     }
 }
@@ -637,65 +612,56 @@ async function removeContact(contactId: string) {
     }
 }
 
-const accountBalance = computed(() => accountStore.account?.balance || 0)
+const accountBalance = computed(() => accountStore.account?.balance || 0);
 
 const cards = computed<DisplayCard[]>(() => {
-    if (!cardsStore.cards) return []
-    return cardsStore.cards.map(card => {
-        const cardType = card.type === 'CREDIT' ? 'Crédito' : 'Débito'
-        const last4 = card.number.match(/\d{4}$/)?.[0] || ''
+    if (!cardsStore.cards) return [];
+    return cardsStore.cards.map((card) => {
+        const cardType = card.type === "CREDIT" ? "Crédito" : "Débito";
+        const last4 = card.number.match(/\d{4}$/)?.[0] || "";
         return {
             id: String(card.id),
             brand: card.metadata?.brand || getCardBrand(card.number),
             number_last4: last4,
             expiry: card.expirationDate,
             holder: card.fullName,
-            logo: getBrandLogo(card.metadata?.brand || getCardBrand(card.number))
-        }
-    })
-})
+            logo: getBrandLogo(
+                card.metadata?.brand || getCardBrand(card.number)
+            ),
+        };
+    });
+});
 
 function getCardBrand(number: string) {
-    const n = number.replace(/\D/g, '')
-    if (n.startsWith('4')) return 'Visa'
-    if (n.startsWith('5') || n.startsWith('2')) return 'Mastercard'
-    if (n.startsWith('3')) return 'Amex'
-    return 'Desconocida'
+    const n = number.replace(/\D/g, "");
+    if (n.startsWith("4")) return "Visa";
+    if (n.startsWith("5") || n.startsWith("2")) return "Mastercard";
+    if (n.startsWith("3")) return "Amex";
+    return "Desconocida";
 }
 
 function getBrandLogo(brand: string) {
-    if (brand === 'Visa') return 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png'
-    if (brand === 'Mastercard') return 'https://brandlogos.net/wp-content/uploads/2021/11/mastercard-logo.png'
-    if (brand === 'Amex') return 'https://upload.wikimedia.org/wikipedia/commons/f/fa/American_Express_logo_%282018%29.svg'
-    return 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='
-}
-
-function selectPaymentMethod(method: 'account' | 'card') {
-    selectedPaymentMethod.value = method
-    if (method === 'account') {
-        selectedCard.value = null
-    }
-    showPaymentMethodDialog.value = false
-}
-
-function selectCard(card: DisplayCard) {
-    selectedCard.value = card
-    selectedPaymentMethod.value = 'card'
-    showPaymentMethodDialog.value = false
+    if (brand === "Visa")
+        return "https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png";
+    if (brand === "Mastercard")
+        return "https://brandlogos.net/wp-content/uploads/2021/11/mastercard-logo.png";
+    if (brand === "Amex")
+        return "https://upload.wikimedia.org/wikipedia/commons/f/fa/American_Express_logo_%282018%29.svg";
+    return "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
 }
 
 async function fetchCards() {
     try {
-        await cardsStore.fetchCards()
+        await cardsStore.fetchCards();
     } catch (error) {
-        console.error('Error fetching cards:', error)
+        console.error("Error fetching cards:", error);
     }
 }
 
 onMounted(() => {
-    fetchCards()
-    accountStore.fetchAccount()
-})
+    fetchCards();
+    accountStore.fetchAccount();
+});
 </script>
 
 <style scoped>
@@ -1194,4 +1160,3 @@ onMounted(() => {
     margin-bottom: 1rem;
 }
 </style>
-
