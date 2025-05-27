@@ -131,6 +131,10 @@
                                         {{ formatPercent(tooltip.percent)
                                         }}<br />
                                         {{ formatMoney(tooltip.value) }}
+                                        <br />
+                                        <span :class="tooltip.return && tooltip.return >= 0 ? 'text-success' : 'text-error'">
+                                            {{ tooltip.return && tooltip.return >= 0 ? '+' : '' }}{{ formatPercent(tooltip.return ?? 0) }}
+                                        </span>
                                     </div>
                                     <div class="chart-legend">
                                         <div
@@ -469,6 +473,7 @@ interface TooltipState {
     label: string;
     percent: number;
     value: number;
+    return?: number;
 }
 
 const tooltip = ref<TooltipState>({
@@ -478,11 +483,12 @@ const tooltip = ref<TooltipState>({
     label: "",
     percent: 0,
     value: 0,
+    return: 0,
 });
 
 function showTooltip(
     e: MouseEvent,
-    slice: { label: string; percent: number; value: number }
+    slice: { label: string; percent: number; value: number; return: number }
 ) {
     tooltip.value = {
         show: true,
@@ -491,6 +497,7 @@ function showTooltip(
         label: slice.label,
         percent: slice.percent,
         value: slice.value,
+        return: slice.return,
     };
 }
 
@@ -501,54 +508,45 @@ function hideTooltip() {
     };
 }
 
-// Add chart slices computation
+// Helper to get color by fund name
+function getFundColor(fundName: string): string {
+    switch (fundName.toLowerCase().replace(/\s+/g, '')) {
+        case 'growth':
+            return '#4CAF50';
+        case 'tech':
+            return '#2196F3';
+        case 'value':
+            return '#FFC107';
+        case 'crypto':
+            return '#9C27B0';
+        case 'realestate':
+        case 'real estate':
+            return '#F44336';
+        default:
+            return '#888888';
+    }
+}
+
 const chartSlices = computed(() => {
     const total = totalBalance.value;
-    if (total === 0) return [];
+    if (total === 0 || investments.value.length === 0) return [];
 
-    const sliceValue = total / 5; // Divide total investment among 5 funds
-    return [
-        {
-            type: "growth",
-            label: "Growth",
-            color: "#4CAF50",
-            percent: 20,
-            offset: 0,
-            value: sliceValue,
-        },
-        {
-            type: "tech",
-            label: "Tech",
-            color: "#2196F3",
-            percent: 20,
-            offset: 20,
-            value: sliceValue,
-        },
-        {
-            type: "value",
-            label: "Value",
-            color: "#FFC107",
-            percent: 20,
-            offset: 40,
-            value: sliceValue,
-        },
-        {
-            type: "crypto",
-            label: "Crypto",
-            color: "#9C27B0",
-            percent: 20,
-            offset: 60,
-            value: sliceValue,
-        },
-        {
-            type: "realestate",
-            label: "Real Estate",
-            color: "#F44336",
-            percent: 20,
-            offset: 80,
-            value: sliceValue,
-        },
-    ];
+    let currentOffset = 0;
+
+    return investments.value.map((item, index) => {
+        const percent = (item.invested_amount / total) * 100;
+        const slice = {
+            type: item.fund_name.toLowerCase().replace(/\s+/g, ''),
+            label: item.fund_name,
+            color: getFundColor(item.fund_name.toLowerCase()),
+            percent: percent,
+            offset: currentOffset,
+            value: item.invested_amount,
+            return: item.percentage_variation
+        };
+        currentOffset = (currentOffset + percent) % 100;
+        return slice;
+    });
 });
 </script>
 
