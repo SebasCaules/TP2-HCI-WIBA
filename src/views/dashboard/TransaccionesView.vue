@@ -471,30 +471,29 @@ async function renderChart() {
     // Fetch transactions with the specified parameters
     await transactionStore.fetchTransactions({ page: 1, pageSize: 1000 });
 
-    const data = transactionStore.transactions.reduce(
-        (acc: Record<string, number>, tx: any) => {
-            const type = tx.method || "Otro";
-            acc[type] = (acc[type] || 0) + tx.amount;
-            return acc;
-        },
-        {}
-    );
+    let entrada = 0;
+    let salida = 0;
+
+    for (const tx of transactionStore.transactions) {
+        const isDeposit = tx.description?.includes("Depósito");
+        const isPayer = tx.payer?.id?.toString() === currentUserIdRef.value;
+
+        if ((isDeposit || !isPayer) && (!tx.pending || isDeposit)) {
+            entrada += tx.amount;
+        } else if (!isDeposit && isPayer) {
+            salida += tx.amount;
+        }
+    }
 
     chartInstance = new Chart(ctx, {
         type: "bar",
         data: {
-            labels: Object.keys(data),
+            labels: ["Entrada", "Salida"],
             datasets: [
                 {
-                    label: "Montos por tipo de transacción",
-                    data: Object.values(data),
-                    backgroundColor: [
-                        "#489fb5",
-                        "#4caf50",
-                        "#ff9800",
-                        "#9c27b0",
-                        "#f44336",
-                    ],
+                    label: "Movimientos",
+                    data: [entrada, salida],
+                    backgroundColor: ["#22c55e", "#ef4444"],
                 },
             ],
         },
