@@ -14,7 +14,7 @@
             <CustomTextField
               v-model="profile.firstName"
               label="Nombre"
-              placeholder="Tu nombre"
+              :placeholder="securityStore.user?.firstName || 'Nombre'"
               :error-messages="profileErrors.firstName"
             />
           </div>
@@ -22,7 +22,7 @@
             <CustomTextField
               v-model="profile.lastName"
               label="Apellido"
-              placeholder="Tu apellido"
+              :placeholder="securityStore.user?.lastName || 'Apellido'"
               :error-messages="profileErrors.lastName"
             />
           </div>
@@ -30,7 +30,7 @@
             <CustomTextField
               v-model="profile.username"
               label="Usuario"
-              placeholder="Tu nombre de usuario"
+              :placeholder="securityStore.user?.username || 'Nombre de usuario'"
               :error-messages="profileErrors.username"
             />
           </div>
@@ -121,6 +121,9 @@ import { supabase } from '@/plugins/supabase'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import type { User } from '@/types/types'
+import { useSecurityStore } from '@/stores/securityStore'
+
+const securityStore = useSecurityStore()
 
 const authStore = useAuthStore()
 
