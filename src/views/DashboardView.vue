@@ -90,14 +90,10 @@
                         >
                             <template #prepend>
                                 <v-icon
-                                    :color="tx.amount < 0 ? 'error' : 'success'"
+                                    :color="getTransactionDisplay(tx).color === 'error' ? 'var(--error)' : getTransactionDisplay(tx).color === 'success' ? 'var(--success)' : 'warning'"
                                     size="20"
                                 >
-                                    {{
-                                        tx.amount > 0
-                                            ? "mdi-arrow-bottom-right"
-                                            : "mdi-arrow-top-right"
-                                    }}
+                                    {{ getTransactionDisplay(tx).icon }}
                                 </v-icon>
                             </template>
                             <v-list-item-title class="dashboard-list-title">{{
@@ -110,10 +106,10 @@
                                 <span
                                     :class="[
                                         'dashboard-list-amount',
-                                        tx.amount < 0 ? 'negative' : 'positive',
+                                        getTransactionDisplay(tx).isNegative ? 'negative' : 'positive',
                                     ]"
                                 >
-                                    {{ tx.amount < 0 ? "- " : "" }}${{
+                                    {{ getTransactionDisplay(tx).isNegative ? "- " : "" }}${{
                                         Math.abs(tx.amount).toLocaleString(
                                             "es-AR",
                                             {
@@ -392,6 +388,39 @@ function formatDate(dateStr: string): string {
 
 function toggleBalanceVisibility() {
     isBalanceVisible.value = !isBalanceVisible.value;
+}
+
+const currentUserId = computed(() => securityStore.user?.id);
+
+function isUserPayer(transaction: any): boolean {
+  return transaction.payer?.id === currentUserId.value;
+}
+
+function getTransactionDisplay(transaction: any): { icon: string; color: string; isNegative: boolean } {
+  const isPayer = isUserPayer(transaction);
+  const isDeposit = transaction.description?.includes('Depósito');
+
+  if (isDeposit) {
+    return {
+      icon: 'mdi-arrow-bottom-right',
+      color: 'success',
+      isNegative: false
+    };
+  }
+
+  if (transaction.pending) {
+    return {
+      icon: 'mdi-arrow-right',
+      color: 'warning',
+      isNegative: false
+    };
+  }
+
+  return {
+    icon: isPayer ? 'mdi-arrow-top-right' : 'mdi-arrow-bottom-right',
+    color: isPayer ? 'error' : 'success',
+    isNegative: isPayer
+  };
 }
 </script>
 

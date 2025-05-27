@@ -1,13 +1,10 @@
 <template>
-    <v-container>
+    <v-container fluid class="transactions-main">
         <template v-if="securityStore.isLoggedIn">
-            <v-row>
+            <v-row class="transactions-row" no-gutters>
                 <v-col cols="12" class="px-md-8">
                     <h1 class="transactions-title">Inversiones</h1>
-                </v-col>
-            </v-row>
-            <v-row>
-                <v-col cols="12" class="px-md-8">
+                    
                     <!-- Stats Row -->
                     <v-row class="mb-6">
                         <v-col cols="12" md="8">
@@ -576,6 +573,16 @@ const chartSlices = computed(() => {
 </script>
 
 <style scoped>
+.transactions-main {
+    padding: 0;
+    background: var(--background);
+    min-height: 100vh;
+}
+
+.transactions-row {
+    margin: 0;
+}
+
 .investment-summary {
     background-color: var(--primary) !important;
 }
@@ -798,10 +805,12 @@ const chartSlices = computed(() => {
 }
 
 .investments-title {
-    font-size: 1.5rem;
-    font-weight: 600;
+    font-size: 2.2rem;
+    font-weight: 800;
     margin-bottom: 1.5rem;
-    color: var(--text);
+    margin-top: 0.5rem;
+    margin-left: 0;
+    font-family: var(--font-sans), sans-serif;
 }
 
 .investment-card {
