@@ -60,18 +60,8 @@
     background-color: var(--border);
 }
 
-/* Dark Theme Scrollbar */
-:root[data-theme="dark"] ::-webkit-scrollbar-track {
-    background: var(--background);
-}
-
-:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
-    background: var(--primary);
-}
-
-:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
-    background: var(--accent);
-}
+/* Remove dark theme scrollbar styling to use system default */
+/* Dark theme scrollbar styles removed */
 
 /* Dark Theme Selection */
 :root[data-theme="dark"] ::selection {

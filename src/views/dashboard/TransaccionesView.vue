@@ -13,109 +13,58 @@
                     :base-color="!showTable ? 'var(--icon-muted)' : undefined"
                 ></v-switch>
 
-                <v-card class="transactions-card">
-                    <v-card-text>
-                        <BaseDataTable
-                            v-if="showTable"
-                            :headers="headers"
-                            :items="transactionStore.transactions"
-                            :loading="transactionStore.loading"
-                            @click:row="showTransactionDetails"
-                        >
-                            <template #item.date="{ item }">
-                                {{
-                                    formatDate(getTransactionDate(item), "day")
-                                }}
-                            </template>
-                            <template #item.description="{ item }">
-                                <span>
-                                    <!-- Hay que hacer esto porque la api marca como pendiente los depósitos por alguna razon -->
-                                    {{
-                                        item.pending &&
-                                        !item.description?.includes(
-                                            "Depósito a cuenta"
-                                        )
-                                            ? `Cobro: ${
-                                                  item.description ?? "-"
-                                              }`
-                                            : item.description ?? "-"
-                                    }}
-                                </span>
-                            </template>
-                            <template #item.amount="{ item }">
-                                <div class="amount-cell">
-                                    <span class="amount-icon-area">
-                                        <v-icon
-                                            v-if="getAmountDisplay(item).icon"
-                                            :color="
-                                                getAmountDisplay(item).color ===
-                                                'error'
-                                                    ? 'var(--error)'
-                                                    : getAmountDisplay(item)
-                                                          .color === 'success'
-                                                    ? 'var(--success)'
-                                                    : 'warning'
-                                            "
-                                            size="small"
-                                        >
-                                            {{ getAmountDisplay(item).icon }}
-                                        </v-icon>
-                                    </span>
-                                    <span
-                                        class="amount-value"
-                                        :class="{
-                                            'text-error':
-                                                getAmountDisplay(item).color ===
-                                                'error',
-                                            'text-success':
-                                                getAmountDisplay(item).color ===
-                                                'success',
-                                            'text-warning':
-                                                getAmountDisplay(item).color ===
-                                                'warning',
-                                        }"
-                                    >
-                                        ${{
-                                            getAmountDisplay(
-                                                item
-                                            ).amount.toFixed(2)
-                                        }}
-                                    </span>
-                                </div>
-                            </template>
-                            <template #item.status="{ item }">
-                                <v-chip
-                                    :color="
-                                        item.pending ? 'warning' : 'success'
-                                    "
-                                    size="small"
-                                >
-                                    {{
-                                        item.pending
-                                            ? "Pendiente"
-                                            : "Completada"
-                                    }}
-                                </v-chip>
-                            </template>
-                            <template #item.moreInfo="{ item }">
-                                <v-btn
-                                    icon
-                                    variant="text"
-                                    @click.stop="showTransactionDetails(item)"
-                                    aria-label="Más información"
-                                >
-                                    <v-icon color="var(--primary)"
-                                        >mdi-information-outline</v-icon
-                                    >
-                                </v-btn>
-                            </template>
-                        </BaseDataTable>
+        <BaseDataTable
+          v-if="showTable"
+          :headers="headers"
+          :items="transactionStore.transactions"
+          :loading="transactionStore.loading"
+          @click:row="showTransactionDetails"
+        >
+          <template #item.date="{ item }">
+            {{ formatDate(getTransactionDate(item), 'day') }}
+          </template>
+          <template #item.description="{ item }">
+            <span>
+              <!-- Hay que hacer esto porque la api marca como pendiente los depósitos por alguna razon -->
+              {{ item.pending && !item.description?.includes('Depósito a cuenta') 
+                ? `Cobro: ${item.description ?? '-'}` 
+                : (item.description ?? '-') }}
+            </span>
+          </template>
+          <template #item.amount="{ item }">
+            <div class="amount-cell">
+              <span class="amount-icon-area">
+                <v-icon v-if="getAmountDisplay(item).icon" :color="getAmountDisplay(item).color === 'error' ? 'var(--error)' : getAmountDisplay(item).color === 'success' ? 'var(--success)' : 'warning'" size="small">
+                  {{ getAmountDisplay(item).icon }}
+                </v-icon>
+              </span>
+              <span class="amount-value" :class="{
+                'text-error': getAmountDisplay(item).color === 'error',
+                'text-success': getAmountDisplay(item).color === 'success',
+                'text-warning': getAmountDisplay(item).color === 'warning'
+              }">
+                ${{ getAmountDisplay(item).amount.toFixed(2) }}
+              </span>
+            </div>
+          </template>
+          <template #item.status="{ item }">
+            <v-chip
+              :color="item.pending ? 'warning' : 'success'"
+              size="small"
+            >
+              {{ item.pending ? 'Pendiente' : 'Completada' }}
+            </v-chip>
+          </template>
+          <template #item.moreInfo="{ item }">
+            <v-btn icon variant="text" @click.stop="showTransactionDetails(item)" aria-label="Más información">
+              <v-icon color="primary">mdi-information-outline</v-icon>
+            </v-btn>
+          </template>
+        </BaseDataTable>
 
-                        <div v-else>
-                            <canvas id="transactionChart"></canvas>
-                        </div>
-                    </v-card-text>
-                </v-card>
+        <div v-else>
+          <canvas id="transactionChart"></canvas>
+        </div>
 
                 <v-pagination
                     v-if="showTable"
@@ -625,10 +574,9 @@ function copyUuid(uuid?: string) {
 }
 
 .transactions-card {
-    border-radius: 1rem;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-    padding: 1rem;
-    background-color: white;
+  border-radius: 1rem;
+  padding: 1rem;
+  background-color: white;
 }
 
 :deep(.v-data-table) {
