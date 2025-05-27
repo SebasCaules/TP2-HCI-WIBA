@@ -27,10 +27,13 @@
                 </v-card-text>
 
                 <v-card-actions class="form-actions">
+                    <div v-if="formError" class="text-error text-center mb-2">
+                        {{ formError }}
+                    </div>
                     <FilledButton
                         type="submit"
                         :loading="loading"
-                        :disabled="loading"
+                        :disabled="loading || !!formError"
                     >
                         Generar Cobro
                     </FilledButton>
@@ -90,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { usePaymentStore } from '@/stores/paymentStore';
 import FilledButton from '@/components/ui/FilledButton.vue';
 import CustomTextField from '@/components/ui/CustomTextField.vue';
@@ -107,6 +110,19 @@ const loading = ref(false);
 const copying = ref(false);
 const payment = ref<Payment | null>(null);
 const showSuccessDialog = ref(false);
+
+const formError = computed(() => {
+    if (!form.value.description || form.value.description.length > 256) {
+        return 'La descripción es obligatoria y debe tener hasta 256 caracteres.';
+    }
+    if (form.value.amount <= 0) {
+        return 'El monto debe ser mayor a 0.';
+    }
+    if (!/^\d+(\.\d{1,4})?$/.test(form.value.amount.toString())) {
+        return 'El monto no puede tener más de 4 decimales.';
+    }
+    return '';
+});
 
 async function handleSubmit() {
     loading.value = true;
@@ -210,4 +226,4 @@ async function copyUuid() {
 :deep(.v-text-field) {
     width: 100%;
 }
-</style> 
+</style>

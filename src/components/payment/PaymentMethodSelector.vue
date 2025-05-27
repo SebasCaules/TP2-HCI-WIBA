@@ -76,9 +76,7 @@
                                 Saldo de la cuenta
                             </div>
                             <div class="select-card-balance">
-                                Saldo disponible: ${{
-                                    formatNumber(accountBalance.toString())
-                                }}
+                                Saldo disponible: {{ formatNumber(accountBalance) }}
                             </div>
                         </div>
                         <v-icon
@@ -151,6 +149,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import FilledButton from "@/components/ui/FilledButton.vue";
+import { useAccountStore } from "@/stores/accountStore";
 
 interface DisplayCard {
     id: string;
@@ -176,11 +175,21 @@ interface Emits {
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
+const accountStore = useAccountStore();
+
+const accountBalance = computed(() => {
+    return accountStore.account?.balance || 0;
+});
 
 const showPaymentMethodDialog = ref(false);
 
-function formatNumber(value: string) {
-    return value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+function formatNumber(value: number) {
+    return new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(value);
 }
 
 function selectPaymentMethod(method: "account" | "card") {
