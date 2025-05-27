@@ -199,52 +199,18 @@
         </v-dialog>
 
         <!-- Success Dialog -->
-        <v-dialog v-model="showSuccessDialog" max-width="400px">
-            <v-card class="success-dialog">
-                <div class="success-dialog-header">
-                    <v-btn
-                        icon
-                        class="dialog-close-btn"
-                        @click="showSuccessDialog = false"
-                    >
-                        <v-icon>mdi-close</v-icon>
-                    </v-btn>
-                </div>
-                <div class="success-dialog-content">
-                    <v-icon color="success" size="48">mdi-check-circle</v-icon>
-                    <div class="success-dialog-title">
-                        ¡Transferencia realizada con éxito!
-                    </div>
-                    <div class="success-dialog-message">
-                        La transferencia fue completada correctamente.
-                    </div>
-                </div>
-            </v-card>
-        </v-dialog>
+        <SuccessDialog
+            v-model="showSuccessDialog"
+            title="¡Transferencia realizada con éxito!"
+            message="La transferencia fue completada correctamente."
+        />
 
         <!-- Error Dialog -->
-        <v-dialog v-model="showErrorDialog" max-width="400px">
-            <v-card class="error-dialog">
-                <div class="error-dialog-header">
-                    <v-btn
-                        icon
-                        class="dialog-close-btn"
-                        @click="showErrorDialog = false"
-                    >
-                        <v-icon>mdi-close</v-icon>
-                    </v-btn>
-                </div>
-                <div class="error-dialog-content">
-                    <v-icon color="error" size="48">mdi-alert-circle</v-icon>
-                    <div class="error-dialog-title">
-                        Error en la transferencia
-                    </div>
-                    <div class="error-dialog-message">
-                        {{ errorDialogMessage }}
-                    </div>
-                </div>
-            </v-card>
-        </v-dialog>
+        <ErrorDialog
+            v-model="showErrorDialog"
+            title="Error en la transferencia"
+            :message="errorDialogMessage"
+        />
 
 
         <!-- Add Card Dialog -->
@@ -274,6 +240,8 @@ import AddCardDialog from "@/components/AddCardDialog.vue";
 import { usePaymentStore } from "@/stores/paymentStore";
 import type { PaymentRequest } from "@/api/payment";
 import PaymentMethodSelector from "@/components/payment/PaymentMethodSelector.vue";
+import SuccessDialog from "@/components/dialogs/SuccessDialog.vue";
+import ErrorDialog from "@/components/dialogs/ErrorDialog.vue";
 
 interface DisplayCard {
     id: string;
@@ -318,6 +286,14 @@ const userId = computed(() => securityStore.user?.id?.toString());
 
 const showErrorDialog = ref(false);
 const errorDialogMessage = ref("");
+
+const errorCodeMessages = {
+    400: "La solicitud o los datos son inválidos. Por favor, verifica la información ingresada.",
+    401: "No estás autorizado para realizar esta operación. Por favor, inicia sesión nuevamente.",
+    404: "No se encontró la cuenta o el destinatario especificado.",
+    422: "No se puede procesar la transferencia. Por favor, verifica los datos ingresados.",
+    500: "Ocurrió un error inesperado. Por favor, intenta nuevamente más tarde."
+} as const;
 
 async function fetchContacts() {
     if (!userId.value) return;
@@ -594,10 +570,49 @@ async function confirmTransfer() {
         console.error("Transfer confirmation error:", error);
         showConfirmDialog.value = false;
         showErrorDialog.value = true;
-        errorDialogMessage.value =
-            error instanceof Error
-                ? error.message
-                : "Error al confirmar la transferencia.";
+        
+        // Log the full error object for debugging
+        console.log('Full error object:', error);
+        
+        // Handle the specific API error format we're receiving
+        if (error && typeof error === 'object') {
+            const apiError = error as { code?: number; description?: string; message?: string };
+            console.log('API Error details:', {
+                code: apiError.code,
+                description: apiError.description,
+                message: apiError.message
+            });
+            
+            // Get the appropriate error message based on the error code
+            if (apiError.code && apiError.code in errorCodeMessages) {
+                // If we have a specific error code, use only the mapped message
+                errorDialogMessage.value = errorCodeMessages[apiError.code as keyof typeof errorCodeMessages];
+            } else {
+                // Fall back to the API description or message if no code mapping exists
+                errorDialogMessage.value = apiError.description || apiError.message || "Error al confirmar la transferencia.";
+            }
+        } else if (error instanceof Error) {
+            // Try to parse the error message if it's a JSON string
+            try {
+                const errorData = JSON.parse(error.message);
+                console.log('Parsed error data:', errorData);
+                
+                // Check if the parsed error has a code
+                if (errorData.code && errorData.code in errorCodeMessages) {
+                    // Use only the mapped message
+                    errorDialogMessage.value = errorCodeMessages[errorData.code as keyof typeof errorCodeMessages];
+                } else {
+                    errorDialogMessage.value = errorData.description || errorData.message || errorData.error || "Error al confirmar la transferencia.";
+                }
+            } catch {
+                // If it's not JSON, use the error message directly
+                errorDialogMessage.value = error.message || "Error al confirmar la transferencia.";
+            }
+        } else {
+            errorDialogMessage.value = "Error al confirmar la transferencia.";
+        }
+        
+        console.log('Final error message to display:', errorDialogMessage.value);
         return;
     }
 }
@@ -882,140 +897,6 @@ onMounted(() => {
     text-align: center;
     font-family: var(--font-sans, sans-serif);
 }
-.success-dialog {
-    border-radius: 16px;
-    padding: 1.5rem;
-    text-align: center;
-}
-
-.success-dialog-header {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 1rem;
-}
-
-.dialog-close-btn {
-    color: var(--muted-text) !important;
-    margin-right: -8px;
-}
-
-.success-dialog-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.2rem;
-    padding: 0 1rem 1rem;
-}
-.success-dialog-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--primary);
-    margin-top: 0.5rem;
-}
-.success-dialog-message {
-    font-size: 1.05rem;
-    color: var(--text);
-    margin-bottom: 1rem;
-}
-.success-dialog-btn {
-    min-width: 120px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    border-radius: 1.5rem;
-    padding: 0.7rem 2rem;
-    margin-top: 0.5rem;
-}
-
-.remove-contact-btn {
-    opacity: 0.7;
-    transition: opacity 0.2s;
-}
-
-.remove-contact-btn:hover {
-    opacity: 1;
-}
-
-.no-contacts-message {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem 2rem;
-    text-align: center;
-    background: #f8fafc;
-    border-radius: 14px;
-    border: 2px dashed #e0e0e0;
-    width: 100%;
-    gap: 1rem;
-}
-
-.no-contacts-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--text);
-    font-family: var(--font-sans), sans-serif;
-}
-
-.no-contacts-subtitle {
-    font-size: 1.05rem;
-    color: var(--muted-text);
-    font-family: var(--font-sans), sans-serif;
-}
-
-.deposit-method-box {
-    display: flex;
-    align-items: center;
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    background: transparent;
-    height: 48px;
-    padding: 0 1.1rem;
-    width: 100%;
-    box-sizing: border-box;
-    transition: border-color 0.18s;
-    font-size: 1.06rem;
-    font-family: var(--font-sans, sans-serif);
-    cursor: pointer;
-    outline: none;
-    gap: 0.8rem;
-}
-
-.deposit-method-box:hover,
-.deposit-method-box:focus {
-    border-color: var(--primary);
-}
-
-.deposit-card-logo {
-    width: 32px;
-    height: 32px;
-    object-fit: contain;
-    display: flex;
-    align-items: center;
-}
-
-.deposit-method-icon {
-    font-size: 24px;
-}
-
-.deposit-method-text {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--text);
-    flex: 1;
-    font-family: var(--font-sans), sans-serif;
-    display: flex;
-    align-items: center;
-    height: 100%;
-}
-
-.deposit-select-icon {
-    color: var(--muted-text);
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    height: 100%;
-}
-
 .select-card-dialog {
     border-radius: 2rem !important;
     overflow: visible;
@@ -1127,36 +1008,84 @@ onMounted(() => {
     padding: 0.8rem 2rem;
 }
 
-.error-dialog {
-    border-radius: 16px;
-    padding: 1.5rem;
-    text-align: center;
-}
-
-.error-dialog-header {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 1rem;
-}
-
-.error-dialog-content {
+.no-cards-message {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.2rem;
-    padding: 0 1rem 1rem;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+    background: #f8fafc;
+    border-radius: 14px;
+    border: 2px dashed #e0e0e0;
+    width: 100%;
+    gap: 1rem;
 }
 
-.error-dialog-title {
-    font-size: 1.3rem;
+.no-cards-title {
+    font-size: 1.2rem;
     font-weight: 700;
-    color: var(--error);
-    margin-top: 0.5rem;
+    color: var(--text);
+    font-family: var(--font-sans), sans-serif;
 }
 
-.error-dialog-message {
+.no-cards-subtitle {
     font-size: 1.05rem;
+    color: var(--muted-text);
+    font-family: var(--font-sans), sans-serif;
+}
+
+.deposit-method-box {
+    display: flex;
+    align-items: center;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    background: transparent;
+    height: 48px;
+    padding: 0 1.1rem;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.18s;
+    font-size: 1.06rem;
+    font-family: var(--font-sans, sans-serif);
+    cursor: pointer;
+    outline: none;
+    gap: 0.8rem;
+}
+
+.deposit-method-box:hover,
+.deposit-method-box:focus {
+    border-color: var(--primary);
+}
+
+.deposit-card-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    display: flex;
+    align-items: center;
+}
+
+.deposit-method-icon {
+    font-size: 24px;
+}
+
+.deposit-method-text {
+    font-size: 1.15rem;
+    font-weight: 700;
     color: var(--text);
-    margin-bottom: 1rem;
+    flex: 1;
+    font-family: var(--font-sans), sans-serif;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.deposit-select-icon {
+    color: var(--muted-text);
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    height: 100%;
 }
 </style>
