@@ -26,7 +26,9 @@ defineProps<{
   fullWidth?: boolean
   variant?: 'primary' | 'secondary'
 }>()
-defineEmits(['click'])
+defineEmits<{
+  (e: 'click', event: MouseEvent): void
+}>()
 </script>
 
 <style scoped>

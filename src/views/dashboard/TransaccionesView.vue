@@ -4,14 +4,24 @@
             <v-col cols="12" class="px-md-8">
                 <h1 class="transactions-title">Transacciones</h1>
 
-                <v-switch
-                    v-model="showTable"
-                    inset
-                    class="mb-4"
-                    label="Mostrar como tabla"
-                    :color="showTable ? 'var(--primary)' : undefined"
-                    :base-color="!showTable ? 'var(--icon-muted)' : undefined"
-                ></v-switch>
+                <div class="transactions-toggle-wrapper">
+                    <IconFilledButton
+                        icon="mdi-table"
+                        :variant="showTable ? 'primary' : 'secondary'"
+                        @click="showTable = true"
+                        class="transactions-toggle-btn"
+                    >
+                        Tabla
+                    </IconFilledButton>
+                    <IconFilledButton
+                        icon="mdi-chart-bar"
+                        :variant="!showTable ? 'primary' : 'secondary'"
+                        @click="showTable = false"
+                        class="transactions-toggle-btn"
+                    >
+                        Gráfico
+                    </IconFilledButton>
+                </div>
 
                 <BaseDataTable
                     v-if="showTable"
@@ -388,6 +398,7 @@ import { onMounted, ref, watch, nextTick, computed } from "vue";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { useSecurityStore } from "@/stores/securityStore";
 import BaseDataTable from "@/components/ui/BaseDataTable.vue";
+import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import { Chart, registerables } from "chart.js";
 import type { Payment } from "@/api/payment";
 
@@ -504,6 +515,11 @@ async function renderChart() {
                     beginAtZero: true,
                 },
             },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
         },
     });
 }
@@ -725,5 +741,23 @@ function copyUuid(uuid?: string) {
 
 :deep(.v-selection-control__thumb.icon-muted) {
     background-color: var(--icon-muted) !important;
+}
+
+.transactions-toggle-wrapper {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2.2rem;
+    justify-content: flex-start;
+    width: fit-content;
+}
+
+.transactions-toggle-btn {
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 0.5rem 1.8rem;
+    min-width: 160px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 </style>
