@@ -1,6 +1,6 @@
 <template>
   <v-app-bar class="topbar" flat>
-    <v-app-bar-title class="topbar-title">WIBA</v-app-bar-title>
+    <v-app-bar-title class="topbar-title" @click="$router.push('/dashboard')" style="cursor: pointer;">WIBA</v-app-bar-title>
     <v-spacer />
     <v-menu
       v-model="showMenu"
