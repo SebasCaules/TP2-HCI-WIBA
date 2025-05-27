@@ -229,6 +229,7 @@
     </v-dialog>
 
     <v-pagination
+      v-if="showTable"
       v-model="page"
       :length="Math.ceil(totalCount / pageSize)"
     />
@@ -244,7 +245,6 @@ import { useSecurityStore } from '@/stores/securityStore';
 import BaseDataTable from '@/components/ui/BaseDataTable.vue';
 import { Chart, registerables } from 'chart.js';
 import type { Payment } from '@/api/payment';
-import { ref as vueRef } from 'vue';
 
 Chart.register(...registerables);
 
@@ -302,10 +302,13 @@ function showTransactionDetails(transaction: Payment) {
   }
 }
 
-function renderChart() {
+async function renderChart() {
   const ctx = document.getElementById('transactionChart') as HTMLCanvasElement;
   if (!ctx) return;
   if (chartInstance) chartInstance.destroy();
+
+  // Fetch transactions with the specified parameters
+  await transactionStore.fetchTransactions({ page: 1, pageSize: 1000 });
 
   const data = transactionStore.transactions.reduce((acc: Record<string, number>, tx: any) => {
     const type = tx.method || 'Otro';
