@@ -121,20 +121,11 @@
     </v-dialog>
 
     <!-- Success Dialog -->
-    <v-dialog v-model="showSuccessDialog" max-width="400px">
-      <v-card class="success-dialog">
-        <div class="dialog-header">
-          <span class="dialog-title">¡Depósito realizado con éxito!</span>
-          <v-btn icon class="dialog-close-btn" @click="showSuccessDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </div>
-        <div class="success-dialog-content">
-          <v-icon color="success" size="48">mdi-check-circle</v-icon>
-          <div class="success-dialog-message">El depósito fue completado correctamente.</div>
-        </div>
-      </v-card>
-    </v-dialog>
+    <SuccessDialog
+      v-model="showSuccessDialog"
+      title="¡Depósito realizado con éxito!"
+      message="El depósito fue completado correctamente."
+    />
     
     <!-- Snackbar para mensajes -->
     <v-snackbar
@@ -158,6 +149,7 @@ import FilledButton from '@/components/ui/FilledButton.vue'
 import AddCardDialog from '@/components/AddCardDialog.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import { usePaymentStore } from '@/stores/paymentStore'
+import SuccessDialog from '@/components/dialogs/SuccessDialog.vue'
 
 interface DisplayCard {
   id: string
@@ -302,7 +294,7 @@ async function confirmDeposit() {
     // Primero creamos el pago
     const payment = await paymentStore.createPayment({
       amount: parsedAmount,
-      description: 'Depósito a cuenta',
+      description: `Depósito a cuenta (*${selectedCard.value?.number_last4})`,
       metadata: {
         cardId: selectedCard.value?.id,
         cardBrand: selectedCard.value?.brand
@@ -710,26 +702,6 @@ onMounted(async () => {
   font-weight: 600;
   border-radius: 1.5rem;
   padding: 0.8rem 2rem;
-}
-
-.success-dialog {
-  border-radius: 1.5rem;
-  padding: 1.5rem;
-  text-align: center;
-}
-
-.success-dialog-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.2rem;
-  padding: 0 1rem 1rem;
-}
-
-.success-dialog-message {
-  font-size: 1.05rem;
-  color: var(--text);
-  margin-bottom: 1rem;
 }
 
 .no-cards-message {
