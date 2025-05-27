@@ -37,7 +37,7 @@
                             <span class="detail-value total-amount">{{ formatMoney(totalAmount) }}</span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-label">Saldo estimado:</span>
+                            <span class="detail-label">Saldo restante:</span>
                             <span class="detail-value">{{ formatMoney(newBalance) }}</span>
                         </div>
                     </div>
