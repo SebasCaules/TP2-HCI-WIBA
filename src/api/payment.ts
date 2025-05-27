@@ -45,9 +45,12 @@ export interface PaymentFilters {
 
 export interface PaymentResponse {
     results: Payment[];
-    total: number;
-    page: number;
-    pages: number;
+    paging: {
+        page: number;
+        pages: number;
+        total: number;
+        totalCount: number;
+    };
 }
 
 const BASE_URL = `${Api.baseUrl}/payment`;

@@ -14,7 +14,15 @@ export const useTransactionStore = defineStore('transaction', () => {
     try {
       const res = await PaymentApi.getAll(filters);
       transactions.value = res.results;
-      transactionsResponse.value = res;
+      transactionsResponse.value = {
+        results: res.results,
+        paging: {
+          page: res.paging.page,
+          pages: res.paging.pages,
+          total: res.paging.total,
+          totalCount: res.paging.totalCount
+        }
+      };
     } catch (e) {
       error.value = 'Error al obtener transacciones';
       transactions.value = [];
