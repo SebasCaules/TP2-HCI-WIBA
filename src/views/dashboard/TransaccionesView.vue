@@ -509,7 +509,13 @@ async function renderChart() {
                 {
                     label: "Montos por tipo de transacción",
                     data: Object.values(data),
-                    backgroundColor: ["#ff8a5c", "#4cc9f0", "#f72585"],
+                    backgroundColor: [
+                        "#489fb5",
+                        "#4caf50",
+                        "#ff9800",
+                        "#9c27b0",
+                        "#f44336",
+                    ],
                 },
             ],
         },
