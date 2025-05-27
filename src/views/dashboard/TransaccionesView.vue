@@ -104,7 +104,7 @@
                                     @click.stop="showTransactionDetails(item)"
                                     aria-label="Más información"
                                 >
-                                    <v-icon color="primary"
+                                    <v-icon color="var(--primary)"
                                         >mdi-information-outline</v-icon
                                     >
                                 </v-btn>
