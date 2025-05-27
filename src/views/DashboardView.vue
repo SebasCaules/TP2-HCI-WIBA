@@ -94,7 +94,8 @@
                                         getTransactionDisplay(tx).color ===
                                         'error'
                                             ? 'var(--error)'
-                                            : getTransactionDisplay(tx).color === 'success'
+                                            : getTransactionDisplay(tx)
+                                                  .color === 'success'
                                             ? 'var(--success)'
                                             : 'warning'
                                     "
@@ -107,7 +108,7 @@
                                 tx.description
                             }}</v-list-item-title>
                             <v-list-item-subtitle class="dashboard-list-date">{{
-                                formatDate(getTransactionDate(tx))
+                                formatDate(getTransactionDate(tx), "day")
                             }}</v-list-item-subtitle>
                             <template #append>
                                 <span
@@ -116,7 +117,10 @@
                                         getTransactionDisplay(tx).isNegative
                                             ? 'negative'
                                             : 'positive',
-                                        tx.pending && !tx.description?.includes('Depósito') ? 'text-warning' : ''
+                                        tx.pending &&
+                                        !tx.description?.includes('Depósito')
+                                            ? 'text-warning'
+                                            : '',
                                     ]"
                                 >
                                     {{
@@ -331,10 +335,13 @@ async function fetchData() {
             throw new Error("No se pudo obtener la información del usuario");
         }
 
-        const { contacts: fetchedContacts } = await fetchContacts(userId.value.toString());
+        const { contacts: fetchedContacts } = await fetchContacts(
+            userId.value.toString()
+        );
         contacts.value = fetchedContacts;
     } catch (e) {
-        error.value = e instanceof Error ? e.message : "Error al cargar los datos";
+        error.value =
+            e instanceof Error ? e.message : "Error al cargar los datos";
         console.error("Error fetching dashboard data:", e);
     } finally {
         loading.value = false;
@@ -361,9 +368,9 @@ onMounted(async () => {
 
 const balance = computed(() => accountStore.account?.balance ?? null);
 const transactions = computed(() => {
-    return transactionStore.transactions.slice(0, 7).map(tx => ({
+    return transactionStore.transactions.slice(0, 7).map((tx) => ({
         ...tx,
-        pending: tx.pending || false // Ensure pending property exists
+        pending: tx.pending || false, // Ensure pending property exists
     }));
 });
 
@@ -372,17 +379,23 @@ function getTransactionDate(item: any): string {
     return item.metadata?.timestamp || item.created_at;
 }
 
-function formatDate(dateStr: string): string {
-    if (!dateStr) return "Fecha no disponible";
+function formatDate(dateStr: string, format: "full" | "day" = "full"): string {
+    if (!dateStr) return "-";
     const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "Fecha no disponible";
-
+    if (format === "day") {
+        return date.toLocaleDateString("es-AR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        });
+    }
     return date.toLocaleDateString("es-AR", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
+        second: "2-digit",
     });
 }
 
@@ -414,7 +427,7 @@ function getTransactionDisplay(transaction: any): {
 
     if (transaction.pending) {
         return {
-            icon: "mdi-arrow-right",
+            icon: "mdi-clock-outline",
             color: "warning",
             isNegative: false,
         };
