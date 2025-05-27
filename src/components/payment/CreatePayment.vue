@@ -1,94 +1,80 @@
 <template>
     <v-container class="create-payment-container">
-        <v-card class="create-payment-card">
-            <v-card-title class="text-h5 mb-4 text-center">Cobrar un producto o servicio</v-card-title>
-            
-            <v-form @submit.prevent="handleSubmit" ref="form" class="create-payment-form">
-                <v-card-text class="form-content">
+        <div class="create-payment-title text-h5 mb-4 text-center">Cobrar un producto o servicio</div>
+        <v-form @submit.prevent="handleSubmit" ref="form" class="create-payment-form">
+            <div class="form-content">
+                <div class="transfer-form-group">
                     <CustomTextField
                         v-model="form.description"
-                        label="Descripción"
+                        placeholder="Descripción"
                         :rules="[(v: string) => !!v || 'La descripción es obligatoria']"
                         required
-                        class="mb-4"
+                        class="transfer-reason-input"
                     />
-                    
+                </div>
+                <div class="transfer-form-group">
                     <CustomTextField
                         v-model.number="form.amount"
-                        label="Monto"
+                        placeholder="Monto"
                         type="number"
                         :rules="[
                             (v: number) => !!v || 'El monto es obligatorio',
                             (v: number) => v > 0 || 'El monto debe ser mayor a 0'
                         ]"
                         required
-                        class="mb-4"
+                        class="transfer-amount-input"
                     />
-                </v-card-text>
-
-                <v-card-actions class="form-actions">
-                    <div v-if="formError" class="text-error text-center mb-2">
-                        {{ formError }}
-                    </div>
-                    <FilledButton
-                        type="submit"
-                        :loading="loading"
-                        :disabled="loading || !!formError"
-                    >
-                        Generar Cobro
-                    </FilledButton>
-                </v-card-actions>
-            </v-form>
-
-            <!-- Payment Result Section -->
-            <v-expand-transition>
-                <div v-if="payment" class="payment-result pa-4 text-center">
-                    <SuccessDialog
-                        v-model="showSuccessDialog"
-                        title="¡Cobro generado exitosamente!"
-                        message="El cobro ha sido generado correctamente. Comparte el siguiente código con quien desees que te pague:"
-                    />
-
-                    <v-card class="mb-4 payment-details-card">
-                        <v-card-text>
-                            <div class="text-subtitle-1 mb-2">Código de Cobro</div>
-                            <div class="uuid-display pa-2 mb-2">{{ payment.uuid }}</div>
-                            <FilledButton
-                                block
-                                @click="copyUuid"
-                                :loading="copying"
-                            >
-                                <v-icon start>mdi-content-copy</v-icon>
-                                Copiar Código
-                            </FilledButton>
-                        </v-card-text>
-                    </v-card>
-
-                    <v-card class="payment-details-card">
-                        <v-card-text>
-                            <div class="text-subtitle-1 mb-4">Detalles del Cobro</div>
-                            <div class="payment-detail-row">
-                                <span class="text-subtitle-2">Monto:</span>
-                                <span class="text-h6">${{ payment.amount }}</span>
-                            </div>
-                            <div class="payment-detail-row">
-                                <span class="text-subtitle-2">Descripción:</span>
-                                <span>{{ payment.description }}</span>
-                            </div>
-                            <div class="payment-detail-row">
-                                <span class="text-subtitle-2">Estado:</span>
-                                <v-chip
-                                    :color="payment.pending ? 'warning' : 'success'"
-                                    size="small"
-                                >
-                                    {{ payment.pending ? 'Pendiente' : 'Completado' }}
-                                </v-chip>
-                            </div>
-                        </v-card-text>
-                    </v-card>
                 </div>
-            </v-expand-transition>
-        </v-card>
+                <FilledButton
+                    type="submit"
+                    :loading="loading"
+                    :disabled="loading"
+                    class="transfer-continue-btn"
+                >
+                    Generar Cobro
+                </FilledButton>
+            </div>
+        </v-form>
+        <!-- Payment Result Section -->
+        <v-expand-transition>
+            <div v-if="payment" class="payment-result pa-4 text-center">
+                <SuccessDialog
+                    v-model="showSuccessDialog"
+                    title="¡Cobro generado exitosamente!"
+                    message="El cobro ha sido generado correctamente. Comparte el siguiente código con quien desees que te pague:"
+                />
+                <v-card class="mb-4 payment-details-card">
+                    <v-card-text>
+                        <div class="uuid-label-row">
+                            <span class="uuid-label-text">Código de Cobro</span>
+                            <v-btn icon @click="copyUuid" :loading="copying" size="small" class="uuid-copy-btn">
+                                <v-icon>mdi-content-copy</v-icon>
+                            </v-btn>
+                        </div>
+                        <div class="uuid-display pa-2 mb-2">{{ payment.uuid }}</div>
+                    </v-card-text>
+                </v-card>
+                <v-card class="payment-details-card">
+                    <v-card-text>
+                        <div class="payment-details-title">Detalles del Cobro</div>
+                        <div class="payment-detail-row">
+                            <span class="payment-detail-label">Monto:</span>
+                            <span class="payment-detail-value">${{ payment.amount }}</span>
+                        </div>
+                        <div class="payment-detail-row">
+                            <span class="payment-detail-label">Descripción:</span>
+                            <span class="payment-detail-value">{{ payment.description }}</span>
+                        </div>
+                        <div class="payment-detail-row">
+                            <span class="payment-detail-label">Estado:</span>
+                            <v-chip :color="payment.pending ? 'warning' : 'success'" size="small">
+                                {{ payment.pending ? 'Pendiente' : 'Completado' }}
+                            </v-chip>
+                        </div>
+                    </v-card-text>
+                </v-card>
+            </div>
+        </v-expand-transition>
     </v-container>
 </template>
 
@@ -156,15 +142,19 @@ async function copyUuid() {
 
 <style scoped>
 .create-payment-container {
-    max-width: 600px;
+    max-width: 400px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 0;
     font-family: var(--font-family);
 }
 
-.create-payment-card {
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.create-payment-title {
+    font-size: 2rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 2.2rem;
+    font-family: var(--font-sans), sans-serif;
+    color: var(--text);
 }
 
 .create-payment-form {
@@ -172,18 +162,60 @@ async function copyUuid() {
 }
 
 .form-content {
-    padding: 2.5rem !important;
+    padding: 0 !important;
 }
 
-.form-actions {
-    padding: 0 2.5rem 2.5rem !important;
-    justify-content: center;
+.transfer-form-group {
+    margin-bottom: 1rem;
+    width: 100%;
+    max-width: 400px;
+}
+
+.transfer-form-group:last-of-type {
+    margin-bottom: 0;
+}
+
+.transfer-recipient-input,
+.transfer-amount-input,
+.transfer-reason-input {
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
+}
+
+:deep(.v-text-field),
+:deep(.v-field),
+:deep(.v-field__input) {
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
+}
+
+.transfer-continue-btn {
+    margin-top: 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    height: 50px;
+    width: 100%;
+    max-width: 400px;
+    align-self: center;
+}
+
+.payment-result {
+    width: 100%;
+    text-align: center;
 }
 
 .payment-details-card {
+    width: 400px;
+    max-width: 100vw;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
     border-radius: 8px;
     background-color: var(--card);
-    width: 100%;
+    /* border: 1px solid blue; // for debugging */
 }
 
 .uuid-display {
@@ -197,33 +229,57 @@ async function copyUuid() {
     border: 1px solid var(--border-color);
 }
 
+.payment-details-title {
+    text-align: center;
+    font-size: 1.15rem;
+    font-weight: 500;
+    margin-bottom: 1.2rem;
+    font-family: var(--font-family);
+}
+
 .payment-detail-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 1.2rem;
     padding: 0 1rem;
 }
-
 .payment-detail-row:last-child {
     margin-bottom: 0;
 }
 
-:deep(.v-card-title) {
-    font-family: var(--font-family);
-    font-weight: 600;
-}
-
-:deep(.v-card-text) {
+.payment-detail-label {
+    font-size: 1rem;
+    font-weight: 500;
     font-family: var(--font-family);
 }
 
-:deep(.text-subtitle-1),
-:deep(.text-subtitle-2) {
+.payment-detail-value {
+    font-size: 1rem;
+    font-weight: 400;
     font-family: var(--font-family);
+    text-align: right;
 }
 
-:deep(.v-text-field) {
-    width: 100%;
+.uuid-label-row {
+    position: relative;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    min-height: 40px;
+}
+
+.uuid-label-text {
+    display: inline-block;
+    font-size: 1.15rem;
+    font-weight: 500;
+    line-height: 40px;
+}
+
+.uuid-copy-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
 }
 </style>
