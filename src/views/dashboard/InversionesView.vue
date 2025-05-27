@@ -755,14 +755,16 @@ const chartSlices = computed(() => {
     display: flex;
     gap: 1rem;
     margin-bottom: 2.2rem;
+    justify-content: flex-start;
+    width: fit-content;
 }
 
 .investments-add-btn,
 .investments-sell-btn {
     font-size: 1.1rem;
     font-weight: 600;
-    padding: 0.5rem 2.5rem;
-    min-width: 200px;
+    padding: 0.5rem 1.8rem;
+    min-width: 160px;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
