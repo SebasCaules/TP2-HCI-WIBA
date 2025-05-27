@@ -57,15 +57,15 @@
                             </IconFilledButton>
                             <IconFilledButton
                                 icon="mdi-wallet"
-                                @click="$router.push('/dashboard/cobrar')"
+                                @click="$router.push({ path: '/dashboard/pagos', query: { mode: 'charge' } })"
                             >
                                 Cobrar
                             </IconFilledButton>
                             <IconFilledButton
-                                icon="mdi-cash"
-                                @click="$router.push('/dashboard/pagos')"
+                                icon="mdi-cash-minus"
+                                @click="$router.push({ path: '/dashboard/pagos', query: { mode: 'pay' } })"
                             >
-                                Pagos
+                                Pagar
                             </IconFilledButton>
                         </div>
                     </div>

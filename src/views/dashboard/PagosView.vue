@@ -40,8 +40,12 @@ const route = useRoute();
 const activeTab = ref('create');
 
 onMounted(() => {
-    // If there's a UUID in the URL, switch to the pay tab
-    if (route.query.uuid) {
+    const mode = route.query.mode;
+    if (mode === 'pay') {
+        activeTab.value = 'pay';
+    } else if (mode === 'charge') {
+        activeTab.value = 'create';
+    } else if (route.query.uuid) {
         activeTab.value = 'pay';
     }
 });
