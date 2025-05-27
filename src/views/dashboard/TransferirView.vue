@@ -812,17 +812,37 @@ onMounted(() => {
     margin: 0 auto;
     padding: 2rem 3rem;
 }
-.select-contact-dialog-header {
+
+.dialog-header {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    padding: 0 0 1rem 0;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    width: 100%;
+    position: static;
 }
-.select-contact-title {
-    font-size: 1.4rem;
+
+.dialog-title {
+    font-size: 1.5rem;
     font-weight: 700;
+    color: var(--text);
     font-family: var(--font-sans), sans-serif;
+    text-align: center;
+    margin: 0;
 }
+
+.dialog-close-btn {
+    position: static;
+    transform: none;
+    color: var(--muted-text) !important;
+}
+
+/* Remove old header styles */
+.select-contact-dialog-header,
+.select-contact-title {
+    display: none;
+}
+
 .select-contact-list-custom {
     display: flex;
     flex-direction: column;
@@ -1075,41 +1095,5 @@ onMounted(() => {
     display: flex;
     align-items: center;
     height: 100%;
-}
-
-.dialog-header {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    width: 100%;
-}
-
-.dialog-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text);
-    font-family: var(--font-sans), sans-serif;
-    text-align: center;
-}
-
-.dialog-close-btn {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--muted-text) !important;
-}
-
-/* Remove old header styles */
-.select-contact-dialog-header,
-.confirm-transfer-header {
-    display: none;
-}
-
-.select-contact-title,
-.confirm-transfer-title {
-    display: none;
 }
 </style>

@@ -306,7 +306,6 @@ async function confirmDeposit() {
     
     showConfirmDialog.value = false
     amount.value = ''
-    selectedCard.value = null
     showSuccessDialog.value = true
     
     await paymentStore.fetchPayments()
