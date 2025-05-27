@@ -1,6 +1,6 @@
 <template>
     <v-dialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" max-width="400px">
-        <v-card class="error-dialog">
+        <v-card class="error-dialog rounded-xl">
             <div class="error-dialog-header">
                 <v-btn
                     icon
@@ -24,7 +24,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 
 const props = defineProps<{
     modelValue: boolean;
@@ -39,7 +38,7 @@ defineEmits<{
 
 <style scoped>
 .error-dialog {
-    border-radius: 16px;
+    border-radius: 2rem;
     padding: 1.5rem;
     text-align: center;
 }
@@ -66,7 +65,7 @@ defineEmits<{
 .error-dialog-title {
     font-size: 1.3rem;
     font-weight: 700;
-    color: var(--error);
+    color: var(--primary);
     margin-top: 0.5rem;
 }
 

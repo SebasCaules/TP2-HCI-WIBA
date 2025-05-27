@@ -273,7 +273,7 @@ const totalCount = computed(() => transactionStore.transactionsResponse?.paging?
 const headers = [
   { title: 'Descripción', key: 'description', width: '300px', align: 'start' as const },
   { title: 'Monto', key: 'amount', width: '150px', align: 'end' as const },
-  { title: 'Fecha', key: 'date', width: '180px', align: 'start' as const },
+  { title: 'Fecha', key: 'date', width: '180px', align: 'center' as const },
   { title: '', key: 'moreInfo', width: '80px', align: 'center' as const },
 ];
 
@@ -464,6 +464,11 @@ function copyUuid(uuid?: string) {
 :deep(.v-data-table td.description-cell) {
   white-space: normal;
   word-break: break-word;
+  overflow: visible;
+}
+
+:deep(.v-data-table td.amount-cell) {
+  text-align: center;
 }
 
 :deep(.v-data-table tr) {

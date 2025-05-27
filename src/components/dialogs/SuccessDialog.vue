@@ -1,6 +1,6 @@
 <template>
     <v-dialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" max-width="400px">
-        <v-card class="success-dialog">
+        <v-card class="success-dialog rounded-xl">
             <div class="success-dialog-header">
                 <v-btn
                     icon
@@ -39,7 +39,7 @@ defineEmits<{
 
 <style scoped>
 .success-dialog {
-    border-radius: 16px;
+    border-radius: 2rem;
     padding: 1.5rem;
     text-align: center;
 }

@@ -305,3 +305,37 @@
     font-size: 1.25rem;
     cursor: pointer;
 }
+
+.dialog--expanded {
+    border-radius: 2rem !important;
+    overflow: visible;
+    box-shadow: 0 2px 16px 0 rgba(60, 60, 60, 0.1);
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem 2.5rem;
+}
+
+.dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 1rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.dialog__title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-family: var(--font-sans), sans-serif;
+    color: var(--text);
+}
+
+.dialog__close {
+    color: var(--muted-text) !important;
+    margin-right: -8px;
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+}

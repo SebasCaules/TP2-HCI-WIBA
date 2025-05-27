@@ -11,6 +11,7 @@
                 class="pay-payment-form"
             >
                 <v-card-text class="form-content">
+                    <ErrorDialog v-model="showErrorDialog" title="Error de Pago" message="El pago debe ser realizado con otro usuario." />
                     <CustomTextField
                         v-model="uuid"
                         label="Código de Cobro"
@@ -117,6 +118,8 @@ import CustomTextField from "@/components/ui/CustomTextField.vue";
 import SuccessDialog from "@/components/ui/SuccessDialog.vue";
 import PaymentMethodSelector from "@/components/payment/PaymentMethodSelector.vue";
 import type { Payment } from "@/api/payment";
+import ErrorDialog from '@/components/dialogs/ErrorDialog.vue';
+
 
 const props = defineProps<{
     initialUuid?: string;
@@ -142,6 +145,7 @@ const paymentSuccess = ref(false);
 const paymentDetails = ref<Payment | null>(null);
 const showAddCardDialog = ref(false);
 const accountBalance = ref(12000); // reemplaza con store real si existe
+const showErrorDialog = ref(false);
 
 onMounted(async () => {
     // If we have an initial UUID, set it
@@ -212,8 +216,14 @@ async function handleSubmit() {
         uuid.value = "";
         selectedPaymentMethod.value = "account";
         selectedCard.value = cards.value.length > 0 ? cards.value[0] : null;
+        showErrorDialog.value = false; // Hide error dialog on success
     } catch (error) {
-        console.error("Error confirming payment:", error);
+        const err = error as { code: number; description: string };
+        if (err.code === 422 && err.description === "Payment must be pushed with another user.") {
+            showErrorDialog.value = true;
+        } else {
+            console.error("Error confirming payment:", error);
+        }
     } finally {
         loading.value = false;
     }
