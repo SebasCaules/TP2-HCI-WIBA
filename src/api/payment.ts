@@ -34,6 +34,7 @@ export interface Payment {
 
 export interface PaymentFilters {
     page?: number;
+    pageSize?: number;
     direction?: 'ASC' | 'DESC';
     pending?: boolean;
     method?: 'ACCOUNT' | 'CARD';

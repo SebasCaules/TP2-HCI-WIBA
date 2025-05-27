@@ -1,9 +1,15 @@
 <template>
     <v-container class="pay-payment-container">
         <v-card class="pay-payment-card">
-            <v-card-title class="text-h5 mb-4 text-center">Pagar un cobro</v-card-title>
-            
-            <v-form @submit.prevent="handleSubmit" ref="form" class="pay-payment-form">
+            <v-card-title class="text-h5 mb-4 text-center"
+                >Pagar un cobro</v-card-title
+            >
+
+            <v-form
+                @submit.prevent="handleSubmit"
+                ref="form"
+                class="pay-payment-form"
+            >
                 <v-card-text class="form-content">
                     <CustomTextField
                         v-model="uuid"
@@ -14,35 +20,17 @@
                         :loading="loading"
                     />
 
-                    <!-- Payment Method Selection -->
-                    <div class="payment-method mb-4">
-                        <div class="text-subtitle-1 mb-2">Método de Pago</div>
-                        <v-radio-group v-model="paymentMethod" class="mb-4">
-                            <v-radio
-                                label="Saldo en cuenta"
-                                value="account"
-                            />
-                            <v-radio
-                                label="Tarjeta"
-                                value="card"
-                            />
-                        </v-radio-group>
-
-                        <v-expand-transition>
-                            <div v-if="paymentMethod === 'card'" class="card-selection">
-                                <v-select
-                                    v-model="selectedCard"
-                                    :items="cards"
-                                    item-title="last4"
-                                    item-value="id"
-                                    label="Seleccionar Tarjeta"
-                                    variant="outlined"
-                                    :rules="[v => !!v || 'Debe seleccionar una tarjeta']"
-                                    required
-                                />
-                            </div>
-                        </v-expand-transition>
-                    </div>
+                    <PaymentMethodSelector
+                        :selectedPaymentMethod="selectedPaymentMethod"
+                        :selectedCard="selectedCard"
+                        :accountBalance="accountBalance"
+                        :cards="cards"
+                        @update:selectedPaymentMethod="
+                            selectedPaymentMethod = $event
+                        "
+                        @update:selectedCard="selectedCard = $event"
+                        @add-card="showAddCardDialog = true"
+                    />
                 </v-card-text>
 
                 <v-card-actions class="form-actions">
@@ -67,30 +55,49 @@
 
                     <v-card class="payment-details-card mt-4">
                         <v-card-text>
-                            <div class="text-subtitle-1 mb-4">Detalles del Pago</div>
-                            
-                            <div class="payment-detail-row">
-                                <span class="text-subtitle-2">Monto:</span>
-                                <span class="text-h6">${{ paymentDetails?.amount }}</span>
+                            <div class="text-subtitle-1 mb-4">
+                                Detalles del Pago
                             </div>
 
                             <div class="payment-detail-row">
-                                <span class="text-subtitle-2">Descripción:</span>
+                                <span class="text-subtitle-2">Monto:</span>
+                                <span class="text-h6"
+                                    >${{ paymentDetails?.amount }}</span
+                                >
+                            </div>
+
+                            <div class="payment-detail-row">
+                                <span class="text-subtitle-2"
+                                    >Descripción:</span
+                                >
                                 <span>{{ paymentDetails?.description }}</span>
                             </div>
 
                             <div class="payment-detail-row">
                                 <span class="text-subtitle-2">Receptor:</span>
-                                <span>{{ paymentDetails?.receiver?.firstName }} {{ paymentDetails?.receiver?.lastName }}</span>
+                                <span
+                                    >{{ paymentDetails?.receiver?.firstName }}
+                                    {{
+                                        paymentDetails?.receiver?.lastName
+                                    }}</span
+                                >
                             </div>
 
                             <div class="payment-detail-row">
                                 <span class="text-subtitle-2">Estado:</span>
                                 <v-chip
-                                    :color="paymentDetails?.pending ? 'warning' : 'success'"
+                                    :color="
+                                        paymentDetails?.pending
+                                            ? 'warning'
+                                            : 'success'
+                                    "
                                     size="small"
                                 >
-                                    {{ paymentDetails?.pending ? 'Pendiente' : 'Completado' }}
+                                    {{
+                                        paymentDetails?.pending
+                                            ? "Pendiente"
+                                            : "Completado"
+                                    }}
                                 </v-chip>
                             </div>
                         </v-card-text>
@@ -102,30 +109,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import { usePaymentStore } from '@/stores/paymentStore';
-import { useCardsStore } from '@/stores/cardsStore';
-import FilledButton from '@/components/ui/FilledButton.vue';
-import CustomTextField from '@/components/ui/CustomTextField.vue';
-import SuccessDialog from '@/components/ui/SuccessDialog.vue';
-import type { Payment } from '@/api/payment';
+import { ref, onMounted, computed } from "vue";
+import { usePaymentStore } from "@/stores/paymentStore";
+import { useCardsStore } from "@/stores/cardsStore";
+import FilledButton from "@/components/ui/FilledButton.vue";
+import CustomTextField from "@/components/ui/CustomTextField.vue";
+import SuccessDialog from "@/components/ui/SuccessDialog.vue";
+import PaymentMethodSelector from "@/components/payment/PaymentMethodSelector.vue";
+import type { Payment } from "@/api/payment";
 
 const props = defineProps<{
     initialUuid?: string;
 }>();
 
-const route = useRoute();
 const paymentStore = usePaymentStore();
 const cardsStore = useCardsStore();
 
-const uuid = ref(props.initialUuid || '');
+interface DisplayCard {
+    id: string;
+    number_last4: string;
+    brand: string;
+    logo: string;
+    expiry: string;
+    holder: string;
+}
+
+const uuid = ref(props.initialUuid || "");
 const loading = ref(false);
-const paymentMethod = ref('account');
-const selectedCard = ref<string | null>(null);
-const cards = ref<Array<{ id: string; last4: string }>>([]);
+const selectedPaymentMethod = ref<"account" | "card">("account");
+const selectedCard = ref<DisplayCard | null>(null);
 const paymentSuccess = ref(false);
 const paymentDetails = ref<Payment | null>(null);
+const showAddCardDialog = ref(false);
+const accountBalance = ref(12000); // reemplaza con store real si existe
 
 onMounted(async () => {
     // If we have an initial UUID, set it
@@ -136,38 +152,68 @@ onMounted(async () => {
     await fetchCards();
 });
 
+const cards = computed<DisplayCard[]>(() => {
+    if (!cardsStore.cards) return [];
+    return cardsStore.cards.map((card) => {
+        const last4 = card.number.match(/\d{4}$/)?.[0] || "";
+        return {
+            id: String(card.id),
+            brand: card.metadata?.brand || getCardBrand(card.number),
+            number_last4: last4,
+            expiry: card.expirationDate,
+            holder: card.fullName,
+            logo: getBrandLogo(
+                card.metadata?.brand || getCardBrand(card.number)
+            ),
+        };
+    });
+});
+
+function getCardBrand(number: string) {
+    const n = number.replace(/\D/g, "");
+    if (n.startsWith("4")) return "Visa";
+    if (n.startsWith("5") || n.startsWith("2")) return "Mastercard";
+    if (n.startsWith("3")) return "Amex";
+    return "Desconocida";
+}
+
+function getBrandLogo(brand: string) {
+    if (brand === "Visa")
+        return "https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png";
+    if (brand === "Mastercard")
+        return "https://brandlogos.net/wp-content/uploads/2021/11/mastercard-logo.png";
+    if (brand === "Amex")
+        return "https://upload.wikimedia.org/wikipedia/commons/f/fa/American_Express_logo_%282018%29.svg";
+    return "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
+}
+
 async function fetchCards() {
     try {
         await cardsStore.fetchCards();
-        cards.value = cardsStore.cards.map(card => ({
-            id: card.id.toString(),
-            last4: card.number.slice(-4)
-        }));
-        if (cards.value.length > 0) {
-            selectedCard.value = cards.value[0].id;
-        }
     } catch (error) {
-        console.error('Error fetching cards:', error);
+        console.error("Error fetching cards:", error);
     }
 }
 
 async function handleSubmit() {
     if (!uuid.value) return;
-    
+
     loading.value = true;
     try {
         const response = await paymentStore.confirmPayment(
             uuid.value,
-            paymentMethod.value === 'card' && selectedCard.value ? selectedCard.value : undefined
+            selectedPaymentMethod.value === "card" && selectedCard.value
+                ? selectedCard.value.id
+                : undefined
         );
         paymentSuccess.value = true;
         paymentDetails.value = response;
         // Reset form after successful payment
-        uuid.value = '';
-        paymentMethod.value = 'account';
-        selectedCard.value = cards.value.length > 0 ? cards.value[0].id : null;
+        uuid.value = "";
+        selectedPaymentMethod.value = "account";
+        selectedCard.value = cards.value.length > 0 ? cards.value[0] : null;
     } catch (error) {
-        console.error('Error confirming payment:', error);
+        console.error("Error confirming payment:", error);
     } finally {
         loading.value = false;
     }
@@ -264,4 +310,4 @@ async function handleSubmit() {
     width: 100%;
     max-width: 400px;
 }
-</style> 
+</style>
