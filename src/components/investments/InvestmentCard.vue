@@ -116,11 +116,11 @@ const percentageChange = computed(() => investmentStore.dailyRate * 100)
 // Function to get color for each fund
 function getFundColor(fundId: string): string {
     const colors = {
-        growth: '#489fb5',    // Blue
-        tech: '#4caf50',      // Green
-        value: '#ff9800',     // Orange
-        crypto: '#9c27b0',    // Purple
-        realestate: '#f44336' // Red
+        growth: 'var(--chart-1)',    // Blue
+        tech: 'var(--chart-2)',      // Green
+        value: 'var(--chart-3)',     // Orange
+        crypto: 'var(--chart-4)',    // Purple
+        realestate: 'var(--chart-5)' // Red
     };
     return colors[fundId as keyof typeof colors] || '#757575';
 }
