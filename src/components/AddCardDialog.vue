@@ -1,13 +1,13 @@
 <template>
   <v-dialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" max-width="600px" :retain-focus="false" :scrim="true">
     <v-card class="add-card-dialog" width="100%">
+      <div class="dialog-header">
+        <span class="dialog-title">Nueva Tarjeta</span>
+        <v-btn icon class="dialog-close-btn" @click="$emit('update:modelValue', false)">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </div>
       <v-card-text>
-        <div class="add-card-dialog-header">
-          <span class="add-card-dialog-title">Nueva Tarjeta</span>
-          <v-btn icon class="dialog-close-btn" @click="$emit('update:modelValue', false)">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </div>
         <div class="add-card-form-container">
           <div class="card-preview card-preview-modern">
             <div class="card-preview-bg-modern">
@@ -464,11 +464,27 @@ async function addCard() {
   letter-spacing: normal !important;
   text-transform: none;
 }
+.dialog-header {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+.dialog-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-sans), sans-serif;
+  text-align: center;
+}
 .dialog-close-btn {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted-text) !important;
 }
 .add-card-error {
   color: var(--error);

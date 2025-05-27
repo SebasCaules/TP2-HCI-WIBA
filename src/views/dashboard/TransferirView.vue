@@ -69,15 +69,9 @@
             style="border-radius: 1.5rem"
         >
             <v-card class="select-contact-dialog">
-                <div class="select-contact-dialog-header">
-                    <span class="select-contact-title"
-                        >Seleccionar contacto</span
-                    >
-                    <v-btn
-                        icon
-                        class="dialog-close-btn"
-                        @click="showContactDialog = false"
-                    >
+                <div class="dialog-header">
+                    <span class="dialog-title">Seleccionar contacto</span>
+                    <v-btn icon class="dialog-close-btn" @click="showContactDialog = false">
                         <v-icon>mdi-close</v-icon>
                     </v-btn>
                 </div>
@@ -150,15 +144,9 @@
             :scrim="true"
         >
             <v-card class="confirm-transfer-dialog" width="100%">
-                <div class="confirm-transfer-header">
-                    <span class="confirm-transfer-title"
-                        >Confirmar transferencia</span
-                    >
-                    <v-btn
-                        icon
-                        class="dialog-close-btn"
-                        @click="showConfirmDialog = false"
-                    >
+                <div class="dialog-header">
+                    <span class="dialog-title">Confirmar transferencia</span>
+                    <v-btn icon class="dialog-close-btn" @click="showConfirmDialog = false">
                         <v-icon>mdi-close</v-icon>
                     </v-btn>
                 </div>
@@ -1087,5 +1075,41 @@ onMounted(() => {
     display: flex;
     align-items: center;
     height: 100%;
+}
+
+.dialog-header {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.dialog-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+    font-family: var(--font-sans), sans-serif;
+    text-align: center;
+}
+
+.dialog-close-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted-text) !important;
+}
+
+/* Remove old header styles */
+.select-contact-dialog-header,
+.confirm-transfer-header {
+    display: none;
+}
+
+.select-contact-title,
+.confirm-transfer-title {
+    display: none;
 }
 </style>

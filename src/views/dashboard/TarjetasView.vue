@@ -62,6 +62,43 @@
             @update:model-value="showDialog = $event"
             @card-added="handleCardAdded"
         />
+
+        <!-- Delete Card Confirmation Dialog -->
+        <v-dialog
+            v-model="showDeleteDialog"
+            max-width="400px"
+            :retain-focus="false"
+            :scrim="true"
+        >
+            <v-card class="delete-card-dialog">
+                <div class="dialog-header">
+                    <span class="dialog-title">Eliminar tarjeta</span>
+                    <v-btn icon class="dialog-close-btn" @click="showDeleteDialog = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </div>
+                <v-card-text class="delete-card-content">
+                    <div class="delete-card-message">
+                        ¿Estás seguro que deseas eliminar esta tarjeta? Esta acción no se puede deshacer.
+                    </div>
+                </v-card-text>
+                <v-card-actions class="delete-card-actions">
+                    <FilledButton
+                        class="btn-secondary"
+                        @click="showDeleteDialog = false"
+                    >
+                        Cancelar
+                    </FilledButton>
+                    <FilledButton
+                        class="delete-card-confirm-btn"
+                        color="error"
+                        @click="confirmDeleteCard"
+                    >
+                        Eliminar
+                    </FilledButton>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-container>
 </template>
 
@@ -71,15 +108,18 @@ import { useCardsStore } from "@/stores/cardsStore";
 import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import BaseDataTable from "@/components/ui/BaseDataTable.vue";
 import AddCardDialog from "@/components/AddCardDialog.vue";
+import FilledButton from "@/components/ui/FilledButton.vue";
 
 const showDialog = ref(false);
+const showDeleteDialog = ref(false);
+const cardToDelete = ref<number | null>(null);
 const cardsStore = useCardsStore();
 
 const headers = [
     {
         title: "",
         key: "logo",
-        width: 60,
+        width: "60px",
         align: "center" as const,
         class: "priority-high",
     },
@@ -93,7 +133,7 @@ const headers = [
         title: "Vencimiento",
         key: "expiry",
         align: "end" as const,
-        width: 120,
+        width: "120px",
         class: "priority-medium",
     },
     {
@@ -134,8 +174,17 @@ onMounted(async () => {
 });
 
 async function deleteCard(id: number) {
+    cardToDelete.value = id;
+    showDeleteDialog.value = true;
+}
+
+async function confirmDeleteCard() {
+    if (!cardToDelete.value) return;
+    
     try {
-        await cardsStore.removeCard(id);
+        await cardsStore.removeCard(cardToDelete.value);
+        showDeleteDialog.value = false;
+        cardToDelete.value = null;
     } catch (error) {
         console.error('Error deleting card:', error);
     }
@@ -498,5 +547,74 @@ function handleCardAdded(card: any) {
     height: var(--v-table-row-height) !important;
     padding: 0 16px !important;
     vertical-align: middle !important;
+}
+
+.delete-card-dialog {
+    border-radius: 2rem !important;
+    overflow: visible;
+    box-shadow: var(--shadow-card);
+    padding: 2rem 3rem;
+}
+
+.dialog-header {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.dialog-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+    font-family: var(--font-sans), sans-serif;
+    text-align: center;
+}
+
+.dialog-close-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted-text) !important;
+}
+
+.delete-card-content {
+    padding: 0 0 1.5rem 0;
+}
+
+.delete-card-message {
+    font-size: 1.1rem;
+    color: var(--text);
+    text-align: center;
+    font-family: var(--font-sans), sans-serif;
+    line-height: 1.5;
+}
+
+.delete-card-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0;
+}
+
+.delete-card-confirm-btn {
+    background-color: var(--error) !important;
+    color: white !important;
+    min-width: 120px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 1.5rem;
+    padding: 0.8rem 2rem;
+}
+
+.btn-secondary {
+    min-width: 120px !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    border-radius: 1.5rem !important;
+    padding: 0.8rem 2rem !important;
 }
 </style>

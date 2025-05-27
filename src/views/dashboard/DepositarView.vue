@@ -37,8 +37,8 @@
       :scrim="true"
     >
       <v-card class="select-card-dialog">
-        <div class="select-card-dialog-header">
-          <span class="select-card-title">Seleccionar tarjeta</span>
+        <div class="dialog-header">
+          <span class="dialog-title">Seleccionar tarjeta</span>
           <v-btn icon class="dialog-close-btn" @click="showCardDialog = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
@@ -89,8 +89,8 @@
       :scrim="true"
     >
       <v-card class="confirm-deposit-dialog" width="100%">
-        <div class="confirm-deposit-header">
-          <span class="confirm-deposit-title">Confirmar depósito</span>
+        <div class="dialog-header">
+          <span class="dialog-title">Confirmar depósito</span>
           <v-btn icon class="dialog-close-btn" @click="showConfirmDialog = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
@@ -123,14 +123,14 @@
     <!-- Success Dialog -->
     <v-dialog v-model="showSuccessDialog" max-width="400px">
       <v-card class="success-dialog">
-        <div class="success-dialog-header">
+        <div class="dialog-header">
+          <span class="dialog-title">¡Depósito realizado con éxito!</span>
           <v-btn icon class="dialog-close-btn" @click="showSuccessDialog = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </div>
         <div class="success-dialog-content">
           <v-icon color="success" size="48">mdi-check-circle</v-icon>
-          <div class="success-dialog-title">¡Depósito realizado con éxito!</div>
           <div class="success-dialog-message">El depósito fue completado correctamente.</div>
         </div>
       </v-card>
@@ -522,22 +522,29 @@ onMounted(async () => {
   padding: 2rem 3rem;
 }
 
-.select-card-dialog-header {
+.dialog-header {
+  position: relative;
   display: flex;
+  justify-content: center;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 0 1rem 0;
+  margin-bottom: 1.5rem;
+  width: 100%;
 }
 
-.select-card-title {
-  font-size: 1.4rem;
+.dialog-title {
+  font-size: 1.5rem;
   font-weight: 700;
+  color: var(--text);
   font-family: var(--font-sans), sans-serif;
+  text-align: center;
 }
 
 .dialog-close-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--muted-text) !important;
-  margin-right: -8px;
 }
 
 .select-card-list-custom {
@@ -638,19 +645,6 @@ onMounted(async () => {
   padding: 2rem 3rem;
 }
 
-.confirm-deposit-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 0 1rem 0;
-}
-
-.confirm-deposit-title {
-  font-size: 1.4rem;
-  font-weight: 700;
-  font-family: var(--font-sans), sans-serif;
-}
-
 .confirm-deposit-content {
   display: flex;
   flex-direction: column;
@@ -724,30 +718,12 @@ onMounted(async () => {
   text-align: center;
 }
 
-.success-dialog-header {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 1rem;
-}
-
-.dialog-close-btn {
-  color: var(--muted-text) !important;
-  margin-right: -8px;
-}
-
 .success-dialog-content {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1.2rem;
   padding: 0 1rem 1rem;
-}
-
-.success-dialog-title {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--primary);
-  margin-top: 0.5rem;
 }
 
 .success-dialog-message {
@@ -784,5 +760,18 @@ onMounted(async () => {
   font-size: 1.05rem;
   color: var(--muted-text);
   font-family: var(--font-sans), sans-serif;
+}
+
+/* Remove old header styles */
+.select-card-dialog-header,
+.confirm-deposit-header,
+.success-dialog-header {
+  display: none;
+}
+
+.select-card-title,
+.confirm-deposit-title,
+.success-dialog-title {
+  display: none;
 }
 </style> 
