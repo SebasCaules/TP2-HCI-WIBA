@@ -34,6 +34,7 @@
                 />
               </template>
             </CustomTextField>
+            <ErrorMessage :message="apiError" />
             <div class="forgot-password-link">
               <a href="#" @click.prevent="showResetDialog = true">¿Olvidaste tu contraseña?</a>
             </div>
@@ -104,6 +105,7 @@ import type { Credentials } from '@/api/user.ts'
 import CustomTextField from '@/components/ui/CustomTextField.vue'
 import FilledButton from '@/components/ui/FilledButton.vue'
 import BackButton from '@/components/ui/BackButton.vue'
+import ErrorMessage from '@/components/ui/ErrorMessage.vue'
 
 const router = useRouter()
 const securityStore = useSecurityStore()
@@ -120,6 +122,14 @@ const resetEmail = ref('')
 const resetError = ref('')
 const resetSuccess = ref('')
 const isResetting = ref(false)
+
+const apiError = ref('')
+
+const errorCodeMessages = {
+    400: "Los datos ingresados son inválidos. Por favor, verifica tu email y contraseña.",
+    401: "Email o contraseña incorrectos.",
+    500: "Email o contraseña incorrectos."
+} as const;
 
 const validateForm = (): boolean => {
   let valid = true
@@ -149,35 +159,43 @@ const validateForm = (): boolean => {
 const handleSubmit = async (): Promise<void> => {
   if (!validateForm()) return
   loading.value = true
-  try {
+  apiError.value = ''
+  emailError.value = ''
+  passwordError.value = ''
 
+  try {
     const credentials: Credentials = {
       email: email.value,
       password: password.value
     }
     
-
     await securityStore.login(credentials, true)
-
     
     const user = await securityStore.getCurrentUser()
     if (!user) {
       throw new Error('No se pudo obtener la información del usuario')
     }
 
-    
-
     await router.push('/dashboard')
 
   } catch (error) {
     console.error('Error durante el login:', error);
+    
     if (error instanceof Error) {
-      if (error.message.includes('No se pudo obtener la información del usuario')) {
-        emailError.value = 'Error al obtener la información del usuario. Por favor, intenta nuevamente.'
+      // Check if it's an API error with a code
+      const errorObj = error as { code?: number; message?: string };
+      
+      if (errorObj.code && errorObj.code in errorCodeMessages) {
+        apiError.value = errorCodeMessages[errorObj.code as keyof typeof errorCodeMessages];
+      } else if (error.message.includes('No se pudo obtener la información del usuario')) {
+        apiError.value = 'Error al obtener la información del usuario. Por favor, intenta nuevamente.';
       } else {
-        emailError.value = 'Email o contraseña incorrectos.'
-        passwordError.value = 'Email o contraseña incorrectos.'
+        // Default error message for any other error
+        apiError.value = 'Email o contraseña incorrectos.';
       }
+    } else {
+      // Default error message for unknown errors
+      apiError.value = 'Email o contraseña incorrectos.';
     }
   } finally {
     loading.value = false
@@ -188,6 +206,7 @@ const handleResetPassword = async (): Promise<void> => {
   resetError.value = ''
   resetSuccess.value = ''
   isResetting.value = true
+  apiError.value = ''
 
   try {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -210,7 +229,13 @@ const handleResetPassword = async (): Promise<void> => {
     }, 3000)
   } catch (err: any) {
     console.error('Error requesting password reset:', err)
-    resetError.value = securityStore.error || 'Error al solicitar el restablecimiento de contraseña.'
+    const errorObj = err as { code?: number; message?: string };
+    
+    if (errorObj.code && errorObj.code in errorCodeMessages) {
+      resetError.value = errorCodeMessages[errorObj.code as keyof typeof errorCodeMessages];
+    } else {
+      resetError.value = securityStore.error || 'Error al solicitar el restablecimiento de contraseña.';
+    }
   } finally {
     isResetting.value = false
   }

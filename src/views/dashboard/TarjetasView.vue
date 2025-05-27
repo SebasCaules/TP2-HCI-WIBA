@@ -475,7 +475,7 @@ function handleCardAdded(card: any) {
 }
 
 .delete-action {
-    color: #a00;
+    color: var(--error);
     cursor: pointer;
     font-weight: 500;
     transition: text-decoration 0.2s;

@@ -1,239 +1,243 @@
 <template>
   <v-container class="transactions-container" fluid>
-    <h1 class="transactions-title">Historial de Transacciones</h1>
+    <v-row class="transactions-row" no-gutters>
+      <v-col cols="12" class="px-md-8">
+        <h1 class="transactions-title">Transacciones</h1>
 
-    <v-switch
-      v-model="showTable"
-      inset
-      class="mb-4"
-      label="Mostrar como tabla"
-      color="primary"
-    ></v-switch>
+        <v-switch
+          v-model="showTable"
+          inset
+          class="mb-4"
+          label="Mostrar como tabla"
+          color="primary"
+        ></v-switch>
 
-    <v-card class="transactions-card">
-      <v-card-text>
-        <BaseDataTable
-          v-if="showTable"
-          :headers="headers"
-          :items="transactionStore.transactions"
-          :loading="transactionStore.loading"
-          @click:row="showTransactionDetails"
-        >
-          <template #item.date="{ item }">
-            {{ formatDate(getTransactionDate(item)) }}
-          </template>
-          <template #item.description="{ item }">
-            <span>
-              <!-- Hay que hacer esto porque la api marca como pendiente los depósitos por alguna razon -->
-              {{ item.pending && !item.description?.includes('Depósito a cuenta') 
-                ? `Cobro: ${item.description ?? '-'}` 
-                : (item.description ?? '-') }}
-            </span>
-          </template>
-          <template #item.amount="{ item }">
-            <div class="amount-cell">
-              <span class="amount-icon-area">
-                <v-icon v-if="getAmountDisplay(item).icon" :color="getAmountDisplay(item).color" size="small">
-                  {{ getAmountDisplay(item).icon }}
-                </v-icon>
-              </span>
-              <span class="amount-value" :class="{ 'text-error': getAmountDisplay(item).color === 'error' }">
-                ${{ getAmountDisplay(item).amount.toFixed(2) }}
-              </span>
-            </div>
-          </template>
-          <template #item.status="{ item }">
-            <v-chip
-              :color="item.pending ? 'warning' : 'success'"
-              size="small"
+        <v-card class="transactions-card">
+          <v-card-text>
+            <BaseDataTable
+              v-if="showTable"
+              :headers="headers"
+              :items="transactionStore.transactions"
+              :loading="transactionStore.loading"
+              @click:row="showTransactionDetails"
             >
-              {{ item.pending ? 'Pendiente' : 'Completada' }}
-            </v-chip>
-          </template>
-          <template #item.moreInfo="{ item }">
-            <v-btn icon variant="text" @click.stop="showTransactionDetails(item)" aria-label="Más información">
-              <v-icon color="primary">mdi-information-outline</v-icon>
-            </v-btn>
-          </template>
-        </BaseDataTable>
-
-        <div v-else>
-          <canvas id="transactionChart"></canvas>
-        </div>
-      </v-card-text>
-    </v-card>
-
-    <!-- Transaction Details Dialog -->
-    <v-dialog v-model="showDetailsDialog" max-width="600px">
-      <v-card class="transaction-details-dialog">
-        <div class="transaction-details-header">
-          <span class="transaction-details-title">
-            {{ selectedTransaction?.description || 'Detalle de la Transacción' }}
-          </span>
-          <v-btn icon class="dialog-close-btn" @click="showDetailsDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </div>
-        <v-card-text>
-          <v-list>
-            <v-list-item>
-              <template v-slot:prepend>
-                <v-icon icon="mdi-currency-usd"></v-icon>
+              <template #item.date="{ item }">
+                {{ formatDate(getTransactionDate(item)) }}
               </template>
-              <v-list-item-title>Monto</v-list-item-title>
-              <v-list-item-subtitle>${{ Math.abs(selectedTransaction?.amount ?? 0).toFixed(2) }}</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <template v-slot:prepend>
-                <v-icon icon="mdi-calendar"></v-icon>
+              <template #item.description="{ item }">
+                <span>
+                  <!-- Hay que hacer esto porque la api marca como pendiente los depósitos por alguna razon -->
+                  {{ item.pending && !item.description?.includes('Depósito a cuenta') 
+                    ? `Cobro: ${item.description ?? '-'}` 
+                    : (item.description ?? '-') }}
+                </span>
               </template>
-              <v-list-item-title>Fecha</v-list-item-title>
-              <v-list-item-subtitle>{{ formatDate(getTransactionDate(selectedTransaction)) }}</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <template v-slot:prepend>
-                <v-icon icon="mdi-account"></v-icon>
+              <template #item.amount="{ item }">
+                <div class="amount-cell">
+                  <span class="amount-icon-area">
+                    <v-icon v-if="getAmountDisplay(item).icon" :color="getAmountDisplay(item).color === 'error' ? 'var(--error)' : getAmountDisplay(item).color === 'success' ? 'var(--success)' : 'warning'" size="small">
+                      {{ getAmountDisplay(item).icon }}
+                    </v-icon>
+                  </span>
+                  <span class="amount-value" :class="{ 'text-error': getAmountDisplay(item).color === 'error' }">
+                    ${{ getAmountDisplay(item).amount.toFixed(2) }}
+                  </span>
+                </div>
               </template>
-              <v-list-item-title>
-                {{ counterpartyLabel }}
-              </v-list-item-title>
-              <v-list-item-subtitle>
-                {{ counterpartyName }}
-              </v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item v-if="selectedTransaction && isUserPayer(selectedTransaction)">
-              <template v-slot:prepend>
-                <v-icon icon="mdi-credit-card"></v-icon>
-              </template>
-              <v-list-item-title>Método</v-list-item-title>
-              <v-list-item-subtitle>
-                <template v-if="selectedTransaction.method === 'CARD' && selectedTransaction.card">
-                  Tarjeta *{{ selectedTransaction.card.number.slice(-4) }}
-                </template>
-                <template v-else>
-                  Cuenta
-                </template>
-              </v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <template v-slot:prepend>
-                <v-icon icon="mdi-information"></v-icon>
-              </template>
-              <v-list-item-title>Estado</v-list-item-title>
-              <v-list-item-subtitle>
+              <template #item.status="{ item }">
                 <v-chip
-                  :color="selectedTransaction?.pending ? 'warning' : 'success'"
+                  :color="item.pending ? 'warning' : 'success'"
                   size="small"
-                  variant="elevated"
                 >
-                  {{ selectedTransaction?.pending ? 'Pendiente' : 'Completada' }}
+                  {{ item.pending ? 'Pendiente' : 'Completada' }}
                 </v-chip>
-              </v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
-
-    <!-- Pending Transaction Dialog -->
-    <v-dialog v-model="showPendingDialog" max-width="500px">
-      <v-card class="transaction-details-dialog">
-        <div class="transaction-details-header">
-          <span class="transaction-details-title">
-            Cobro: {{ (selectedTransaction?.description || '-') }}
-          </span>
-          <v-btn icon class="dialog-close-btn" @click="showPendingDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </div>
-        <v-card-text>
-          <v-list>
-            <v-list-item>
-              <template v-slot:prepend>
-                <v-icon icon="mdi-currency-usd"></v-icon>
               </template>
-              <v-list-item-title>Monto</v-list-item-title>
-              <v-list-item-subtitle>${{ Math.abs(selectedTransaction?.amount ?? 0).toFixed(2) }}</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <template v-slot:prepend>
-                <v-icon icon="mdi-calendar"></v-icon>
-              </template>
-              <v-list-item-title>Fecha</v-list-item-title>
-              <v-list-item-subtitle>{{ formatDate(getTransactionDate(selectedTransaction)) }}</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <template v-slot:prepend>
-                <v-icon icon="mdi-identifier"></v-icon>
-              </template>
-              <v-list-item-title>ID de pago</v-list-item-title>
-              <v-list-item-subtitle>
-                <v-btn icon size="small" variant="text" @click="copyUuid(selectedTransaction?.uuid)" aria-label="Copiar UUID">
-                  <v-icon>mdi-content-copy</v-icon>
+              <template #item.moreInfo="{ item }">
+                <v-btn icon variant="text" @click.stop="showTransactionDetails(item)" aria-label="Más información">
+                  <v-icon color="primary">mdi-information-outline</v-icon>
                 </v-btn>
-              </v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <template v-slot:prepend>
-                <v-icon icon="mdi-information"></v-icon>
               </template>
-              <v-list-item-title>Estado</v-list-item-title>
-              <v-list-item-subtitle>
-                <v-chip color="warning" size="small" variant="elevated">
-                  Pendiente
-                </v-chip>
-              </v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+            </BaseDataTable>
 
-    <!-- Deposit Dialog -->
-    <v-dialog v-model="showDepositDialog" max-width="500px">
-      <v-card class="transaction-details-dialog">
-        <div class="transaction-details-header">
-          <span class="transaction-details-title">
-            Depósito
-          </span>
-          <v-btn icon class="dialog-close-btn" @click="showDepositDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </div>
-        <v-card-text>
-          <v-list>
-            <v-list-item>
-              <template v-slot:prepend>
-                <v-icon icon="mdi-currency-usd"></v-icon>
-              </template>
-              <v-list-item-title>Monto</v-list-item-title>
-              <v-list-item-subtitle>${{ Math.abs(selectedTransaction?.amount ?? 0).toFixed(2) }}</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <template v-slot:prepend>
-                <v-icon icon="mdi-calendar"></v-icon>
-              </template>
-              <v-list-item-title>Fecha</v-list-item-title>
-              <v-list-item-subtitle>{{ formatDate(getTransactionDate(selectedTransaction)) }}</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item v-if="selectedTransaction?.card">
-              <template v-slot:prepend>
-                <v-icon icon="mdi-credit-card"></v-icon>
-              </template>
-              <v-list-item-title>Tarjeta</v-list-item-title>
-              <v-list-item-subtitle>*{{ selectedTransaction.card.number.slice(-4) }}</v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+            <div v-else>
+              <canvas id="transactionChart"></canvas>
+            </div>
+          </v-card-text>
+        </v-card>
 
-    <v-pagination
-      v-model="page"
-      :length="Math.ceil(totalCount / pageSize)"
-    />
+        <!-- Transaction Details Dialog -->
+        <v-dialog v-model="showDetailsDialog" max-width="600px">
+          <v-card class="transaction-details-dialog">
+            <div class="transaction-details-header">
+              <span class="transaction-details-title">
+                {{ selectedTransaction?.description || 'Detalle de la Transacción' }}
+              </span>
+              <v-btn icon class="dialog-close-btn" @click="showDetailsDialog = false">
+                <v-icon>mdi-close</v-icon>
+              </v-btn>
+            </div>
+            <v-card-text>
+              <v-list>
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-currency-usd"></v-icon>
+                  </template>
+                  <v-list-item-title>Monto</v-list-item-title>
+                  <v-list-item-subtitle>${{ Math.abs(selectedTransaction?.amount ?? 0).toFixed(2) }}</v-list-item-subtitle>
+                </v-list-item>
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-calendar"></v-icon>
+                  </template>
+                  <v-list-item-title>Fecha</v-list-item-title>
+                  <v-list-item-subtitle>{{ formatDate(getTransactionDate(selectedTransaction)) }}</v-list-item-subtitle>
+                </v-list-item>
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-account"></v-icon>
+                  </template>
+                  <v-list-item-title>
+                    {{ counterpartyLabel }}
+                  </v-list-item-title>
+                  <v-list-item-subtitle>
+                    {{ counterpartyName }}
+                  </v-list-item-subtitle>
+                </v-list-item>
+                <v-list-item v-if="selectedTransaction && isUserPayer(selectedTransaction)">
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-credit-card"></v-icon>
+                  </template>
+                  <v-list-item-title>Método</v-list-item-title>
+                  <v-list-item-subtitle>
+                    <template v-if="selectedTransaction.method === 'CARD' && selectedTransaction.card">
+                      Tarjeta *{{ selectedTransaction.card.number.slice(-4) }}
+                    </template>
+                    <template v-else>
+                      Cuenta
+                    </template>
+                  </v-list-item-subtitle>
+                </v-list-item>
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-information"></v-icon>
+                  </template>
+                  <v-list-item-title>Estado</v-list-item-title>
+                  <v-list-item-subtitle>
+                    <v-chip
+                      :color="selectedTransaction?.pending ? 'warning' : 'success'"
+                      size="small"
+                      variant="elevated"
+                    >
+                      {{ selectedTransaction?.pending ? 'Pendiente' : 'Completada' }}
+                    </v-chip>
+                  </v-list-item-subtitle>
+                </v-list-item>
+              </v-list>
+            </v-card-text>
+          </v-card>
+        </v-dialog>
 
-    <v-snackbar v-model="snackbar" :timeout="2000">{{ snackbarText }}</v-snackbar>
+        <!-- Pending Transaction Dialog -->
+        <v-dialog v-model="showPendingDialog" max-width="500px">
+          <v-card class="transaction-details-dialog">
+            <div class="transaction-details-header">
+              <span class="transaction-details-title">
+                Cobro: {{ (selectedTransaction?.description || '-') }}
+              </span>
+              <v-btn icon class="dialog-close-btn" @click="showPendingDialog = false">
+                <v-icon>mdi-close</v-icon>
+              </v-btn>
+            </div>
+            <v-card-text>
+              <v-list>
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-currency-usd"></v-icon>
+                  </template>
+                  <v-list-item-title>Monto</v-list-item-title>
+                  <v-list-item-subtitle>${{ Math.abs(selectedTransaction?.amount ?? 0).toFixed(2) }}</v-list-item-subtitle>
+                </v-list-item>
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-calendar"></v-icon>
+                  </template>
+                  <v-list-item-title>Fecha</v-list-item-title>
+                  <v-list-item-subtitle>{{ formatDate(getTransactionDate(selectedTransaction)) }}</v-list-item-subtitle>
+                </v-list-item>
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-identifier"></v-icon>
+                  </template>
+                  <v-list-item-title>ID de pago</v-list-item-title>
+                  <v-list-item-subtitle>
+                    <v-btn icon size="small" variant="text" @click="copyUuid(selectedTransaction?.uuid)" aria-label="Copiar UUID">
+                      <v-icon>mdi-content-copy</v-icon>
+                    </v-btn>
+                  </v-list-item-subtitle>
+                </v-list-item>
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-information"></v-icon>
+                  </template>
+                  <v-list-item-title>Estado</v-list-item-title>
+                  <v-list-item-subtitle>
+                    <v-chip color="warning" size="small" variant="elevated">
+                      Pendiente
+                    </v-chip>
+                  </v-list-item-subtitle>
+                </v-list-item>
+              </v-list>
+            </v-card-text>
+          </v-card>
+        </v-dialog>
+
+        <!-- Deposit Dialog -->
+        <v-dialog v-model="showDepositDialog" max-width="500px">
+          <v-card class="transaction-details-dialog">
+            <div class="transaction-details-header">
+              <span class="transaction-details-title">
+                Depósito
+              </span>
+              <v-btn icon class="dialog-close-btn" @click="showDepositDialog = false">
+                <v-icon>mdi-close</v-icon>
+              </v-btn>
+            </div>
+            <v-card-text>
+              <v-list>
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-currency-usd"></v-icon>
+                  </template>
+                  <v-list-item-title>Monto</v-list-item-title>
+                  <v-list-item-subtitle>${{ Math.abs(selectedTransaction?.amount ?? 0).toFixed(2) }}</v-list-item-subtitle>
+                </v-list-item>
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-calendar"></v-icon>
+                  </template>
+                  <v-list-item-title>Fecha</v-list-item-title>
+                  <v-list-item-subtitle>{{ formatDate(getTransactionDate(selectedTransaction)) }}</v-list-item-subtitle>
+                </v-list-item>
+                <v-list-item v-if="selectedTransaction?.card">
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-credit-card"></v-icon>
+                  </template>
+                  <v-list-item-title>Tarjeta</v-list-item-title>
+                  <v-list-item-subtitle>*{{ selectedTransaction.card.number.slice(-4) }}</v-list-item-subtitle>
+                </v-list-item>
+              </v-list>
+            </v-card-text>
+          </v-card>
+        </v-dialog>
+
+        <v-pagination
+          v-model="page"
+          :length="Math.ceil(totalCount / pageSize)"
+        />
+
+        <v-snackbar v-model="snackbar" :timeout="2000">{{ snackbarText }}</v-snackbar>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
@@ -403,17 +407,22 @@ function copyUuid(uuid?: string) {
 
 <style scoped>
 .transactions-container {
-  padding: 2rem;
+  padding: 0;
   background-color: var(--background);
   min-height: 100vh;
 }
 
+.transactions-row {
+  margin: 0;
+}
+
 .transactions-title {
-  font-size: 1.8rem;
-  font-weight: bold;
-  margin-bottom: 2rem;
-  text-align: center;
-  color: var(--primary-text);
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  margin-top: 0.5rem;
+  margin-left: 0;
+  font-family: var(--font-sans), sans-serif;
 }
 
 .transactions-card {
@@ -453,7 +462,7 @@ function copyUuid(uuid?: string) {
 }
 
 .text-error {
-  color: var(--error);
+  color: var(--error) !important;
 }
 
 .v-list-item {
