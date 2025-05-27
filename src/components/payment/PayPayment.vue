@@ -1,111 +1,82 @@
 <template>
     <v-container class="pay-payment-container">
-        <v-card class="pay-payment-card">
-            <v-card-title class="text-h5 mb-4 text-center"
-                >Pagar un cobro</v-card-title
-            >
-
-            <v-form
-                @submit.prevent="handleSubmit"
-                ref="form"
-                class="pay-payment-form"
-            >
-                <v-card-text class="form-content">
-                    <ErrorDialog v-model="showErrorDialog" title="Error de Pago" message="El pago debe ser realizado con otro usuario." />
+        <div class="pay-payment-title text-h5 mb-4 text-center">Pagar un cobro</div>
+        <v-form
+            @submit.prevent="handleSubmit"
+            ref="form"
+            class="pay-payment-form"
+        >
+            <div class="form-content">
+                <ErrorDialog v-model="showErrorDialog" title="Error de Pago" message="El pago debe ser realizado con otro usuario." />
+                <div class="pay-form-group">
                     <CustomTextField
                         v-model="uuid"
-                        label="Código de Cobro"
+                        placeholder="Código de Cobro"
                         :rules="[(v: string) => !!v || 'El código de cobro es obligatorio']"
                         required
-                        class="mb-4"
+                        class="pay-uuid-input"
                         :loading="loading"
                     />
-
+                </div>
+                <div class="pay-form-group">
                     <PaymentMethodSelector
                         :selectedPaymentMethod="selectedPaymentMethod"
                         :selectedCard="selectedCard"
                         :accountBalance="accountBalance"
                         :cards="cards"
-                        @update:selectedPaymentMethod="
-                            selectedPaymentMethod = $event
-                        "
+                        @update:selectedPaymentMethod="selectedPaymentMethod = $event"
                         @update:selectedCard="selectedCard = $event"
                         @add-card="showAddCardDialog = true"
                     />
-                </v-card-text>
-
-                <v-card-actions class="form-actions">
-                    <FilledButton
-                        type="submit"
-                        :loading="loading"
-                        :disabled="loading"
-                    >
-                        Confirmar Pago
-                    </FilledButton>
-                </v-card-actions>
-            </v-form>
-
-            <!-- Success Alert and Payment Details -->
-            <v-expand-transition>
-                <div v-if="paymentSuccess" class="pa-4 text-center">
-                    <SuccessDialog
-                        v-model="paymentSuccess"
-                        title="¡Pago realizado exitosamente!"
-                        message="El pago ha sido procesado correctamente."
-                    />
-
-                    <v-card class="payment-details-card mt-4">
-                        <v-card-text>
-                            <div class="text-subtitle-1 mb-4">
-                                Detalles del Pago
-                            </div>
-
-                            <div class="payment-detail-row">
-                                <span class="text-subtitle-2">Monto:</span>
-                                <span class="text-h6"
-                                    >${{ paymentDetails?.amount }}</span
-                                >
-                            </div>
-
-                            <div class="payment-detail-row">
-                                <span class="text-subtitle-2"
-                                    >Descripción:</span
-                                >
-                                <span>{{ paymentDetails?.description }}</span>
-                            </div>
-
-                            <div class="payment-detail-row">
-                                <span class="text-subtitle-2">Receptor:</span>
-                                <span
-                                    >{{ paymentDetails?.receiver?.firstName }}
-                                    {{
-                                        paymentDetails?.receiver?.lastName
-                                    }}</span
-                                >
-                            </div>
-
-                            <div class="payment-detail-row">
-                                <span class="text-subtitle-2">Estado:</span>
-                                <v-chip
-                                    :color="
-                                        paymentDetails?.pending
-                                            ? 'warning'
-                                            : 'success'
-                                    "
-                                    size="small"
-                                >
-                                    {{
-                                        paymentDetails?.pending
-                                            ? "Pendiente"
-                                            : "Completado"
-                                    }}
-                                </v-chip>
-                            </div>
-                        </v-card-text>
-                    </v-card>
                 </div>
-            </v-expand-transition>
-        </v-card>
+                <FilledButton
+                    type="submit"
+                    :loading="loading"
+                    :disabled="loading"
+                    class="pay-continue-btn"
+                >
+                    Confirmar Pago
+                </FilledButton>
+            </div>
+        </v-form>
+
+        <!-- Success Alert (dialog only) -->
+        <SuccessDialog
+            v-model="paymentSuccess"
+            title="¡Pago realizado exitosamente!"
+            message="El pago ha sido procesado correctamente."
+        />
+
+        <!-- Payment Details Card (always shown if paymentDetails exists) -->
+        <v-expand-transition>
+            <div v-if="paymentDetails" class="pa-4 payment-result">
+                <v-card class="payment-details-card mt-4">
+                    <v-card-text>
+                        <div class="payment-details-title">Detalles del Pago</div>
+                        <div class="payment-detail-row">
+                            <span class="payment-detail-label">Monto:</span>
+                            <span class="payment-detail-value">${{ paymentDetails.amount }}</span>
+                        </div>
+                        <div class="payment-detail-row">
+                            <span class="payment-detail-label">Descripción:</span>
+                            <span class="payment-detail-value">{{ paymentDetails.description }}</span>
+                        </div>
+                        <div class="payment-detail-row">
+                            <span class="payment-detail-label">Receptor:</span>
+                            <span class="payment-detail-value">
+                                {{ paymentDetails.receiver?.firstName }} {{ paymentDetails.receiver?.lastName }}
+                            </span>
+                        </div>
+                        <div class="payment-detail-row">
+                            <span class="payment-detail-label">Estado:</span>
+                            <v-chip :color="paymentDetails.pending ? 'warning' : 'success'" size="small">
+                                {{ paymentDetails.pending ? 'Pendiente' : 'Completado' }}
+                            </v-chip>
+                        </div>
+                    </v-card-text>
+                </v-card>
+            </div>
+        </v-expand-transition>
     </v-container>
 </template>
 
@@ -232,15 +203,19 @@ async function handleSubmit() {
 
 <style scoped>
 .pay-payment-container {
-    max-width: 600px;
+    max-width: 400px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 0;
     font-family: var(--font-family);
 }
 
-.pay-payment-card {
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.pay-payment-title {
+    font-size: 2rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 2.2rem;
+    font-family: var(--font-sans), sans-serif;
+    color: var(--text);
 }
 
 .pay-payment-form {
@@ -248,76 +223,89 @@ async function handleSubmit() {
 }
 
 .form-content {
-    padding: 2.5rem !important;
+    padding: 0 !important;
 }
 
-.form-actions {
-    padding: 0 2.5rem 2.5rem !important;
-    justify-content: center;
+.pay-form-group {
+    margin-bottom: 1rem;
+    width: 100%;
+    max-width: 400px;
 }
 
-.payment-method {
-    background-color: var(--background);
-    border-radius: 8px;
+.pay-form-group:last-of-type {
+    margin-bottom: 0;
+}
+
+.pay-uuid-input {
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
+}
+
+:deep(.v-text-field),
+:deep(.v-field),
+:deep(.v-field__input),
+:deep(.v-select) {
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
+}
+
+.pay-continue-btn {
+    margin-top: 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    height: 50px;
+    width: 100%;
+    max-width: 400px;
+    align-self: center;
+}
+
+.payment-result {
     width: 100%;
     text-align: center;
-}
-
-.card-selection {
-    margin-top: 1rem;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
 }
 
 .payment-details-card {
     border-radius: 8px;
     background-color: var(--card);
-    width: 100%;
+    width: 400px;
+    max-width: 100vw;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+}
+
+.payment-details-title {
+    text-align: center;
+    font-size: 1.15rem;
+    font-weight: 500;
+    margin-bottom: 1.2rem;
+    font-family: var(--font-family);
 }
 
 .payment-detail-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 1.2rem;
     padding: 0 1rem;
 }
-
 .payment-detail-row:last-child {
     margin-bottom: 0;
 }
 
-:deep(.v-card-title) {
-    font-family: var(--font-family);
-    font-weight: 600;
-}
-
-:deep(.v-card-text) {
+.payment-detail-label {
+    font-size: 1rem;
+    font-weight: 500;
     font-family: var(--font-family);
 }
 
-:deep(.text-subtitle-1),
-:deep(.text-subtitle-2) {
+.payment-detail-value {
+    font-size: 1rem;
+    font-weight: 400;
     font-family: var(--font-family);
-}
-
-:deep(.v-radio-group) {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-:deep(.v-radio) {
-    margin: 0.5rem 0;
-    width: auto;
-}
-
-:deep(.v-text-field),
-:deep(.v-select) {
-    width: 100%;
-    max-width: 400px;
+    text-align: right;
 }
 </style>
