@@ -90,7 +90,14 @@
                         >
                             <template #prepend>
                                 <v-icon
-                                    :color="getTransactionDisplay(tx).color === 'error' ? 'var(--error)' : getTransactionDisplay(tx).color === 'success' ? 'var(--success)' : 'warning'"
+                                    :color="
+                                        getTransactionDisplay(tx).color ===
+                                        'error'
+                                            ? 'var(--error)'
+                                            : getTransactionDisplay(tx).color === 'success'
+                                            ? 'var(--success)'
+                                            : 'warning'
+                                    "
                                     size="20"
                                 >
                                     {{ getTransactionDisplay(tx).icon }}
@@ -106,10 +113,17 @@
                                 <span
                                     :class="[
                                         'dashboard-list-amount',
-                                        getTransactionDisplay(tx).isNegative ? 'negative' : 'positive',
+                                        getTransactionDisplay(tx).isNegative
+                                            ? 'negative'
+                                            : 'positive',
+                                        tx.pending && !tx.description?.includes('Depósito') ? 'text-warning' : ''
                                     ]"
                                 >
-                                    {{ getTransactionDisplay(tx).isNegative ? "- " : "" }}${{
+                                    {{
+                                        getTransactionDisplay(tx).isNegative
+                                            ? "- "
+                                            : ""
+                                    }}${{
                                         Math.abs(tx.amount).toLocaleString(
                                             "es-AR",
                                             {
@@ -251,11 +265,10 @@
 import { ref, onMounted, computed, watch } from "vue";
 import { useSecurityStore } from "@/stores/securityStore.ts";
 import { useAccountStore } from "@/stores/accountStore";
-import { useTransactionStore } from '@/stores/transactionStore';
+import { useTransactionStore } from "@/stores/transactionStore";
 import IconFilledButton from "@/components/ui/IconFilledButton.vue";
 import InvestmentCard from "@/components/investments/InvestmentCard.vue";
 import type { Contact } from "@/types/types";
-import type { DashboardData } from "@/services/dashboardDeprecated";
 import { fetchContacts } from "@/services/contacts";
 
 const securityStore = useSecurityStore();
@@ -264,8 +277,6 @@ const transactionStore = useTransactionStore();
 const userId = computed(() => securityStore.user?.id);
 const loading = ref(true);
 const error = ref<string | null>(null);
-const dashboardData = ref<DashboardData | null>(null);
-
 const contacts = ref<Contact[]>([]);
 const isBalanceVisible = ref(true);
 
@@ -292,6 +303,17 @@ const dashboardTotal = 873.06;
 const dashboardGain = 3.5;
 const dashboardPercentage = 0.4;
 
+// Define a type for the bills
+interface Bill {
+    title: string;
+    provider: string;
+    amount: number;
+    due_date: string;
+}
+
+// Initialize bills with the correct type
+const bills = computed<Bill[]>(() => []);
+
 async function fetchData() {
     loading.value = true;
     error.value = null;
@@ -301,44 +323,18 @@ async function fetchData() {
         return;
     }
     try {
-        // Asegurarnos de que tenemos el usuario actual
         const user = await securityStore.getCurrentUser();
-
-        // Obtener datos de cuenta
         await accountStore.fetchAccount();
-
-        // Obtener transacciones
         await transactionStore.fetchTransactions();
 
         if (!user) {
             throw new Error("No se pudo obtener la información del usuario");
         }
 
-        // Fetch contacts
-        const { contacts: fetchedContacts } = await fetchContacts(
-            userId.value.toString()
-        );
-
-        dashboardData.value = {
-            user: {
-                id: user.id.toString(),
-                first_name: user.firstName,
-                last_name: user.lastName,
-                username: user.username,
-            },
-            account: {
-                balance: accountStore.account?.balance ?? 0,
-                account_number: accountStore.account?.cvu ?? "Sin CVU",
-            },
-            transactions: transactionStore.transactions.slice(0, 7),
-            bills: [], // TODO: Implementar obtención de facturas reales
-            contacts: fetchedContacts,
-            cards: [], // TODO: Implementar obtención de tarjetas reales
-        };
+        const { contacts: fetchedContacts } = await fetchContacts(userId.value.toString());
         contacts.value = fetchedContacts;
     } catch (e) {
-        error.value =
-            e instanceof Error ? e.message : "Error al cargar los datos";
+        error.value = e instanceof Error ? e.message : "Error al cargar los datos";
         console.error("Error fetching dashboard data:", e);
     } finally {
         loading.value = false;
@@ -363,9 +359,13 @@ onMounted(async () => {
     }
 });
 
-const balance = computed(() => dashboardData.value?.account.balance ?? null);
-const transactions = computed(() => dashboardData.value?.transactions ?? []);
-const bills = computed(() => dashboardData.value?.bills ?? []);
+const balance = computed(() => accountStore.account?.balance ?? null);
+const transactions = computed(() => {
+    return transactionStore.transactions.slice(0, 7).map(tx => ({
+        ...tx,
+        pending: tx.pending || false // Ensure pending property exists
+    }));
+});
 
 function getTransactionDate(item: any): string {
     // Try to get timestamp from metadata first, fall back to created_at
@@ -376,13 +376,13 @@ function formatDate(dateStr: string): string {
     if (!dateStr) return "Fecha no disponible";
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return "Fecha no disponible";
-    
+
     return date.toLocaleDateString("es-AR", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
         hour: "2-digit",
-        minute: "2-digit"
+        minute: "2-digit",
     });
 }
 
@@ -393,34 +393,38 @@ function toggleBalanceVisibility() {
 const currentUserId = computed(() => securityStore.user?.id);
 
 function isUserPayer(transaction: any): boolean {
-  return transaction.payer?.id === currentUserId.value;
+    return transaction.payer?.id === currentUserId.value;
 }
 
-function getTransactionDisplay(transaction: any): { icon: string; color: string; isNegative: boolean } {
-  const isPayer = isUserPayer(transaction);
-  const isDeposit = transaction.description?.includes('Depósito');
+function getTransactionDisplay(transaction: any): {
+    icon: string;
+    color: string;
+    isNegative: boolean;
+} {
+    const isPayer = isUserPayer(transaction);
+    const isDeposit = transaction.description?.includes("Depósito");
 
-  if (isDeposit) {
+    if (isDeposit) {
+        return {
+            icon: "mdi-arrow-bottom-right",
+            color: "success",
+            isNegative: false,
+        };
+    }
+
+    if (transaction.pending) {
+        return {
+            icon: "mdi-arrow-right",
+            color: "warning",
+            isNegative: false,
+        };
+    }
+
     return {
-      icon: 'mdi-arrow-bottom-right',
-      color: 'success',
-      isNegative: false
+        icon: isPayer ? "mdi-arrow-top-right" : "mdi-arrow-bottom-right",
+        color: isPayer ? "error" : "success",
+        isNegative: isPayer,
     };
-  }
-
-  if (transaction.pending) {
-    return {
-      icon: 'mdi-arrow-right',
-      color: 'warning',
-      isNegative: false
-    };
-  }
-
-  return {
-    icon: isPayer ? 'mdi-arrow-top-right' : 'mdi-arrow-bottom-right',
-    color: isPayer ? 'error' : 'success',
-    isNegative: isPayer
-  };
 }
 </script>
 

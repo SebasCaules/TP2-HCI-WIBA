@@ -22,7 +22,7 @@
               @click:row="showTransactionDetails"
             >
               <template #item.date="{ item }">
-                {{ formatDate(getTransactionDate(item)) }}
+                {{ formatDate(getTransactionDate(item), 'day') }}
               </template>
               <template #item.description="{ item }">
                 <span>
@@ -39,7 +39,11 @@
                       {{ getAmountDisplay(item).icon }}
                     </v-icon>
                   </span>
-                  <span class="amount-value" :class="{ 'text-error': getAmountDisplay(item).color === 'error' }">
+                  <span class="amount-value" :class="{
+                    'text-error': getAmountDisplay(item).color === 'error',
+                    'text-success': getAmountDisplay(item).color === 'success',
+                    'text-warning': getAmountDisplay(item).color === 'warning'
+                  }">
                     ${{ getAmountDisplay(item).amount.toFixed(2) }}
                   </span>
                 </div>
@@ -235,11 +239,6 @@
           </v-card>
         </v-dialog>
 
-        <v-pagination
-          v-model="page"
-          :length="Math.ceil(totalCount / pageSize)"
-        />
-
         <v-snackbar v-model="snackbar" :timeout="2000">{{ snackbarText }}</v-snackbar>
       </v-col>
     </v-row>
@@ -285,9 +284,16 @@ function getTransactionDate(item: any): string {
   return item.metadata?.timestamp || item.created_at;
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, format: 'full' | 'day' = 'full'): string {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
+  if (format === 'day') {
+    return date.toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  }
   return date.toLocaleDateString('es-AR', {
     day: '2-digit',
     month: '2-digit',
@@ -332,7 +338,7 @@ async function renderChart() {
         {
           label: 'Montos por tipo de transacción',
           data: Object.values(data),
-          backgroundColor: ['#4F46E5', '#6366F1', '#818CF8']
+          backgroundColor: ['#ff8a5c', '#4cc9f0', '#f72585']
         }
       ]
     },
@@ -377,8 +383,8 @@ function getAmountDisplay(transaction: Payment): { amount: number; icon: string;
   if (transaction.pending) {
     return {
       amount: Math.abs(transaction.amount),
-      icon: '',
-      color: 'warning'
+      icon: 'mdi-clock-outline',
+      color: 'warning',
     };
   }
 
