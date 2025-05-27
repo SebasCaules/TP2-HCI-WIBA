@@ -9,8 +9,8 @@
                     inset
                     class="mb-4"
                     label="Mostrar como tabla"
-                    :color="showTable ? 'primary' : undefined"
-                    :base-color="!showTable ? 'icon-muted' : undefined"
+                    :color="showTable ? 'var(--primary)' : undefined"
+                    :base-color="!showTable ? 'var(--icon-muted)' : undefined"
                 ></v-switch>
 
                 <v-card class="transactions-card">
