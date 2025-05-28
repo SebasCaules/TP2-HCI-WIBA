@@ -6,20 +6,14 @@
                     <CustomTextField
                         v-model="form.description"
                         placeholder="Descripción"
-                        :rules="[(v: string) => !!v || 'La descripción es obligatoria']"
                         required
                         class="transfer-reason-input"
                     />
                 </div>
                 <div class="transfer-form-group">
                     <CustomTextField
-                        v-model.number="form.amount"
+                        v-model="form.amount"
                         placeholder="Monto"
-                        type="number"
-                        :rules="[
-                            (v: number) => !!v || 'El monto es obligatorio',
-                            (v: number) => v > 0 || 'El monto debe ser mayor a 0'
-                        ]"
                         required
                         class="transfer-amount-input"
                     />
@@ -27,7 +21,7 @@
                 <FilledButton
                     type="submit"
                     :loading="loading"
-                    :disabled="loading"
+                    :disabled="!isFormValid || loading"
                     class="transfer-continue-btn"
                 >
                     Generar Cobro
@@ -78,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { usePaymentStore } from '@/stores/paymentStore';
 import FilledButton from '@/components/ui/FilledButton.vue';
 import CustomTextField from '@/components/ui/CustomTextField.vue';
@@ -88,7 +82,7 @@ import type { Payment } from '@/api/payment';
 const paymentStore = usePaymentStore();
 const form = ref({
     description: '',
-    amount: 0
+    amount: ''
 });
 
 const loading = ref(false);
@@ -96,17 +90,12 @@ const copying = ref(false);
 const payment = ref<Payment | null>(null);
 const showSuccessDialog = ref(false);
 
-const formError = computed(() => {
-    if (!form.value.description || form.value.description.length > 256) {
-        return 'La descripción es obligatoria y debe tener hasta 256 caracteres.';
-    }
-    if (form.value.amount <= 0) {
-        return 'El monto debe ser mayor a 0.';
-    }
-    if (!/^\d+(\.\d{1,4})?$/.test(form.value.amount.toString())) {
-        return 'El monto no puede tener más de 4 decimales.';
-    }
-    return '';
+const isFormValid = computed(() => {
+    const desc = form.value.description?.trim();
+    const amountRaw = form.value.amount;
+    const amount = Number(amountRaw);
+    console.log('amountRaw:', amountRaw, 'typeof:', typeof amountRaw, 'parsed:', amount);
+    return !!desc && !isNaN(amount) && amount > 0;
 });
 
 async function handleSubmit() {
@@ -114,7 +103,7 @@ async function handleSubmit() {
     try {
         const result = await paymentStore.createPayment({
             description: form.value.description,
-            amount: form.value.amount
+            amount: parseFloat(form.value.amount)
         });
         payment.value = result;
         showSuccessDialog.value = true;

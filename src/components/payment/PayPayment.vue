@@ -37,7 +37,7 @@
                 <FilledButton
                     type="submit"
                     :loading="loading"
-                    :disabled="loading"
+                    :disabled="!isFormValid || loading"
                     class="pay-continue-btn"
                 >
                     Confirmar Pago
@@ -195,6 +195,10 @@ async function fetchCards() {
         console.error("Error fetching cards:", error);
     }
 }
+
+const isFormValid = computed(() => {
+    return uuid.value.trim() !== '';
+});
 
 async function handleSubmit() {
     console.log("Iniciando handleSubmit con UUID:", uuid.value);
