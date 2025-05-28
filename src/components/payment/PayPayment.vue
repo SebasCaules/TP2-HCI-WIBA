@@ -6,7 +6,11 @@
             class="pay-payment-form"
         >
             <div class="form-content">
-                <ErrorDialog v-model="showErrorDialog" title="Error de Pago" message="El pago debe ser realizado con otro usuario." />
+                <ErrorDialog
+                    v-model="showErrorDialog"
+                    :title="errorDialogTitle"
+                    :message="errorDialogMessage"
+                />
                 <div class="pay-form-group">
                     <CustomTextField
                         v-model="uuid"
@@ -23,7 +27,9 @@
                         :selectedCard="selectedCard"
                         :accountBalance="accountBalance"
                         :cards="cards"
-                        @update:selectedPaymentMethod="selectedPaymentMethod = $event"
+                        @update:selectedPaymentMethod="
+                            selectedPaymentMethod = $event
+                        "
                         @update:selectedCard="selectedCard = $event"
                         @add-card="showAddCardDialog = true"
                     />
@@ -51,25 +57,45 @@
             <div v-if="paymentDetails" class="pa-4 payment-result">
                 <v-card class="payment-details-card mt-4">
                     <v-card-text>
-                        <div class="payment-details-title">Detalles del Pago</div>
-                        <div class="payment-detail-row">
-                            <span class="payment-detail-label">Monto:</span>
-                            <span class="payment-detail-value">${{ paymentDetails.amount }}</span>
+                        <div class="payment-details-title">
+                            Detalles del Pago
                         </div>
                         <div class="payment-detail-row">
-                            <span class="payment-detail-label">Descripción:</span>
-                            <span class="payment-detail-value">{{ paymentDetails.description }}</span>
+                            <span class="payment-detail-label">Monto:</span>
+                            <span class="payment-detail-value"
+                                >${{ paymentDetails.amount }}</span
+                            >
+                        </div>
+                        <div class="payment-detail-row">
+                            <span class="payment-detail-label"
+                                >Descripción:</span
+                            >
+                            <span class="payment-detail-value">{{
+                                paymentDetails.description
+                            }}</span>
                         </div>
                         <div class="payment-detail-row">
                             <span class="payment-detail-label">Receptor:</span>
                             <span class="payment-detail-value">
-                                {{ paymentDetails.receiver?.firstName }} {{ paymentDetails.receiver?.lastName }}
+                                {{ paymentDetails.receiver?.firstName }}
+                                {{ paymentDetails.receiver?.lastName }}
                             </span>
                         </div>
                         <div class="payment-detail-row">
                             <span class="payment-detail-label">Estado:</span>
-                            <v-chip :color="paymentDetails.pending ? 'warning' : 'success'" size="small">
-                                {{ paymentDetails.pending ? 'Pendiente' : 'Completado' }}
+                            <v-chip
+                                :color="
+                                    paymentDetails.pending
+                                        ? 'warning'
+                                        : 'success'
+                                "
+                                size="small"
+                            >
+                                {{
+                                    paymentDetails.pending
+                                        ? "Pendiente"
+                                        : "Completado"
+                                }}
                             </v-chip>
                         </div>
                     </v-card-text>
@@ -88,8 +114,7 @@ import CustomTextField from "@/components/ui/CustomTextField.vue";
 import SuccessDialog from "@/components/ui/SuccessDialog.vue";
 import PaymentMethodSelector from "@/components/payment/PaymentMethodSelector.vue";
 import type { Payment } from "@/api/payment";
-import ErrorDialog from '@/components/dialogs/ErrorDialog.vue';
-
+import ErrorDialog from "@/components/dialogs/ErrorDialog.vue";
 
 const props = defineProps<{
     initialUuid?: string;
@@ -115,6 +140,8 @@ const paymentSuccess = ref(false);
 const paymentDetails = ref<Payment | null>(null);
 const showAddCardDialog = ref(false);
 const accountBalance = ref(12000); // reemplaza con store real si existe
+const errorDialogTitle = ref("Error de Pago");
+const errorDialogMessage = ref("El pago debe ser realizado con otro usuario.");
 const showErrorDialog = ref(false);
 
 onMounted(async () => {
@@ -170,16 +197,24 @@ async function fetchCards() {
 }
 
 async function handleSubmit() {
+    console.log("Iniciando handleSubmit con UUID:", uuid.value);
     if (!uuid.value) return;
 
     loading.value = true;
     try {
+        console.log(
+            "Confirmando pago con método:",
+            selectedPaymentMethod.value,
+            "y tarjeta:",
+            selectedCard.value?.id
+        );
         const response = await paymentStore.confirmPayment(
             uuid.value,
             selectedPaymentMethod.value === "card" && selectedCard.value
                 ? selectedCard.value.id
                 : undefined
         );
+        console.log("Pago confirmado exitosamente:", response);
         paymentSuccess.value = true;
         paymentDetails.value = response;
         // Reset form after successful payment
@@ -188,9 +223,38 @@ async function handleSubmit() {
         selectedCard.value = cards.value.length > 0 ? cards.value[0] : null;
         showErrorDialog.value = false; // Hide error dialog on success
     } catch (error) {
+        console.error("Error detectado:", error);
         const err = error as { code: number; description: string };
-        if (err.code === 422 && err.description === "Payment must be pushed with another user.") {
+        console.log("Código de error:", err.code);
+        console.log("Descripción de error:", err.description);
+        if (
+            err.code === 422 &&
+            err.description === "Payment must be pushed with another user."
+        ) {
             showErrorDialog.value = true;
+            errorDialogTitle.value = "Error de Pago";
+            errorDialogMessage.value =
+                "El pago debe ser realizado con otro usuario.";
+            console.log(
+                "Mostrando ErrorDialog: ",
+                errorDialogTitle.value,
+                errorDialogMessage.value
+            );
+        } else if (
+            err.code === 400 &&
+            (err.description === "UUID not found" ||
+                err.description === "Invalid payment uuid." ||
+                err.description.toLowerCase().includes("uuid"))
+        ) {
+            showErrorDialog.value = true;
+            errorDialogTitle.value = "Código inválido";
+            errorDialogMessage.value =
+                "El código de cobro ingresado no existe.";
+            console.log(
+                "Mostrando ErrorDialog: ",
+                errorDialogTitle.value,
+                errorDialogMessage.value
+            );
         } else {
             console.error("Error confirming payment:", error);
         }
