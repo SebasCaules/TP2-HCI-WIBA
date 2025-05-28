@@ -31,7 +31,7 @@
                 <FilledButton
                     type="submit"
                     :loading="loading"
-                    :disabled="loading"
+                    :disabled="!isFormValid || loading"
                     class="pay-continue-btn"
                 >
                     Confirmar Pago
@@ -168,6 +168,10 @@ async function fetchCards() {
         console.error("Error fetching cards:", error);
     }
 }
+
+const isFormValid = computed(() => {
+    return uuid.value.trim() !== '';
+});
 
 async function handleSubmit() {
     if (!uuid.value) return;
