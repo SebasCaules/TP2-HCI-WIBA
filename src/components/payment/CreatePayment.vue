@@ -1,6 +1,5 @@
 <template>
     <v-container class="create-payment-container">
-        <div class="create-payment-title text-h5 mb-4 text-center">Cobrar un producto o servicio</div>
         <v-form @submit.prevent="handleSubmit" ref="form" class="create-payment-form">
             <div class="form-content">
                 <div class="transfer-form-group">

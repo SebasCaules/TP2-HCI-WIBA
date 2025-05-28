@@ -1,6 +1,5 @@
 <template>
     <v-container class="pay-payment-container">
-        <div class="pay-payment-title text-h5 mb-4 text-center">Pagar un cobro</div>
         <v-form
             @submit.prevent="handleSubmit"
             ref="form"
