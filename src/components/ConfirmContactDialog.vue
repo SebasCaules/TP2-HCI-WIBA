@@ -27,17 +27,15 @@
                 </div>
                 <div class="contact-info-centered">
                     <div><strong>Usuario:</strong> {{ contact?.username }}</div>
-                    <div><strong>Número de cuenta:</strong> {{ contact?.account_number }}</div>
                 </div>
             </v-card-text>
             <v-card-actions class="dialog-actions-row">
                 <FilledButton
-                class="btn-secondary"
-                style="margin-left: 1rem;"
+                class="dialog-action-button btn-secondary"
                 @click="onBack"
                 >No, volver atrás</FilledButton>
                 <FilledButton
-                    class="action-button"
+                    class="dialog-action-button"
                     color="primary"
                     @click="onConfirm"
                 >Sí, agregar</FilledButton>
@@ -165,7 +163,7 @@ function onBack() {
     justify-content: center;
     gap: 1rem;
 }
-.action-button {
+.dialog-action-button {
     min-width: 160px;
     max-width: 220px;
     width: 100%;

@@ -5,7 +5,7 @@
       <div class="hero-content">
         <div class="hero-text">
           <h1 class="hero-title">WIBA</h1>
-          <h2 class="hero-subtitle">Tu billetera virtual</h2>
+          <h2 class="hero-subtitle">Tu billetera electrónica</h2>
           <p class="hero-description">
             Gestioná tus finanzas de manera simple y segura. Transferí dinero, invertí y administrá tus tarjetas en un solo lugar.
           </p>

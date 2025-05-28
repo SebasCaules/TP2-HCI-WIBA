@@ -47,17 +47,6 @@ function getContactType(identifier: string): 'cvu' | 'alias' {
   throw new Error('Invalid identifier format. Must be either a CVU (20 alphanumeric characters) or an alias (WORD.WORD.WORD)');
 }
 
-// New function to check if a contact already exists by name
-function contactExistsByName(contactsMap: Record<string, StoredContact>, firstName: string, lastName: string): boolean {
-    const normalizedFirstName = firstName.toLowerCase().trim();
-    const normalizedLastName = lastName.toLowerCase().trim();
-    
-    return Object.values(contactsMap).some(contact => 
-        contact.firstName.toLowerCase().trim() === normalizedFirstName && 
-        contact.lastName.toLowerCase().trim() === normalizedLastName
-    );
-}
-
 // New function to validate contact addition
 async function validateContactAddition(
     userId: string,
@@ -73,10 +62,10 @@ async function validateContactAddition(
 
     // Check if trying to add self
     if (userCvu && contactId === userCvu) {
-        return { isValid: false, error: 'No puedes agregarte a ti mismo como contacto' };
+        return { isValid: false, error: 'No podes agregarte a vos mismo como contacto' };
     }
     if (userAlias && contactId === userAlias) {
-        return { isValid: false, error: 'No puedes agregarte a ti mismo como contacto' };
+        return { isValid: false, error: 'No podes agregarte a vos mismo como contacto' };
     }
 
     try {
@@ -86,11 +75,6 @@ async function validateContactAddition(
         // Check if contact already exists by ID
         if (contactsMap[contactId]) {
             return { isValid: false, error: 'Este contacto ya existe en tu lista' };
-        }
-
-        // Check if contact already exists by name
-        if (contactExistsByName(contactsMap, firstName, lastName)) {
-            return { isValid: false, error: 'Ya tienes un contacto con este nombre' };
         }
 
         return { isValid: true };

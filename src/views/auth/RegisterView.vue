@@ -6,7 +6,7 @@
         <v-card class="pa-8 login-bg-card" elevation="0">
           <div class="text-center mb-2">
             <h1 class="login-title mb-1">WIBA</h1>
-            <div class="login-subtitle mb-6">Virtual Wallet Application</div>
+            <div class="login-subtitle mb-6">Billetera Electrónica</div>
           </div>
           <v-form @submit.prevent="handleRegister" ref="form">
             <CustomTextField

@@ -44,7 +44,6 @@ import FilledButton from '@/components/ui/FilledButton.vue';
 import CustomTextField from '@/components/ui/CustomTextField.vue';
 import { useSecurityStore } from '@/stores/securityStore';
 import { useAccountStore } from '@/stores/accountStore';
-import { addContact } from '@/services/contacts';
 import type { Contact } from '@/types/types';
 import { useRouter } from 'vue-router';
 
@@ -102,6 +101,7 @@ watch(dialog, (newVal) => {
 
 function closeDialog() {
   dialog.value = false;
+  resetForm();
 }
 
 function resetForm() {
@@ -152,22 +152,7 @@ async function handleSubmit() {
       userData = await accountStore.verifyAlias(accountIdentifier.value);
     }
 
-    // Add the contact to local storage with validation
-    const result = await addContact(
-      currentUserId.value,
-      accountIdentifier.value,
-      userData.firstName,
-      userData.lastName,
-      userCvu.value,
-      userAlias.value
-    );
-
-    if (!result.success) {
-      errorMessage.value = result.error || 'Error al agregar el contacto';
-      return;
-    }
-
-    // Create a contact object for the UI
+    // Create a contact object and emit it
     const contact: Contact = {
       id: accountIdentifier.value,
       first_name: userData.firstName,
