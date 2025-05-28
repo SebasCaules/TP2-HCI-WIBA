@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, reactive } from 'vue';
 import { usePaymentStore } from '@/stores/paymentStore';
 import FilledButton from '@/components/ui/FilledButton.vue';
 import CustomTextField from '@/components/ui/CustomTextField.vue';
@@ -79,7 +79,7 @@ import SuccessDialog from '@/components/ui/SuccessDialog.vue';
 import type { Payment } from '@/api/payment';
 
 const paymentStore = usePaymentStore();
-const form = ref({
+const form = reactive({
     description: '',
     amount: ''
 });
@@ -90,19 +90,18 @@ const payment = ref<Payment | null>(null);
 const showSuccessDialog = ref(false);
 
 const isFormValid = computed(() => {
-    const desc = form.value.description?.trim();
-    const amountRaw = form.value.amount;
+    const desc = form.description?.trim();
+    const amountRaw = form.amount;
     const amount = Number(amountRaw);
-    console.log('amountRaw:', amountRaw, 'typeof:', typeof amountRaw, 'parsed:', amount);
-    return !!desc && !isNaN(amount) && amount > 0;
+    return !!desc && amountRaw !== '' && !isNaN(amount) && amount > 0;
 });
 
 async function handleSubmit() {
     loading.value = true;
     try {
         const result = await paymentStore.createPayment({
-            description: form.value.description,
-            amount: parseFloat(form.value.amount)
+            description: form.description,
+            amount: parseFloat(form.amount)
         });
         payment.value = result;
         showSuccessDialog.value = true;
