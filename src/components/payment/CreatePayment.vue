@@ -21,7 +21,6 @@
                 <FilledButton
                     type="submit"
                     :loading="loading"
-                    :disabled="!isFormValid || loading"
                     class="transfer-continue-btn"
                 >
                     Generar Cobro
@@ -72,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { usePaymentStore } from '@/stores/paymentStore';
 import FilledButton from '@/components/ui/FilledButton.vue';
 import CustomTextField from '@/components/ui/CustomTextField.vue';

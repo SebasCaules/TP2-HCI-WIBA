@@ -45,6 +45,47 @@
             </div>
         </v-form>
 
+        <v-dialog v-model="showConfirmDialog" width="650" :retain-focus="false">
+            <v-card class="confirm-payment-dialog">
+                <div class="confirm-payment-header">
+                    <div class="confirm-payment-title">Confirmar pago</div>
+                    <v-btn icon @click="showConfirmDialog = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </div>
+                <div class="confirm-payment-content">
+                    <div class="confirm-payment-table">
+                        <div
+                            class="confirm-payment-row"
+                            style="
+                                justify-content: center;
+                                text-align: center;
+                                font-weight: 500;
+                            "
+                        >
+                            Este pago acreditará dinero al receptor y se
+                            descontará del medio de pago seleccionado. ¿Deseás continuar?
+                        </div>
+                    </div>
+                    <div class="confirm-payment-actions">
+                        <FilledButton
+                            class="btn-secondary"
+                            @click="showConfirmDialog = false"
+                        >
+                            Cancelar
+                        </FilledButton>
+                        <FilledButton
+                            class="confirm-payment-btn"
+                            color="primary"
+                            @click="confirmPaymentNow"
+                        >
+                            Confirmar
+                        </FilledButton>
+                    </div>
+                </div>
+            </v-card>
+        </v-dialog>
+
         <!-- Success Alert (dialog only) -->
         <SuccessDialog
             v-model="paymentSuccess"
@@ -143,6 +184,7 @@ const accountBalance = ref(12000); // reemplaza con store real si existe
 const errorDialogTitle = ref("Error de Pago");
 const errorDialogMessage = ref("El pago debe ser realizado con otro usuario.");
 const showErrorDialog = ref(false);
+const showConfirmDialog = ref(false);
 
 onMounted(async () => {
     // If we have an initial UUID, set it
@@ -197,13 +239,16 @@ async function fetchCards() {
 }
 
 const isFormValid = computed(() => {
-    return uuid.value.trim() !== '';
+    return uuid.value.trim() !== "";
 });
 
 async function handleSubmit() {
-    console.log("Iniciando handleSubmit con UUID:", uuid.value);
+    console.log("UUID ingresado:", uuid.value);
     if (!uuid.value) return;
+    showConfirmDialog.value = true;
+}
 
+async function confirmPaymentNow() {
     loading.value = true;
     try {
         console.log(
@@ -221,16 +266,13 @@ async function handleSubmit() {
         console.log("Pago confirmado exitosamente:", response);
         paymentSuccess.value = true;
         paymentDetails.value = response;
-        // Reset form after successful payment
         uuid.value = "";
         selectedPaymentMethod.value = "account";
         selectedCard.value = cards.value.length > 0 ? cards.value[0] : null;
-        showErrorDialog.value = false; // Hide error dialog on success
+        showErrorDialog.value = false;
     } catch (error) {
         console.error("Error detectado:", error);
         const err = error as { code: number; description: string };
-        console.log("Código de error:", err.code);
-        console.log("Descripción de error:", err.description);
         if (
             err.code === 422 &&
             err.description === "Payment must be pushed with another user."
@@ -239,11 +281,6 @@ async function handleSubmit() {
             errorDialogTitle.value = "Error de Pago";
             errorDialogMessage.value =
                 "El pago debe ser realizado con otro usuario.";
-            console.log(
-                "Mostrando ErrorDialog: ",
-                errorDialogTitle.value,
-                errorDialogMessage.value
-            );
         } else if (
             err.code === 400 &&
             (err.description === "UUID not found" ||
@@ -254,16 +291,12 @@ async function handleSubmit() {
             errorDialogTitle.value = "Código inválido";
             errorDialogMessage.value =
                 "El código de cobro ingresado no existe.";
-            console.log(
-                "Mostrando ErrorDialog: ",
-                errorDialogTitle.value,
-                errorDialogMessage.value
-            );
         } else {
             console.error("Error confirming payment:", error);
         }
     } finally {
         loading.value = false;
+        showConfirmDialog.value = false;
     }
 }
 </script>
@@ -375,4 +408,72 @@ async function handleSubmit() {
     font-family: var(--font-family);
     text-align: right;
 }
+
+.confirm-payment-dialog {
+    border-radius: 2rem !important;
+    overflow: visible;
+    box-shadow: 0 2px 16px 0 rgba(60, 60, 60, 0.1);
+    width: 100%;
+    max-width: 650px;
+    margin: 0 auto;
+    padding: 2rem 3rem;
+}
+
+.confirm-payment-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 1rem 0;
+}
+
+.confirm-payment-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-family: var(--font-sans), sans-serif;
+}
+
+.confirm-payment-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.confirm-payment-table {
+    background: var(--card);
+    border-radius: 1.5rem;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+    width: 100%;
+    box-shadow: 0 1px 6px 0 rgba(60, 60, 60, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.confirm-payment-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+    font-family: var(--font-sans), sans-serif;
+}
+
+.confirm-payment-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.confirm-payment-btn {
+    min-width: 200px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 1.5rem;
+    padding: 0.8rem 2rem;
+}
+
 </style>
