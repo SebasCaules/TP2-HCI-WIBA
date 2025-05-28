@@ -7,7 +7,7 @@
                   {{ formatMoney(totalBalance) }}
               </span>
               <span class="dashboard-invest-gain">
-                  {{ percentageChange >= 0 ? '+' : '' }}{{ formatMoney(totalGain) }}
+                  {{ totalGain >= 0 ? '+' : '' }}{{ formatMoney(totalGain) }}
                   ({{ percentageChange >= 0 ? '+' : '' }}{{ formatPercent(percentageChange) }})
               </span>
           </div>

@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
-    "@supabase/supabase-js": "^2.49.4",
     "chart.js": "^4.4.9",
     "date-fns": "^4.1.0",
     "pinia": "^3.0.2",

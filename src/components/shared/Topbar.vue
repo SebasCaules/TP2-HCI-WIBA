@@ -100,10 +100,6 @@
         </div>
         <v-divider />
         <div class="user-menu-actions">
-          <router-link to="/dashboard/configuracion" class="user-menu-action">
-            <v-icon size="small" color="var(--primary)">mdi-cog</v-icon>
-            <span>Configuración</span>
-          </router-link>
           <button class="user-menu-action" @click="handleLogout">
             <v-icon size="small" color="var(--primary)">mdi-logout</v-icon>
             <span>Cerrar sesión</span>
