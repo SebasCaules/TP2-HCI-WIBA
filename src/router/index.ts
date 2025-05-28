@@ -42,37 +42,32 @@ const router = createRouter({
                 {
                     path: 'transacciones',
                     name: 'transacciones',
-                    component: () => import('@/views/dashboard/TransaccionesView.vue')
+                    component: () => import('@/views/dashboard/TransactionsView.vue')
                 },
                 {
                     path: 'tarjetas',
                     name: 'tarjetas',
-                    component: () => import('@/views/dashboard/TarjetasView.vue')
+                    component: () => import('@/views/dashboard/CardsView.vue')
                 },
                 {
                     path: 'inversiones',
                     name: 'inversiones',
-                    component: () => import('@/views/dashboard/InversionesView.vue')
+                    component: () => import('@/views/dashboard/InvestmentView.vue')
                 },
                 {
                     path: 'depositar',
                     name: 'depositar',
-                    component: () => import('@/views/dashboard/DepositarView.vue')
+                    component: () => import('@/views/dashboard/DepositView.vue')
                 },
                 {
                     path: 'transferir',
                     name: 'transferir',
-                    component: () => import('@/views/dashboard/TransferirView.vue')
-                },
-                {
-                    path: 'configuracion',
-                    name: 'configuracion',
-                    component: () => import('@/views/dashboard/SettingsView.vue')
+                    component: () => import('@/views/dashboard/TransferView.vue')
                 },
                 {
                     path: 'pagos',
                     name: 'pagos',
-                    component: () => import('@/views/dashboard/PagosView.vue')
+                    component: () => import('@/views/dashboard/PaymentsView.vue')
                 },
                 {
                     path: 'contactos',
